@@ -17,11 +17,22 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
     def wait_read(self, expression, predicate, timeout_ms=7000):
         deadline = time.monotonic() + timeout_ms / 1000
         last = None
+        last_error = None
         while time.monotonic() < deadline:
-            last = self.read(expression)
-            if predicate(last):
-                return last
+            try:
+                last = self.read(expression)
+                if predicate(last):
+                    return last
+                last_error = None
+            except Exception as error:
+                # Restore/reset deliberately reinitializes the app. During that brief
+                # window AppStore.snapshot() reports that the workspace is not ready;
+                # retry until initialization finishes instead of treating it as a
+                # persistence failure.
+                last_error = error
             self.page.wait_for_timeout(40)
+        if last_error is not None:
+            self.fail(f'Timed out waiting for browser state. Last error: {last_error}')
         self.fail(f'Timed out waiting for browser state. Last value: {last!r}')
 
     def test_14_reload_recovery_real_indexeddb(self):
