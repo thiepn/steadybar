@@ -1,0 +1,45 @@
+name: Package Steadybar 2.0 release artifact
+on:
+  push:
+    branches: [release/steadybar-v2-artifact]
+    paths: [.github/workflows/package-v2-release.yml]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 2eced72ccbe3d86e6107c77d783d30cde86c63c8
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify exact merged source
+        run: |
+          test "$(git rev-parse HEAD)" = 2eced72ccbe3d86e6107c77d783d30cde86c63c8
+          npm ci
+          npm run check | tee /tmp/steadybar-v2-release-check.log
+      - name: Create complete runnable source archive
+        run: |
+          git archive --format=zip --prefix=steadybar/ HEAD -o /tmp/steadybar-v2.0.0-release.zip
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          with ZipFile('/tmp/steadybar-v2.0.0-release.zip','a',ZIP_DEFLATED) as z:
+              for p in Path('dist').rglob('*'):
+                  if p.is_file(): z.write(p,'steadybar/'+str(p))
+              z.write('/tmp/steadybar-v2-release-check.log','steadybar/docs/qa/release-clean-install-check.log')
+          PY
+          sha256sum /tmp/steadybar-v2.0.0-release.zip | tee /tmp/steadybar-v2.0.0-release.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: steadybar-v2.0.0-release
+          path: |
+            /tmp/steadybar-v2.0.0-release.zip
+            /tmp/steadybar-v2.0.0-release.sha256
+            /tmp/steadybar-v2-release-check.log
+          retention-days: 14
