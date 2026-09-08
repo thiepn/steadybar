@@ -1,0 +1,62 @@
+name: Verify profile matrix synchronization fix
+on:
+  push:
+    branches: [transfer/profile-system-v201]
+    paths: [.github/workflows/fix-profile-matrix-sync.yml]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PLAYWRIGHT_BUNDLED_BROWSER: '1'
+      PLAYWRIGHT_ENGINE: firefox
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/profile-system-v2.0.1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - name: Apply readiness synchronization without weakening layout assertions
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('tests/profiles.py')
+          text=path.read_text()
+          old="""        self.route('/library/'+exercise['id']);self.page.get_by_role('button',name='Start practice',exact=True).click()\n        for width,height in SIZES:\n"""
+          new="""        self.route('/library/'+exercise['id']);self.page.get_by_role('button',name='Start practice',exact=True).click()\n        # launchPractice is asynchronous. Wait for the active route to finish rendering\n        # before measuring its fixed transport; Firefox can otherwise inspect the old\n        # library DOM between the click handler's await and hash navigation.\n        expect(self.page.locator('.active-title')).to_be_visible()\n        for width,height in SIZES:\n"""
+          if text.count(old)!=1: raise SystemExit('Expected matrix launch fragment exactly once')
+          text=text.replace(old,new)
+          old2="control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)"
+          new2="control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box,f'{kind} {name} {width}x{height}');self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)"
+          if text.count(old2)!=1: raise SystemExit('Expected control assertion exactly once')
+          path.write_text(text.replace(old2,new2))
+          PY
+      - name: Verify code suite
+        run: npm ci && npm run check
+      - name: Install Firefox and audio test support
+        run: |
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps firefox
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=steadybar_test
+          pactl set-default-sink steadybar_test
+      - name: Re-run full Firefox profile suite
+        run: python tests/run_suite.py tests/profiles.py
+      - name: Commit exact verified test synchronization
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/profiles.py
+          git commit -m 'Synchronize active practice layout measurements'
+          git push origin HEAD:fix/profile-system-v2.0.1
