@@ -6,7 +6,7 @@ import { seedData } from '../dist/app/db/seed.js';
 import { createBackup, parseBackup } from '../dist/app/db/backup.js';
 import { validateSettings } from '../dist/app/domain/validation.js';
 
-const accents=['graphite','blue','forest','plum','amber','rose'];
+import { ACCENTS as accents } from '../dist/app/domain/appearance.js';
 test('every appearance mode and accent round-trips in the existing backup format',()=>{
  for(const theme of ['system','light','dark'])for(const accent of accents){
   const data=seedData();data.settings.theme=theme;data.settings.accent=accent;
@@ -22,9 +22,9 @@ test('legacy backups without an accent remain importable',()=>{
  assert.equal(parsed.data.exercises.length,data.exercises.length);
 });
 test('invalid accent names are rejected before storage',()=>{
- for(const accent of ['red','auto','',42])assert.throws(()=>validateSettings({...seedData().settings,accent}));
+ for(const accent of ['unknown','auto','',42])assert.throws(()=>validateSettings({...seedData().settings,accent}));
 });
-const script=readFileSync(new URL('../public/theme.js',import.meta.url),'utf8');
+const script=readFileSync(new URL('../dist/theme.js',import.meta.url),'utf8');
 function prepaint(hint,dark=false,denied=false){
  const root={dataset:{},style:{}};
  vm.runInNewContext(script,{document:{documentElement:root},matchMedia:()=>({matches:dark}),localStorage:{getItem(){if(denied)throw new Error('SecurityError');return hint;}}});
