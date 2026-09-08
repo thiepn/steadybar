@@ -1,0 +1,64 @@
+name: Package Steadybar 2.0.1 exact release
+on:
+  push:
+    branches: [release/package-v2.0.1]
+    paths: [.github/workflows/package-v201.yml]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: c09519389f9a295ec7c5140e445ada4ef6e27176
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reverify exact merged source
+        run: npm ci && npm run check
+      - name: Build exact release archive including compiled dist
+        run: |
+          set -euo pipefail
+          git archive --format=zip --prefix=steadybar/ c09519389f9a295ec7c5140e445ada4ef6e27176 -o /tmp/steadybar-v2.0.1-release.zip
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          archive_path=Path('/tmp/steadybar-v2.0.1-release.zip')
+          with ZipFile(archive_path,'a',ZIP_DEFLATED) as z:
+              names=set(z.namelist())
+              for path in Path('dist').rglob('*'):
+                  if not path.is_file(): continue
+                  name='steadybar/'+str(path)
+                  if name not in names:
+                      z.write(path,name)
+          PY
+          unzip -t /tmp/steadybar-v2.0.1-release.zip
+          sha256sum /tmp/steadybar-v2.0.1-release.zip | tee /tmp/steadybar-v2.0.1-release.sha256
+      - name: Fresh-extraction standalone smoke test
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/steadybar-smoke
+          unzip -q /tmp/steadybar-v2.0.1-release.zip -d /tmp/steadybar-smoke
+          test ! -e /tmp/steadybar-smoke/steadybar/node_modules
+          cd /tmp/steadybar-smoke/steadybar
+          node scripts/serve.mjs >/tmp/steadybar-preview.log 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep .25
+          done
+          for path in / /app/main.js /styles.css /appearance.css /sw.js /manifest.webmanifest /icon-192.png /icon-512.png /icon-maskable.png; do
+            curl -fsS "http://127.0.0.1:4173$path" >/dev/null
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: steadybar-v2.0.1-release
+          path: |
+            /tmp/steadybar-v2.0.1-release.zip
+            /tmp/steadybar-v2.0.1-release.sha256
+          retention-days: 14
