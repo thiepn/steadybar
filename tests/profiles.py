@@ -161,6 +161,7 @@ class Profiles(e2e.MusicPracticeTests):
         self.use_profile('Drums');self.assertEqual(self.read("load('app/store.js').store.view().sessions.length"),0)
         self.assertEqual(self.read("load('app/store.js').store.view().dailyPlans[0].profileId"),original['id'])
         self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click()
+        expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
         self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Stage guitar',exact=True))
         row.get_by_role('button',name='Use profile',exact=True).click()
         self.assertEqual(self.profile()['id'],original['id'])
