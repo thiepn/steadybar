@@ -43,6 +43,8 @@ jobs:
         run: python tests/run_suite.py tests/ui_polish.py
       - name: Verify practice workbench and exact responsive matrix
         run: python tests/run_suite.py tests/workbench.py
+      - name: Verify profile migration and instrument-specific practice
+        run: python tests/run_suite.py tests/profiles.py
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -101,6 +103,8 @@ jobs:
         run: python tests/run_suite.py tests/ci_native.py
       - name: Verify workbench layouts and interactions
         run: python tests/run_suite.py tests/workbench.py
+      - name: Verify profile migration and instrument-specific practice
+        run: python tests/run_suite.py tests/profiles.py
       - name: Keep engine evidence
         if: always()
         uses: actions/upload-artifact@v4
