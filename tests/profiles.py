@@ -356,12 +356,16 @@ class Profiles(e2e.MusicPracticeTests):
                     self.page.screenshot(path=str(e2e.ARTIFACTS/f'profiles-{kind}-{label}-{width}.png'),full_page=True)
                 results.append({'profile':kind,'route':label,'width':width,'height':height,'overflow':False})
         self.route('/library/'+exercise['id']);self.page.get_by_role('button',name='Start practice',exact=True).click()
+        # launchPractice is asynchronous. Wait for the active route to finish rendering
+        # before measuring its fixed transport; Firefox can otherwise inspect the old
+        # library DOM between the click handler's await and hash navigation.
+        expect(self.page.locator('.active-title')).to_be_visible()
         for width,height in SIZES:
             self.page.set_viewport_size({'width':width,'height':height})
             self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width,f'{kind} active {width}')
             if width<500:
                 for name in ('Start practice','Finish block'):
-                    control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)
+                    control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box,f'{kind} {name} {width}x{height}');self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)
             if width in (320,390,820,1440):self.page.screenshot(path=str(e2e.ARTIFACTS/f'profiles-{kind}-active-{width}.png'),full_page=True)
             results.append({'profile':kind,'route':'active','width':width,'height':height,'overflow':False})
         (e2e.ARTIFACTS/f'profiles-{kind}-layout-results.json').write_text(json.dumps(results,indent=2))
