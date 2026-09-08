@@ -25,6 +25,12 @@ The test now waits for `.active-title` to become visible before measuring the un
 
 A superseded Chromium run also exposed a timing-sensitive immutable-history test: immediately after `+ Clean change`, the test could capture the controller outcome list before the asynchronous durable session save completed, even though the later persisted segment correctly contained that result. The gate now waits until the active session in the store contains the committed outcome before taking the pre-edit snapshot. The actual immutable-segment assertions remain unchanged: editing task settings must create a new segment, preserve the prior segment's outcomes exactly, and start the new segment with no outcomes. A dedicated verifier reran the complete Chromium profile suite with this synchronization and passed before committing it to the PR branch.
 
+## Voice review lifecycle audit
+
+The final pre-release Firefox run exposed a real interaction problem rather than a test-only race. A high-fatigue Voice review first saved its result durably and then awaited a second persistence checkpoint from `practice.pause()` before the shared form dialog could close. On a slower browser the result was already safe, but the modal could remain visibly stuck while the pause checkpoint finished.
+
+The flow now keeps the durable review save as the submit boundary, then starts the vocal-rest pause without blocking dialog dismissal. `practice.pause()` stops reference playback, metronome audio, timers and wake-lock activity synchronously before its first persistence await, so the safety action begins immediately. Completion still persists the paused session, and any pause failure is surfaced to the user rather than swallowed. A dedicated clean-install verifier passed **277/277 Node tests** and then reran the complete Firefox profile suite successfully with this product fix before committing it to the PR branch.
+
 ## Release blockers
 
 Do not merge unless the exact final PR head passes all existing mandatory release gates:
@@ -34,4 +40,4 @@ Do not merge unless the exact final PR head passes all existing mandatory releas
 - Firefox native persistence/recovery/offline/backup/audio, workbench and profile-system suites;
 - WebKit native persistence/recovery/offline/backup/audio, workbench and profile-system suites.
 
-The application patch has independently passed clean `npm ci`, strict TypeScript, production build and **277/277 Node tests**. Both synchronization changes have separately passed their complete affected browser profile suite. The final user-authored PR head must still pass the complete three-engine workflow before merge.
+The application patch has independently passed clean `npm ci`, strict TypeScript, production build and **277/277 Node tests**. The Firefox layout synchronization, Chromium durable-outcome synchronization and Voice review lifecycle fix have each separately passed their complete affected browser profile suite. The final user-authored PR head must still pass the complete three-engine workflow before merge.
