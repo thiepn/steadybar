@@ -1,0 +1,745 @@
+
+> steadybar@1.2.0 test
+> npm run build && node --test tests/*.test.mjs
+
+
+> steadybar@1.2.0 build
+> node scripts/build.mjs
+
+Built 47 local assets · offline cache a67a43b823f86e
+TAP version 13
+# Subtest: Steadybar is the package and installable application name
+ok 1 - Steadybar is the package and installable application name
+  ---
+  duration_ms: 0.896611
+  type: 'test'
+  ...
+# Subtest: browser and Apple install metadata use Steadybar
+ok 2 - browser and Apple install metadata use Steadybar
+  ---
+  duration_ms: 0.243698
+  type: 'test'
+  ...
+# Subtest: the UI and onboarding use Steadybar instead of the working title
+ok 3 - the UI and onboarding use Steadybar instead of the working title
+  ---
+  duration_ms: 0.253443
+  type: 'test'
+  ...
+# Subtest: PWA assets, launch URL and scope remain relative for repository subpaths
+ok 4 - PWA assets, launch URL and scope remain relative for repository subpaths
+  ---
+  duration_ms: 0.275044
+  type: 'test'
+  ...
+# Subtest: rebranding preserves the existing database and cross-tab lock names
+ok 5 - rebranding preserves the existing database and cross-tab lock names
+  ---
+  duration_ms: 0.222756
+  type: 'test'
+  ...
+# Subtest: version-1 Music Practice OS backups still round-trip without data changes
+ok 6 - version-1 Music Practice OS backups still round-trip without data changes
+  ---
+  duration_ms: 4.022614
+  type: 'test'
+  ...
+# Subtest: controlled A/B/C: exactly 60 active minutes
+ok 7 - controlled A/B/C: exactly 60 active minutes
+  ---
+  duration_ms: 1.6588
+  type: 'test'
+  ...
+# Subtest: controlled A/B/C: technique/song each 30 min and 50%
+ok 8 - controlled A/B/C: technique/song each 30 min and 50%
+  ---
+  duration_ms: 0.937924
+  type: 'test'
+  ...
+# Subtest: controlled A/B/C: best clean 105; attempted 110
+ok 9 - controlled A/B/C: best clean 105; attempted 110
+  ---
+  duration_ms: 0.349437
+  type: 'test'
+  ...
+# Subtest: failed and messy attempts never raise best clean
+ok 10 - failed and messy attempts never raise best clean
+  ---
+  duration_ms: 0.185069
+  type: 'test'
+  ...
+# Subtest: empty attempts do not invent a zero BPM result
+ok 11 - empty attempts do not invent a zero BPM result
+  ---
+  duration_ms: 1.127169
+  type: 'test'
+  ...
+# Subtest: latest successful is chronological, not highest BPM
+ok 12 - latest successful is chronological, not highest BPM
+  ---
+  duration_ms: 9.563776
+  type: 'test'
+  ...
+# Subtest: average active duration is 20 min
+ok 13 - average active duration is 20 min
+  ---
+  duration_ms: 0.19206
+  type: 'test'
+  ...
+# Subtest: zero history has zero average and an empty distribution
+ok 14 - zero history has zero average and an empty distribution
+  ---
+  duration_ms: 0.18591
+  type: 'test'
+  ...
+# Subtest: active sessions excluded, abandoned time retained
+ok 15 - active sessions excluded, abandoned time retained
+  ---
+  duration_ms: 0.693736
+  type: 'test'
+  ...
+# Subtest: weekly count uses local ISO Monday, excluding abandoned and active
+ok 16 - weekly count uses local ISO Monday, excluding abandoned and active
+  ---
+  duration_ms: 1.071836
+  type: 'test'
+  ...
+# Subtest: local date retains Europe/Berlin midnight boundary
+ok 17 - local date retains Europe/Berlin midnight boundary
+  ---
+  duration_ms: 0.263037
+  type: 'test'
+  ...
+# Subtest: tempo series is cumulative clean only and grouped locally
+ok 18 - tempo series is cumulative clean only and grouped locally
+  ---
+  duration_ms: 0.305681
+  type: 'test'
+  ...
+# Subtest: date filter uses inclusive local days
+ok 19 - date filter uses inclusive local days
+  ---
+  duration_ms: 0.335095
+  type: 'test'
+  ...
+# Subtest: practice daily totals are computed from actual time
+ok 20 - practice daily totals are computed from actual time
+  ---
+  duration_ms: 0.231198
+  type: 'test'
+  ...
+# Subtest: large attempt history does not overflow argument stack
+ok 21 - large attempt history does not overflow argument stack
+  ---
+  duration_ms: 214.750272
+  type: 'test'
+  ...
+# Subtest: built-in library includes every required rudiment, no history
+ok 22 - built-in library includes every required rudiment, no history
+  ---
+  duration_ms: 0.406292
+  type: 'test'
+  ...
+# Subtest: starter routines have exact 20/30/45/60 minute duration
+ok 23 - starter routines have exact 20/30/45/60 minute duration
+  ---
+  duration_ms: 0.225169
+  type: 'test'
+  ...
+# Subtest: all starter content validates and round-trips as backup
+ok 24 - all starter content validates and round-trips as backup
+  ---
+  duration_ms: 2.457264
+  type: 'test'
+  ...
+# Subtest: new daily-plan blocks have independent IDs
+ok 25 - new daily-plan blocks have independent IDs
+  ---
+  duration_ms: 0.17244
+  type: 'test'
+  ...
+# Subtest: reorder is immutable and rejects out-of-range moves safely
+ok 26 - reorder is immutable and rejects out-of-range moves safely
+  ---
+  duration_ms: 0.105058
+  type: 'test'
+  ...
+# Subtest: exercise history keeps snapshots after edit/archive
+ok 27 - exercise history keeps snapshots after edit/archive
+  ---
+  duration_ms: 0.166591
+  type: 'test'
+  ...
+# Subtest: missing exercise cannot start an untraceable session
+ok 28 - missing exercise cannot start an untraceable session
+  ---
+  duration_ms: 0.370238
+  type: 'test'
+  ...
+# Subtest: empty plan cannot start a session
+ok 29 - empty plan cannot start a session
+  ---
+  duration_ms: 0.200783
+  type: 'test'
+  ...
+# Subtest: timer is derived from timestamps rather than tick count
+ok 30 - timer is derived from timestamps rather than tick count
+  ---
+  duration_ms: 0.184298
+  type: 'test'
+  ...
+# Subtest: pause excludes all subsequent wall-clock time
+ok 31 - pause excludes all subsequent wall-clock time
+  ---
+  duration_ms: 0.24527
+  type: 'test'
+  ...
+# Subtest: checkpoint advances the base without double-counting
+ok 32 - checkpoint advances the base without double-counting
+  ---
+  duration_ms: 0.145519
+  type: 'test'
+  ...
+# Subtest: count-in never advances active time
+ok 33 - count-in never advances active time
+  ---
+  duration_ms: 0.11909
+  type: 'test'
+  ...
+# Subtest: recovery pauses at persisted checkpoint, excludes unknown downtime
+ok 34 - recovery pauses at persisted checkpoint, excludes unknown downtime
+  ---
+  duration_ms: 0.238509
+  type: 'test'
+  ...
+# Subtest: finish and skip preserve independent block state
+ok 35 - finish and skip preserve independent block state
+  ---
+  duration_ms: 0.668537
+  type: 'test'
+  ...
+# Subtest: restart retains prior time and attempts in a separate segment
+ok 36 - restart retains prior time and attempts in a separate segment
+  ---
+  duration_ms: 0.329426
+  type: 'test'
+  ...
+# Subtest: wall clock going backward cannot create negative active duration
+ok 37 - wall clock going backward cannot create negative active duration
+  ---
+  duration_ms: 0.187252
+  type: 'test'
+  ...
+# Subtest: progressive trainer clamps at max without wrapping
+ok 38 - progressive trainer clamps at max without wrapping
+  ---
+  duration_ms: 0.134592
+  type: 'test'
+  ...
+# Subtest: repetition trainer advances only at complete clean-round thresholds
+ok 39 - repetition trainer advances only at complete clean-round thresholds
+  ---
+  duration_ms: 0.07986
+  type: 'test'
+  ...
+# Subtest: ladder follows explicit stages and holds final BPM
+ok 40 - ladder follows explicit stages and holds final BPM
+  ---
+  duration_ms: 0.084418
+  type: 'test'
+  ...
+# Subtest: endurance trainer remains fixed regardless of elapsed time
+ok 41 - endurance trainer remains fixed regardless of elapsed time
+  ---
+  duration_ms: 0.058849
+  type: 'test'
+  ...
+# Subtest: trainer rejects negative stages and backward maximum
+ok 42 - trainer rejects negative stages and backward maximum
+  ---
+  duration_ms: 0.339191
+  type: 'test'
+  ...
+# Subtest: backup rejects unknown format or future version
+ok 43 - backup rejects unknown format or future version
+  ---
+  duration_ms: 0.578913
+  type: 'test'
+  ...
+# Subtest: malformed JSON does not become an empty successful import
+ok 44 - malformed JSON does not become an empty successful import
+  ---
+  duration_ms: 0.106791
+  type: 'test'
+  ...
+# Subtest: backup deeply validates BPMs, time, type, and accent length
+ok 45 - backup deeply validates BPMs, time, type, and accent length
+  ---
+  duration_ms: 2.465307
+  type: 'test'
+  ...
+# Subtest: backup rejects duplicate IDs and multiple active sessions
+ok 46 - backup rejects duplicate IDs and multiple active sessions
+  ---
+  duration_ms: 1.916179
+  type: 'test'
+  ...
+# Subtest: date-only validator rejects normalized invalid dates
+ok 47 - date-only validator rejects normalized invalid dates
+  ---
+  duration_ms: 0.098288
+  type: 'test'
+  ...
+# Subtest: validation copies data instead of mutating backup input
+ok 48 - validation copies data instead of mutating backup input
+  ---
+  duration_ms: 0.687727
+  type: 'test'
+  ...
+# Subtest: ISO offset timestamps normalize to UTC for deterministic ordering
+ok 49 - ISO offset timestamps normalize to UTC for deterministic ordering
+  ---
+  duration_ms: 0.725464
+  type: 'test'
+  ...
+# Subtest: v1 to v2 migration preserves choices and introduces safe visibility policy
+ok 50 - v1 to v2 migration preserves choices and introduces safe visibility policy
+  ---
+  duration_ms: 0.161354
+  type: 'test'
+  ...
+# Subtest: BPM goal derives from clean attempts, not attempted tempo
+ok 51 - BPM goal derives from clean attempts, not attempted tempo
+  ---
+  duration_ms: 0.265069
+  type: 'test'
+  ...
+# Subtest: song mastery reflects status, custom goal manual completion
+ok 52 - song mastery reflects status, custom goal manual completion
+  ---
+  duration_ms: 0.152991
+  type: 'test'
+  ...
+# Subtest: Web Audio schedule: 120 BPM has exact 0.5-second beat intervals
+ok 53 - Web Audio schedule: 120 BPM has exact 0.5-second beat intervals
+  ---
+  duration_ms: 0.236226
+  type: 'test'
+  ...
+# Subtest: subdivisions stay phase-aligned with beats and measures
+ok 54 - subdivisions stay phase-aligned with beats and measures
+  ---
+  duration_ms: 0.223877
+  type: 'test'
+  ...
+# Subtest: long-run schedule does not use rendered-frame timing
+ok 55 - long-run schedule does not use rendered-frame timing
+  ---
+  duration_ms: 6.760241
+  type: 'test'
+  ...
+# Subtest: meter and subdivision changes apply at a bar boundary
+ok 56 - meter and subdivision changes apply at a bar boundary
+  ---
+  duration_ms: 0.249266
+  type: 'test'
+  ...
+# Subtest: reverting a pending structural change cancels it
+ok 57 - reverting a pending structural change cancels it
+  ---
+  duration_ms: 0.133421
+  type: 'test'
+  ...
+# Subtest: tempo changes preserve beat order and affect next interval
+ok 58 - tempo changes preserve beat order and affect next interval
+  ---
+  duration_ms: 0.095154
+  type: 'test'
+  ...
+# Subtest: accent muting silences every subdivision in that beat
+ok 59 - accent muting silences every subdivision in that beat
+  ---
+  duration_ms: 0.102485
+  type: 'test'
+  ...
+# Subtest: count-in marks exactly the first two bars
+ok 60 - count-in marks exactly the first two bars
+  ---
+  duration_ms: 0.111358
+  type: 'test'
+  ...
+# Subtest: late scheduler skips stale clicks rather than bursting them
+ok 61 - late scheduler skips stale clicks rather than bursting them
+  ---
+  duration_ms: 0.155585
+  type: 'test'
+  ...
+# Subtest: compound meter defaults group accents in threes
+ok 62 - compound meter defaults group accents in threes
+  ---
+  duration_ms: 0.100441
+  type: 'test'
+  ...
+# Subtest: tap tempo uses robust median of recent intervals
+ok 63 - tap tempo uses robust median of recent intervals
+  ---
+  duration_ms: 0.197738
+  type: 'test'
+  ...
+# Subtest: tap tempo resets after inactivity and ignores double taps
+ok 64 - tap tempo resets after inactivity and ignores double taps
+  ---
+  duration_ms: 0.087512
+  type: 'test'
+  ...
+# Subtest: tap tempo covers the slow 20 BPM lower limit
+ok 65 - tap tempo covers the slow 20 BPM lower limit
+  ---
+  duration_ms: 0.063065
+  type: 'test'
+  ...
+# Subtest: endurance snapshot uses the trainer target duration and BPM
+ok 66 - endurance snapshot uses the trainer target duration and BPM
+  ---
+  duration_ms: 0.150357
+  type: 'test'
+  ...
+# Subtest: restarting a tempo trainer resets its BPM and keeps old attempts
+ok 67 - restarting a tempo trainer resets its BPM and keeps old attempts
+  ---
+  duration_ms: 0.188053
+  type: 'test'
+  ...
+# Subtest: validation rejects duplicate attempt IDs within a block
+ok 68 - validation rejects duplicate attempt IDs within a block
+  ---
+  duration_ms: 0.336738
+  type: 'test'
+  ...
+# Subtest: validation rejects a running timer without an ISO start timestamp
+ok 69 - validation rejects a running timer without an ISO start timestamp
+  ---
+  duration_ms: 0.22584
+  type: 'test'
+  ...
+# Subtest: UUIDs use secure v4 format and are unique across generated records
+ok 70 - UUIDs use secure v4 format and are unique across generated records
+  ---
+  duration_ms: 1.029642
+  type: 'test'
+  ...
+# Subtest: repository initialization commits all starter tables without fake history
+ok 71 - repository initialization commits all starter tables without fake history
+  ---
+  duration_ms: 13.103803
+  type: 'test'
+  ...
+# Subtest: repository exercise create/read/update/archive uses durable repository calls
+ok 72 - repository exercise create/read/update/archive uses durable repository calls
+  ---
+  duration_ms: 6.73394
+  type: 'test'
+  ...
+# Subtest: repository does not report save completion after a request but before commit
+ok 73 - repository does not report save completion after a request but before commit
+  ---
+  duration_ms: 4.461165
+  type: 'test'
+  ...
+# Subtest: repository rolls back a failed commit and surfaces the original error
+ok 74 - repository rolls back a failed commit and surfaces the original error
+  ---
+  duration_ms: 4.050947
+  type: 'test'
+  ...
+# Subtest: invalid complete replacement leaves every existing table untouched
+ok 75 - invalid complete replacement leaves every existing table untouched
+  ---
+  duration_ms: 4.549738
+  type: 'test'
+  ...
+# Subtest: mid-replacement failure rolls back earlier clears and writes in all stores
+ok 76 - mid-replacement failure rolls back earlier clears and writes in all stores
+  ---
+  duration_ms: 6.625938
+  type: 'test'
+  ...
+# Subtest: two concurrent session launches cannot insert two active sessions
+ok 77 - two concurrent session launches cannot insert two active sessions
+  ---
+  duration_ms: 3.346975
+  type: 'test'
+  ...
+# Subtest: session updates serialize against the newest committed record
+ok 78 - session updates serialize against the newest committed record
+  ---
+  duration_ms: 3.509862
+  type: 'test'
+  ...
+# Subtest: stale commands after completion abort without rewriting saved history
+ok 79 - stale commands after completion abort without rewriting saved history
+  ---
+  duration_ms: 3.050739
+  type: 'test'
+  ...
+# Subtest: a session update cannot rewrite its persistent identity
+ok 80 - a session update cannot rewrite its persistent identity
+  ---
+  duration_ms: 2.68005
+  type: 'test'
+  ...
+# Subtest: complete backup restore preserves all entity types, attempts and historical snapshots
+ok 81 - complete backup restore preserves all entity types, attempts and historical snapshots
+  ---
+  duration_ms: 8.170997
+  type: 'test'
+  ...
+# Subtest: restore pauses a running checkpoint immediately, before any page reload
+ok 82 - restore pauses a running checkpoint immediately, before any page reload
+  ---
+  duration_ms: 3.231972
+  type: 'test'
+  ...
+# Subtest: ownership coalesces simultaneous acquire requests without duplicate locks
+ok 83 - ownership coalesces simultaneous acquire requests without duplicate locks
+  ---
+  duration_ms: 5.982829
+  type: 'test'
+  ...
+# Subtest: ownership cancellation prevents a late lock grant from starting work
+ok 84 - ownership cancellation prevents a late lock grant from starting work
+  ---
+  duration_ms: 1.492459
+  type: 'test'
+  ...
+# Subtest: a cancelled old request cannot release a newer lease
+ok 85 - a cancelled old request cannot release a newer lease
+  ---
+  duration_ms: 1.14827
+  type: 'test'
+  ...
+# Subtest: competing tab gets a useful error rather than a delayed automatic start
+ok 86 - competing tab gets a useful error rather than a delayed automatic start
+  ---
+  duration_ms: 0.918885
+  type: 'test'
+  ...
+# Subtest: unsupported Web Locks has a nonthrowing per-tab fallback
+ok 87 - unsupported Web Locks has a nonthrowing per-tab fallback
+  ---
+  duration_ms: 0.430359
+  type: 'test'
+  ...
+# Subtest: completed sessions reject stale commands before any mutation
+ok 88 - completed sessions reject stale commands before any mutation
+  ---
+  duration_ms: 3.105902
+  type: 'test'
+  ...
+# Subtest: abandoned sessions cannot be revived by a stale timer command
+ok 89 - abandoned sessions cannot be revived by a stale timer command
+  ---
+  duration_ms: 0.382547
+  type: 'test'
+  ...
+# Subtest: queued commands for the previous block are not applied to the next block
+ok 90 - queued commands for the previous block are not applied to the next block
+  ---
+  duration_ms: 0.448196
+  type: 'test'
+  ...
+# Subtest: scheduler retains count-in onset when throttling skips its first practice click
+ok 91 - scheduler retains count-in onset when throttling skips its first practice click
+  ---
+  duration_ms: 1.013728
+  type: 'test'
+  ...
+# Subtest: very long scheduler suspension catches up arithmetically without stale bursts
+ok 92 - very long scheduler suspension catches up arithmetically without stale bursts
+  ---
+  duration_ms: 0.36453
+  type: 'test'
+  ...
+# Subtest: pending meter change and skipped count-in retain the correct onset
+ok 93 - pending meter change and skipped count-in retain the correct onset
+  ---
+  duration_ms: 0.235705
+  type: 'test'
+  ...
+# Subtest: changing count-in while playing applies only to the next start
+ok 94 - changing count-in while playing applies only to the next start
+  ---
+  duration_ms: 0.117127
+  type: 'test'
+  ...
+# Subtest: arithmetic catch-up matches a reference event-by-event clock across configurations
+ok 95 - arithmetic catch-up matches a reference event-by-event clock across configurations
+  ---
+  duration_ms: 4.637571
+  type: 'test'
+  ...
+# Subtest: complete data replacement rejects nested duplicate IDs before opening storage
+ok 96 - complete data replacement rejects nested duplicate IDs before opening storage
+  ---
+  duration_ms: 1.697819
+  type: 'test'
+  ...
+# Subtest: replacement validation rejects malformed tables even without a backup wrapper
+ok 97 - replacement validation rejects malformed tables even without a backup wrapper
+  ---
+  duration_ms: 2.30881
+  type: 'test'
+  ...
+# Subtest: replacement validation rejects duplicate dates before touching the database
+ok 98 - replacement validation rejects duplicate dates before touching the database
+  ---
+  duration_ms: 0.767567
+  type: 'test'
+  ...
+# Subtest: exercise bounds, route-safe IDs and blank names are validated
+ok 99 - exercise bounds, route-safe IDs and blank names are validated
+  ---
+  duration_ms: 0.30559
+  type: 'test'
+  ...
+# Subtest: a routine cannot claim to practice an exercise without a source identifier
+ok 100 - a routine cannot claim to practice an exercise without a source identifier
+  ---
+  duration_ms: 0.270498
+  type: 'test'
+  ...
+# Subtest: song-section IDs must be unique inside each song
+ok 101 - song-section IDs must be unique inside each song
+  ---
+  duration_ms: 0.297658
+  type: 'test'
+  ...
+# Subtest: goal validators require meaningful source records and possible BPMs
+ok 102 - goal validators require meaningful source records and possible BPMs
+  ---
+  duration_ms: 0.327193
+  type: 'test'
+  ...
+# Subtest: all seeded nested records still validate after hardening
+ok 103 - all seeded nested records still validate after hardening
+  ---
+  duration_ms: 0.86917
+  type: 'test'
+  ...
+# Subtest: put rejects invalid payloads before attempting a native transaction
+ok 104 - put rejects invalid payloads before attempting a native transaction
+  ---
+  duration_ms: 0.264398
+  type: 'test'
+  ...
+# Subtest: insertActiveSession rejects completed records before storage access
+ok 105 - insertActiveSession rejects completed records before storage access
+  ---
+  duration_ms: 0.415867
+  type: 'test'
+  ...
+# Subtest: critical transactions request strict durability
+ok 106 - critical transactions request strict durability
+  ---
+  duration_ms: 0.14574
+  type: 'test'
+  ...
+# Subtest: durability compatibility fallback handles only unsupported options
+ok 107 - durability compatibility fallback handles only unsupported options
+  ---
+  duration_ms: 0.109966
+  type: 'test'
+  ...
+# Subtest: storage permission errors are not retried as weaker transactions
+ok 108 - storage permission errors are not retried as weaker transactions
+  ---
+  duration_ms: 0.108774
+  type: 'test'
+  ...
+# Subtest: chart coordinates preserve unequal gaps between practice dates
+ok 109 - chart coordinates preserve unequal gaps between practice dates
+  ---
+  duration_ms: 0.602568
+  type: 'test'
+  ...
+# Subtest: chart calendar spacing is unaffected by local daylight-saving transitions
+ok 110 - chart calendar spacing is unaffected by local daylight-saving transitions
+  ---
+  duration_ms: 0.183186
+  type: 'test'
+  ...
+# Subtest: a single chart point is centered and empty data stays empty
+ok 111 - a single chart point is centered and empty data stays empty
+  ---
+  duration_ms: 0.161674
+  type: 'test'
+  ...
+# Subtest: daily peak is actual data, independent of the chart axis minimum
+ok 112 - daily peak is actual data, independent of the chart axis minimum
+  ---
+  duration_ms: 0.218499
+  type: 'test'
+  ...
+# Subtest: positive subsecond practice is not labeled as zero time
+ok 113 - positive subsecond practice is not labeled as zero time
+  ---
+  duration_ms: 0.184838
+  type: 'test'
+  ...
+# Subtest: PWA installation precaches every generated app asset from disk
+ok 114 - PWA installation precaches every generated app asset from disk
+  ---
+  duration_ms: 3.151751
+  type: 'test'
+  ...
+# Subtest: PWA installation does not unexpectedly activate an update
+ok 115 - PWA installation does not unexpectedly activate an update
+  ---
+  duration_ms: 1.092296
+  type: 'test'
+  ...
+# Subtest: PWA activation cleans only older caches for its own scope
+ok 116 - PWA activation cleans only older caches for its own scope
+  ---
+  duration_ms: 2.597095
+  type: 'test'
+  ...
+# Subtest: PWA returns the cached shell for navigation without network
+ok 117 - PWA returns the cached shell for navigation without network
+  ---
+  duration_ms: 1.029452
+  type: 'test'
+  ...
+# Subtest: PWA returns cached application modules without network
+ok 118 - PWA returns cached application modules without network
+  ---
+  duration_ms: 1.761225
+  type: 'test'
+  ...
+# Subtest: PWA leaves cross-origin requests and non-GET writes alone
+ok 119 - PWA leaves cross-origin requests and non-GET writes alone
+  ---
+  duration_ms: 0.533214
+  type: 'test'
+  ...
+# Subtest: PWA unknown same-origin assets use the network, not fabricated content
+ok 120 - PWA unknown same-origin assets use the network, not fabricated content
+  ---
+  duration_ms: 0.831523
+  type: 'test'
+  ...
+# Subtest: PWA activation preserves caches for child paths on the same origin
+ok 121 - PWA activation preserves caches for child paths on the same origin
+  ---
+  duration_ms: 0.838414
+  type: 'test'
+  ...
+1..121
+# tests 121
+# suites 0
+# pass 121
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 379.689822

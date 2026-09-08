@@ -1,0 +1,13 @@
+{
+  "mode": "in-document rendered UI with validated memory storage",
+  "run": 29,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 3,
+  "skip_reasons": [
+    "Requires real origin/IndexedDB; in-document harness is not persistence verification.",
+    "Requires network navigation and a real service worker; not verified by memory harness.",
+    "Real downloads/transactional restore require an allowed localhost origin."
+  ],
+  "date": "2026-09-08T00:44:13Z"
+}
