@@ -38,21 +38,8 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Verify complete rendered UI workflows
         run: python tests/e2e.py --render
-      - name: Verify capabilities that require a real browser origin
-        shell: bash
-        run: |
-          set -euo pipefail
-          tests=(
-            test_14_reload_recovery_real_indexeddb
-            test_15_offline_service_worker_real_origin
-            test_16_backup_download_restore_real_storage
-            test_17_real_webaudio_schedule_and_stop
-            test_18_countin_excluded_and_cancelled_safely
-            test_19_drag_reorder_and_keyboard_skip_link
-          )
-          for test_name in "${tests[@]}"; do
-            python tests/e2e.py --test "$test_name"
-          done
+      - name: Verify real IndexedDB, service worker, backup and audio capabilities
+        run: python tests/ci_native.py
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
