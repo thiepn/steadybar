@@ -9,11 +9,17 @@ from __future__ import annotations
 
 import time
 import unittest
+import subprocess
+from urllib.request import urlopen
 
 import e2e
 
 
 class NativeOriginSmoke(e2e.MusicPracticeTests):
+    def setUp(self):
+        super().setUp()
+        self.page.on('pageerror', lambda error: print('Browser error stack:', error.stack))
+
     def wait_read(self, expression, predicate, timeout_ms=7000):
         deadline = time.monotonic() + timeout_ms / 1000
         last = None
@@ -51,6 +57,76 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
             lambda value: value == 'abandoned',
         )
 
+    def test_15_offline_service_worker_real_origin(self):
+        if not self.server:
+            # External test origins are not owned by this suite.
+            return super().test_15_offline_service_worker_real_origin()
+        self.onboard()
+        self.page.evaluate('navigator.serviceWorker.ready.then(()=>true)')
+        self.page.reload(wait_until='networkidle')
+        self.page.wait_for_function('()=>navigator.serviceWorker.controller !== null')
+        # Stop the actual HTTP origin. This proves offline behavior without
+        # relying on WebKit's emulated-offline reload implementation.
+        cls = type(self)
+        cls.server.terminate()
+        cls.server.wait(timeout=10)
+        try:
+            with self.assertRaises(OSError):
+                urlopen(e2e.URL, timeout=1)
+            self.page.reload(wait_until='domcontentloaded')
+            e2e.expect(self.page.get_by_role('heading', name='Today', exact=True)).to_be_visible()
+            self.route('/library')
+            e2e.expect(self.page.get_by_role('link', name='Double Stroke Roll', exact=True)).to_be_visible()
+            self.route('/metronome')
+            self.page.get_by_role('button', name='Start metronome', exact=True).click()
+            e2e.expect(self.page.get_by_role('button', name='Pause metronome', exact=True)).to_be_visible()
+            self.page.get_by_role('button', name='Pause metronome', exact=True).click()
+            self.route('/practice')
+            self.page.get_by_role('button', name='Start free practice', exact=True).click()
+            self.start()
+            self.finish()
+            self.page.reload(wait_until='domcontentloaded')
+            e2e.expect(self.page.locator('#main')).to_be_visible()
+            self.wait_read("load('app/store.js').store.snapshot().sessions.length", lambda value: value == 1)
+        finally:
+            cls.server = subprocess.Popen(['node', 'scripts/serve.mjs'], cwd=e2e.ROOT,
+                                          stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            for _ in range(50):
+                try:
+                    urlopen(e2e.URL, timeout=1).close()
+                    break
+                except OSError:
+                    time.sleep(.1)
+            else:
+                self.fail('Test HTTP origin could not be restarted.')
+
+    def test_17_real_webaudio_schedule_and_stop(self):
+        self.onboard()
+        self.route('/metronome')
+        self.page.evaluate("""()=>{
+            window.__scheduled=[];
+            const make=AudioContext.prototype.createOscillator;
+            AudioContext.prototype.createOscillator=function(){
+                const node=make.call(this),start=node.start;
+                node.start=function(time){window.__scheduled.push(time);return start.call(this,time);};
+                return node;
+            };
+        }""")
+        self.page.get_by_label('BPM', exact=True).fill('120')
+        self.page.get_by_label('BPM', exact=True).press('Tab')
+        self.page.get_by_label('Subdivision', exact=True).select_option('4')
+        self.page.get_by_role('button', name='Start metronome', exact=True).click()
+        # A click dispatch is not an AudioContext-ready signal. Wait for actual
+        # native scheduling; retain the exact subdivision interval assertion.
+        self.page.wait_for_function('()=>window.__scheduled.length >= 9', timeout=7000)
+        self.page.get_by_role('button', name='Pause metronome', exact=True).click()
+        events = self.page.evaluate('window.__scheduled')
+        self.assertGreaterEqual(len(events), 9)
+        for earlier, later in zip(events, events[1:]):
+            self.assertAlmostEqual(later - earlier, .125, places=8, msg=repr(events))
+        self.page.wait_for_timeout(250)
+        self.assertEqual(self.page.evaluate('window.__scheduled.length'), len(events))
+
     def test_16_backup_download_restore_real_storage(self):
         self.onboard()
         self.create_song('Restore this song')
@@ -66,7 +142,9 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.page.reload(wait_until='networkidle')
         self.wait_read("load('app/store.js').store.snapshot().songs.length", lambda value: value == 0)
         self.page.get_by_label('Choose backup file', exact=True).set_input_files(str(target))
-        self.confirm('Back up & replace')
+        with self.page.expect_navigation(wait_until='networkidle'):
+            self.confirm('Back up & replace')
+        e2e.expect(self.page.locator('#main')).to_be_visible()
         self.wait_read(
             "load('app/store.js').store.snapshot().songs.length",
             lambda value: value == 1,
