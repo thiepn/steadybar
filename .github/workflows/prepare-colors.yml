@@ -20,17 +20,19 @@ jobs:
         run: python3 scripts/neutral-colors-update.py
       - name: Verify source and production build
         run: npm ci && npm run check
-      - name: Remove transfer tooling and commit complete source
+      - name: Commit application sources without workflow changes
         run: |
-          rm scripts/neutral-colors-update.py .github/workflows/prepare-colors.yml
+          git restore --source=HEAD --staged --worktree .github/workflows
+          rm scripts/neutral-colors-update.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git add -f dist
           git commit -m 'Add neutral dark backgrounds and sixteen independent accents'
-          git push origin HEAD:update/neutral-color-transfer
           git archive --format=zip --prefix=steadybar/ HEAD -o /tmp/steadybar-colors-source.zip
+          git push origin HEAD:update/neutral-color-transfer
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: steadybar-colors-source
           path: /tmp/steadybar-colors-source.zip
