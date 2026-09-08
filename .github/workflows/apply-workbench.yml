@@ -26,21 +26,20 @@ jobs:
           assert hashlib.sha256(raw).hexdigest() == '7f7c301eba4c85f5ff5c01b0977da13194e5c309b670c6437d66264c3e21b8fd'
           records = json.loads(raw)
           assert len(records) == 35
-          seen = set()
-          staged = []
+          seen, staged = set(), []
           for record in records:
               name = record['path']
+              if name.startswith('.github/'):
+                  continue  # Workflow changes require the separately authorized connector.
               path = pathlib.PurePosixPath(name)
               assert not path.is_absolute() and '..' not in path.parts and '.git' not in path.parts
               assert name not in seen
               seen.add(name)
-              assert name.startswith(('src/', 'public/', 'tests/', 'docs/')) or name in ('README.md', 'CHANGELOG.md', 'package.json', 'package-lock.json', '.github/workflows/pages.yml', '.github/workflows/source-snapshot.yml')
+              assert name.startswith(('src/', 'public/', 'tests/', 'docs/')) or name in ('README.md', 'CHANGELOG.md', 'package.json', 'package-lock.json')
               dest = root / path
               old = dest.read_bytes() if dest.exists() else None
               assert (hashlib.sha256(old).hexdigest() if old is not None else None) == record['base'], f'Unexpected source revision: {name}'
-              if record.get('delete'):
-                  staged.append((dest, None))
-                  continue
+              assert not record.get('delete')
               lines = (old or b'').decode('utf-8').splitlines(True)
               for start, end, text in reversed(record['edits']):
                   assert 0 <= start <= end <= len(lines)
@@ -49,14 +48,10 @@ jobs:
               assert hashlib.sha256(new).hexdigest() == record['result'], f'Hash mismatch: {name}'
               staged.append((dest, new))
           for dest, content in staged:
-              if content is None:
-                  dest.unlink()
-              else:
-                  dest.parent.mkdir(parents=True, exist_ok=True)
-                  dest.write_bytes(content)
-                  print(hashlib.sha256(content).hexdigest(), dest.relative_to(root))
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_bytes(content)
+              print(hashlib.sha256(content).hexdigest(), dest.relative_to(root))
           shutil.rmtree(root / '.transfer')
-          (root / '.github/workflows/apply-workbench.yml').unlink()
           PY
       - run: npm ci
       - run: npm run check
