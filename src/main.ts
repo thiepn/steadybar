@@ -1,3 +1,5 @@
+import { reference } from './audio/reference.js';
+import { profilePicker } from './ui/profiles.js';
 import { observeCharts } from './ui/charts.js';
 import { applyAppearance, trackSystemAppearance } from './app/appearance.js';
 import { openAppearance } from './ui/appearance.js';
@@ -33,7 +35,7 @@ function route(path:string):Page{
   if(path==='/metronome')return metronomePage();
   if(parts[0]==='library')return id?exercisePage(id):libraryPage();
   if(parts[0]==='routines')return id?routinePage(id):routinesPage();
-  if(parts[0]==='songs')return id?songPage(id):songsPage();
+  if(parts[0]==='songs')return id?songPage(id,parts[2]==='parts'?parts[3]:undefined):songsPage();
   if(parts[0]==='setlists')return id?setlistPage(id):setlistsPage();
   if(path==='/goals')return goalsPage();
   if(path==='/progress')return progressPage();
@@ -76,10 +78,10 @@ function render():void{
     appearance.setAttribute('aria-haspopup','dialog');appearance.title='Appearance';
     const sidebar=el('aside',{class:'sidebar'},
       el('a',{href:'#/',class:'brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
-      makeSearch(),nav,el('div',{class:'sidebar-footer'},appearance));
+      profilePicker(),makeSearch(),nav,el('div',{class:'sidebar-footer'},appearance));
     const header=el('header',{class:'topbar'},
       el('a',{href:'#/',class:'mobile-brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
-      el('div',{class:'actions'},makeSearch(),iconButton('Appearance','sun',openAppearance)));
+      el('div',{class:'actions'},profilePicker(),makeSearch(),iconButton('Appearance','sun',openAppearance)));
     const mobile=el('nav',{class:'mobile-nav','aria-label':'Mobile navigation'});
     for(const [href,label,symbol] of [navigation[0]!,navigation[1]!,navigation[2]!,navigation[3]!]){
       const a=el('a',{href:`#${href}`,class:activeLink(href,path)?'active':''},icon(symbol,20),el('span',{},label));if(activeLink(href,path))a.setAttribute('aria-current','page');mobile.append(a);
@@ -126,7 +128,7 @@ async function boot():Promise<void>{
     })().catch(error=>notify(errorMessage(error),'error'));});
     document.querySelector('.skip-link')?.addEventListener('click',event=>{event.preventDefault();document.querySelector<HTMLElement>('#main')?.focus();});
     window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();if(!document.querySelector('dialog[open]'))openSearch();}});
-    document.addEventListener('visibilitychange',()=>{void practice.onVisibility().catch(e=>notify(errorMessage(e),'error'));});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)reference.stop();void practice.onVisibility().catch(e=>notify(errorMessage(e),'error'));});
     window.addEventListener('pwa-state',drawPwaState);void registerPwa();
     if(!store.snapshot().settings.onboardingDone)showOnboarding();
   }catch(error){root.replaceChildren(el('div',{class:'boot storage-error'},brandMark(),el('h1',{},'Your practice data needs a safe place.'),el('p',{},errorMessage(error)),el('p',{class:'muted'},'Enable website storage, leave private browsing if necessary, and reload. No temporary session will be presented as saved.'),button('Try again',()=>location.reload(),'primary','restart')));}

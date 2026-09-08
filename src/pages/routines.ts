@@ -9,7 +9,7 @@ import { blockList } from '../ui/block-list.js';
 import { launchPractice, routineToday } from '../practice/launch.js';
 let showArchivedRoutines = false;
 export function routinesPage(): Page {
-  const data = store.snapshot(), list = el('div', { class: 'routine-collection' });
+  const data = store.view(), list = el('div', { class: 'routine-collection' });
   const archived = checkbox('archived', 'Show archived routines', showArchivedRoutines);
   const draw = () => {
     showArchivedRoutines = archived.querySelector('input')!.checked;
@@ -34,7 +34,7 @@ export function routinesPage(): Page {
   return { node: el('div', { class: 'page' }, pageHeader('', 'Routines', 'Reusable sequences for the time you have.', [button('New routine', () => editRoutine(), 'primary', 'plus')]), el('div', { class: 'filter-line' }, archived), list) };
 }
 export function routinePage(id:string):Page{
-  const routine=store.snapshot().routines.find(r=>r.id===id);if(!routine)return {node:empty('Routine not found.','Choose another routine from your library.',link('Routines','/routines','button primary'))};
+  const routine=store.view().routines.find(r=>r.id===id);if(!routine)return {node:empty('Routine not found.','Choose another routine from your library.',link('Routines','/routines','button primary'))};
   const start=button('Start routine',()=>launchPractice(routine.blocks,{routineId:id}),'primary','play');start.disabled=!routine.blocks.length;
   const page=el('div',{class:'page'},link('All routines','/routines','back-link'),pageHeader(routine.builtin?'':'',routine.name,routine.description,[button('Edit details',()=>editRoutine(routine),'secondary','edit'),start]));
   page.append(el('div',{class:'routine-summary'},badge(`${routine.blocks.length} blocks`),badge(duration(routineDuration(routine.blocks)),'accent'),routine.scheduledDays.length?el('span',{class:'muted'},`Scheduled: ${routine.scheduledDays.map(d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')}`):el('span',{class:'muted'},'Not scheduled')));

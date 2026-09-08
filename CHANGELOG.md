@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.0 — Instrument-specific practice profiles — 2026-09-08
+
+- Add stable multiple practice profiles, instrument-specific skills/focus/capabilities, profile management and guarded switching.
+- Replace compulsory drum/BPM exercise fields with 11 typed protocols and protocol-specific outcome records.
+- Add 140 starter exercises across Drums, Guitar, Bass, Piano and Voice, exact-duration templates and capability-based Custom profiles.
+- Add chord counts, fretboard note checks, bass groove reviews, piano key/hand cycles, first-reading evidence, bounded vocal reference patterns and explicit self-assessment.
+- Preserve existing session timing, four drum tempo trainers, locks, metronome, recovery, theme choices and sans-serif interface.
+- Scope Today, library, routines, goals, progress, history and search; preserve full-workspace backup and shared repertoire.
+- Add instrument song parts and independent sections/readiness/arrangement notes, with correct practice and setlist snapshots.
+- Upgrade the existing database transactionally to physical schema 3, normalized workspace 2 and backup envelope 2. Preserve a downloadable original; continue importing v1 backups.
+- Add typed validation, deterministic migrations, relationship safety, selective profile writes, audio cancellation and domain/native/browser regression coverage.
+- Document educational and measurement limits; microphone grading, recording and generated backing tracks remain deliberately unadvertised.
+
+
 ## 1.4.0 — Practice workbench
 
 - Researched task-grouped music tools, structured collections, accessibility and interaction performance; documented route-by-route decisions in `docs/DESIGN-RESEARCH.md`.

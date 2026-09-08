@@ -175,6 +175,26 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.wait_read("load('app/store.js').store.snapshot().songs.map(song=>song.title)",
                        lambda value: value == ['Restore this song'])
 
+    def test_18_countin_excluded_and_cancelled_safely(self):
+        self.onboard();self.route('/metronome')
+        self.page.get_by_label('Count-in',exact=True).select_option('1')
+        self.route('/practice');self.page.get_by_label('Free practice BPM',exact=True).fill('300')
+        self.page.get_by_role('button',name='Start free practice',exact=True).click()
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.wait_read("load('practice/controller.js').practice.session.runtime.phase",lambda phase:phase=='countin')
+        self.assertEqual(self.read("load('practice/controller.js').practice.elapsed()"),0)
+        self.page.get_by_role('button',name='Pause practice',exact=True).click()
+        self.page.wait_for_timeout(1100)
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'paused')
+        self.assertEqual(self.read("load('practice/controller.js').practice.elapsed()"),0)
+        self.page.evaluate('window.__resumeRequestedAt=Date.now()')
+        self.page.get_by_role('button',name='Resume practice',exact=True).click()
+        state=self.wait_read("({phase:load('practice/controller.js').practice.session.runtime.phase,elapsed:load('practice/controller.js').practice.elapsed(),wall:(Date.now()-window.__resumeRequestedAt)/1000})",lambda state:state['phase']=='running' and state['elapsed']>0)
+        # Four beats at 300 BPM take 0.8 seconds. Audio startup may add delay;
+        # none of that delay or count-in is credited as active practice time.
+        self.assertGreaterEqual(state['wall']-state['elapsed'],.75)
+        self.finish()
+
     def test_19_drag_reorder_and_keyboard_skip_link(self):
         self.onboard(True)
         original = self.read("load('app/store.js').store.snapshot().dailyPlans[0].blocks.map(b=>b.id)")

@@ -1,3 +1,5 @@
+import { profileName } from '../domain/profiles.js';
+import { switchProfile } from './profiles.js';
 import { store } from './store.js';
 import { navigate } from './navigation.js';
 import { el } from '../ui/dom.js';
@@ -13,11 +15,12 @@ export function openSearch():void{
     {label:'Start practice',type:'Command',icon:'play',action:()=>navigate('/practice')},{label:'Open metronome',type:'Command',icon:'pulse',action:()=>navigate('/metronome')},
     {label:'New exercise',type:'Command',icon:'plus',action:()=>editExercise()},{label:'New routine',type:'Command',icon:'plus',action:()=>editRoutine()},{label:'New song',type:'Command',icon:'plus',action:()=>editSong()},{label:'New setlist',type:'Command',icon:'plus',action:()=>editSetlist()},{label:'New goal',type:'Command',icon:'plus',action:()=>editGoal()},
     {label:'Open progress',type:'Command',icon:'progress',action:()=>navigate('/progress')},{label:'Open settings',type:'Command',icon:'settings',action:()=>navigate('/settings')},{label:'Export backup',type:'Command',icon:'download',action:exportBackup},
-    ...data.exercises.filter(e=>!e.archived).map(e=>({label:e.name,type:'Exercise',icon:'library' as const,action:()=>navigate(`/library/${e.id}`)})),
+    ...data.exercises.filter(e=>!e.archived).map(e=>({label:e.name,type:`Exercise · ${profileName(data,e.profileId)}`,icon:'library' as const,action:()=>navigate(`/library/${e.id}`)})),
+    ...data.songs.flatMap(s=>(s.parts??[]).map(p=>({label:`${s.title} · ${p.name}`,type:`Song part · ${profileName(data,p.profileId)}`,icon:'song' as const,action:async()=>{if(p.profileId!==data.settings.activeProfileId)await switchProfile(p.profileId);navigate(`/songs/${s.id}/parts/${p.id}`);}}))),
     ...data.songs.filter(s=>s.status!=='archived').map(s=>({label:s.title,type:'Song',icon:'song' as const,action:()=>navigate(`/songs/${s.id}`)})),
-    ...data.routines.filter(r=>!r.archived).map(r=>({label:r.name,type:'Routine',icon:'routine' as const,action:()=>navigate(`/routines/${r.id}`)})),
+    ...data.routines.filter(r=>!r.archived).map(r=>({label:r.name,type:`Routine · ${profileName(data,r.profileId)}`,icon:'routine' as const,action:async()=>{if(r.profileId&&r.profileId!==data.settings.activeProfileId)await switchProfile(r.profileId);navigate(`/routines/${r.id}`);}})),
     ...data.setlists.map(s=>({label:s.name,type:'Setlist',icon:'setlist' as const,action:()=>navigate(`/setlists/${s.id}`)})),
-    ...data.goals.map(g=>({label:g.title,type:'Goal',icon:'goal' as const,action:()=>navigate('/goals')})),
+    ...data.goals.map(g=>({label:g.title,type:`Goal · ${g.profileId?profileName(data,g.profileId):'All profiles'}`,icon:'goal' as const,action:async()=>{if(g.profileId&&g.profileId!==data.settings.activeProfileId)await switchProfile(g.profileId);navigate('/goals');}})),
   ];
   const indexed=items.map(item=>({...item,searchText:`${item.label} ${item.type}`.toLocaleLowerCase()}));
   let selected=0;let buttons:HTMLButtonElement[]=[];

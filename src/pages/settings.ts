@@ -1,11 +1,13 @@
+import { profileManagement } from '../ui/profiles.js';
+import { migrationBackup } from '../db/database.js';
+import { downloadText, createBackup } from '../db/backup.js';
 import { appearanceControls } from '../ui/appearance.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
 import { badge, button, checkbox, confirmAction, field, formDialog, formText, input, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 import { exportBackup, parseBackup, restoreBackup } from '../db/backup.js';
-import { replaceData } from '../db/database.js';
-import { seedData } from '../db/seed.js';
+import { resetWorkspace } from '../db/database.js';
 import { practice } from '../practice/controller.js';
 import { audio } from '../audio/engine.js';
 import { pwaState } from '../app/pwa.js';
@@ -27,16 +29,16 @@ export function settingsPage():Page{
   const countIn=select('countIn','Count-in',[['0','None'],['1','1 bar'],['2','2 bars'],['4','4 bars']],String(settings.metronome.countIn));
   const volume=el('input',{name:'volume',type:'range',min:0,max:1,step:0.05,value:settings.metronome.volume});
   const wake=checkbox('wake','Keep the screen awake during practice, when supported',settings.wakeLock),focus=checkbox('focus','Open sessions in Focus Mode',settings.defaultFocus),hidden=checkbox('hidden','Pause when the app moves into the background',settings.pauseWhenHidden);
-  const instrument=select('instrument','Primary instrument',['Drums','Guitar','Piano','Bass','Vocals','Other'],settings.instrument);
+
   const error=el('p',{class:'form-error',role:'alert'}),save=el('button',{type:'submit',class:'button primary'},'Save preferences');
-  prefs.append(el('div',{class:'form-grid'},bpm,meter,subdivision,countIn),field('Metronome volume',volume),instrument,el('div',{class:'settings-toggles'},wake,focus,hidden),el('p',{class:'field-hint'},'Foreground practice is recommended. Mobile browsers can suspend background audio. Count-in and paused time never count as active practice.'),error,save);
+  prefs.append(el('div',{class:'form-grid'},bpm,meter,subdivision,countIn),field('Metronome volume',volume),el('div',{class:'settings-toggles'},wake,focus,hidden),el('p',{class:'field-hint'},'Foreground practice is recommended. Mobile browsers can suspend background audio. Count-in and paused time never count as active practice.'),error,save);
   prefs.addEventListener('input',()=>{dirty=true;});prefs.addEventListener('change',()=>{dirty=true;});
   const unload=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',unload);
   prefs.addEventListener('submit',async event=>{
     event.preventDefault();if(!prefs.reportValidity())return;save.disabled=true;error.textContent='';
     try{
       const form=new FormData(prefs),[beats,unit]=formText(form,'meter').split('/').map(Number);
-      const validated=validateSettings({...store.snapshot().settings,instrument:formText(form,'instrument'),wakeLock:form.has('wake'),defaultFocus:form.has('focus'),pauseWhenHidden:form.has('hidden'),metronome:{...settings.metronome,bpm:Number(form.get('bpm')),meter:{beats:beats||4,beatUnit:unit===8?8:4},accents:beats===settings.metronome.meter.beats && unit===settings.metronome.meter.beatUnit ? [...settings.metronome.accents] : defaultAccents(beats||4,unit||4),subdivision:Number(form.get('subdivision')) as Subdivision,countIn:Number(form.get('countIn')),volume:Number(form.get('volume'))}});
+      const validated=validateSettings({...store.snapshot().settings,wakeLock:form.has('wake'),defaultFocus:form.has('focus'),pauseWhenHidden:form.has('hidden'),metronome:{...settings.metronome,bpm:Number(form.get('bpm')),meter:{beats:beats||4,beatUnit:unit===8?8:4},accents:beats===settings.metronome.meter.beats && unit===settings.metronome.meter.beatUnit ? [...settings.metronome.accents] : defaultAccents(beats||4,unit||4),subdivision:Number(form.get('subdivision')) as Subdivision,countIn:Number(form.get('countIn')),volume:Number(form.get('volume'))}});
       dirty=false;await store.save('settings',validated);notify('Practice preferences saved.');
     }catch(e){dirty=true;error.textContent=e instanceof Error?e.message:'Preferences could not be saved.';}finally{save.disabled=false;}
   });
@@ -59,7 +61,7 @@ export function settingsPage():Page{
     if(!navigator.storage?.persist){notify('This browser does not expose persistent-storage requests. Keep regular backups.','info');return;}
     const granted=await navigator.storage.persist();notify(granted?'Persistent storage is enabled. Keep exporting backups as well.':'The browser did not grant persistent storage. Your data is still saved, but backups are important.','info');
   },'secondary');
-  const dataPanel=el('section',{class:'panel'},sectionHeader('Your data'),el('p',{},'Everything is stored in this browser on this device. There is no account, sync server, tracking, or cloud backup.'),el('p',{class:'muted small'},'Browser data can be cleared or evicted. Export backups regularly, especially before changing devices or domains. A backup includes exercises, songs, routines, plans, sessions, goals, setlists, presets, and settings.'),el('div',{class:'actions'},button('Export backup',exportBackup,'primary','download'),button('Restore backup',()=>file.click(),'secondary','upload'),persist),file,storage);
+  const dataPanel=el('section',{class:'panel'},sectionHeader('Your data'),el('p',{},'Everything is stored in this browser on this device. There is no account, sync server, tracking, or cloud backup.'),el('p',{class:'muted small'},'Browser data can be cleared or evicted. Export backups regularly, especially before changing devices or domains. A backup includes exercises, songs, routines, plans, sessions, goals, setlists, presets, and settings.'),el('div',{class:'actions'},button('Export backup',exportBackup,'primary','download'),button('Export pre-upgrade backup',async()=>{const original=await migrationBackup();if(!original){notify('There is no pre-upgrade snapshot on this device.','info');return;}downloadText(JSON.stringify(createBackup(original),null,2),'steadybar-before-profiles-v2.json');},'secondary'),button('Restore backup',()=>file.click(),'secondary','upload'),persist),file,storage);
   const offlineStatus=el('p',{}),offlineError=el('p',{class:'form-error'});
   const refreshOffline=()=>{
     offlineStatus.textContent=pwaState.ready?'The application shell is cached and ready for offline use.':'The offline shell is not ready yet. Keep the app open until its service worker finishes installing.';
@@ -75,8 +77,8 @@ export function settingsPage():Page{
   ],async form=>{
     if(formText(form,'confirm')!=='RESET')throw new Error('Type RESET exactly to confirm.');
     if(practice.session?.status==='active' && !practice.external)await practice.pause();audio.stop();
-    await withWorkspaceIdle(async()=>{await exportBackup();await replaceData(seedData());});location.reload();
+    await withWorkspaceIdle(async()=>{await exportBackup();await resetWorkspace();});location.reload();
   },'Back up & reset');
-  page.append(el('div',{class:'settings-grid'},el('div',{},appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
+  page.append(el('div',{class:'settings-grid'},el('div',{},profileManagement(),appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
   return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{colors.cleanup();window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};
 }
