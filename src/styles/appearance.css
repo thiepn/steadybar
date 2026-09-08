@@ -55,3 +55,9 @@ h1,h2,h3,strong {font-weight:600}
   .palette-preview {forced-color-adjust:none}
 }
 :root[data-theme=dark] .appearance-controls .accent-swatch {color:var(--swatch-ink)}
+
+/* Keep mobile routine disclosure in document flow; negative offsets overlap the
+   duration in Firefox when text or coarse-pointer sizing changes row height. */
+@media (max-width:640px) {
+  .routine-disclosure {margin-top:0;max-width:100%}
+}

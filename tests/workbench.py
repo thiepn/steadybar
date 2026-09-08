@@ -106,6 +106,16 @@ class Workbench(e2e.MusicPracticeTests):
 
     def test_44_beats_do_not_rebuild_identity_and_queue(self):
         self.onboard(True);self.page.get_by_role('button',name='Start full session',exact=True).click();self.start()
+        # Count-in and native AudioContext startup finish asynchronously. Begin
+        # the observation window only after both audio and practice are running.
+        self.page.bring_to_front()
+        ready=False
+        for _ in range(70):
+            state=self.read("({audio:load('audio/engine.js').audio.running,phase:load('practice/controller.js').practice.session.runtime.phase,error:load('practice/controller.js').practice.error,hidden:document.hidden})")
+            if state['audio'] and state['phase']=='running':
+                ready=True;break
+            self.page.wait_for_timeout(100)
+        self.assertTrue(ready,repr(state))
         self.page.evaluate("""()=>{window.__churn=0;window.__observer=new MutationObserver(r=>window.__churn+=r.length);for(const q of ['.active-title','.next-block','.practice-queue'])window.__observer.observe(document.querySelector(q),{subtree:true,childList:true,characterData:true});}""")
         self.page.wait_for_timeout(1300)
         self.assertEqual(self.page.evaluate('window.__churn'),0)

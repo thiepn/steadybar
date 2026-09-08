@@ -120,7 +120,7 @@ class UIPolish(e2e.MusicPracticeTests):
         expect(self.page.locator('html')).to_have_attribute('data-theme','dark')
         expect(self.page.locator('html')).to_have_attribute('data-accent','plum')
         expect(self.page.get_by_role('button',name='Plum accent',exact=True)).to_have_attribute('aria-pressed','true')
-        self.assertEqual(json.loads(self.page.evaluate("localStorage.getItem('steadybar-appearance')")),{'mode':'dark','accent':'plum'})
+        self.assertEqual(json.loads(self.page.evaluate("localStorage.getItem('steadybar-appearance')")),{'mode':'dark','accent':'plum','palette':'neutral'})
 
     def test_36_mobile_navigation_reaches_every_destination(self):
         self.onboard();self.page.set_viewport_size({'width':390,'height':844})

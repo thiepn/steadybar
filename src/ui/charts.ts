@@ -21,9 +21,34 @@ export function observeCharts(root: HTMLElement): () => void {
   const charts = [...root.querySelectorAll<HTMLElement>('figure.chart')];
   charts.forEach(node => update(node, node.clientWidth));
   if (typeof ResizeObserver === 'undefined') return () => {};
-  const observer = new ResizeObserver(entries => entries.forEach(entry => update(entry.target as HTMLElement, entry.contentRect.width)));
+  // Defer SVG writes until the next frame: changing observed layout during the
+  // observer callback can trigger ResizeObserver loops, particularly in WebKit.
+  const pending = new Map<HTMLElement, number>();
+  let frame: number | undefined;
+  let disposed = false;
+  const flush = () => {
+    frame = undefined;
+    if (disposed) return;
+    pending.forEach((size, node) => update(node, size));
+    pending.clear();
+  };
+  const observer = new ResizeObserver(entries => {
+    if (disposed) return;
+    for (const entry of entries) {
+      const node = entry.target as HTMLElement;
+      if (widths.get(node) !== Math.max(240, Math.round(entry.contentRect.width))) {
+        pending.set(node, entry.contentRect.width);
+      }
+    }
+    if (pending.size && frame === undefined) frame = requestAnimationFrame(flush);
+  });
   charts.forEach(node => observer.observe(node));
-  return () => observer.disconnect();
+  return () => {
+    disposed = true;
+    observer.disconnect();
+    if (frame !== undefined) cancelAnimationFrame(frame);
+    pending.clear();
+  };
 }
 export function lineChart(points: {date:string;bpm:number}[], label = 'Best clean BPM over time'): HTMLElement {
   if (!points.length) return el('div', {class:'chart-empty'}, 'Record a clean attempt to begin your tempo progression.');
