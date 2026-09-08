@@ -1,0 +1,54 @@
+name: Verify profile outcome synchronization fix
+on:
+  push:
+    branches: [transfer/profile-system-v201]
+    paths: [.github/workflows/fix-profile-outcome-sync.yml]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PLAYWRIGHT_BUNDLED_BROWSER: '1'
+      PLAYWRIGHT_ENGINE: chromium
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/profile-system-v2.0.1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - name: Synchronize immutable-segment assertion with durable outcome save
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('tests/profiles.py')
+          text=path.read_text()
+          old="""        self.page.get_by_role('button',name='+ Clean change',exact=True).click()\n        before=self.read(\"JSON.stringify(load('practice/controller.js').practice.session.blocks[0].outcomes)\")\n"""
+          new="""        self.page.get_by_role('button',name='+ Clean change',exact=True).click()\n        # Result logging is intentionally asynchronous and durable. Wait for the\n        # committed session to contain the result before taking the immutable\n        # pre-edit snapshot; otherwise a fast engine can capture an empty list.\n        self.wait_read(\"load('app/store.js').store.snapshot().sessions.find(s=>s.status==='active').blocks[0].outcomes.length\",lambda value:value==1)\n        before=self.read(\"JSON.stringify(load('practice/controller.js').practice.session.blocks[0].outcomes)\")\n"""
+          if text.count(old)!=1: raise SystemExit('Expected immutable-segment fragment exactly once')
+          path.write_text(text.replace(old,new))
+          PY
+      - name: Verify code suite
+        run: npm ci && npm run check
+      - name: Install Chromium
+        run: |
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Re-run complete Chromium profile suite
+        run: python tests/run_suite.py tests/profiles.py
+      - name: Commit exact verified test synchronization
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/profiles.py
+          git commit -m 'Synchronize immutable outcome snapshot with durable save'
+          git push origin HEAD:fix/profile-system-v2.0.1
