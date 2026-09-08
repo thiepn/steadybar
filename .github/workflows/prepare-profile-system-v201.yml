@@ -43,3 +43,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Harden practice profile selection, history and recovery'
           git push origin HEAD:fix/profile-system-v201
+      # retry after correcting the transport payload; no application code lives on this branch
