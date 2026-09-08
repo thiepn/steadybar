@@ -1,6 +1,6 @@
 # Steadybar
 
-**Practice with purpose.** A local-first music practice workspace with a drum-focused starter library.
+A local-first music practice workspace with a drum-focused starter library.
 
 Plan a session, practice with an integrated Web Audio metronome, record clean attempts, and review actual progress. No account, required backend, telemetry, remote fonts, or runtime npm dependencies.
 
@@ -42,7 +42,9 @@ npm run test:e2e
 
 Use `python` in place of `python3` on Windows when appropriate. `npm test` builds before running the Node tests. `npm run test:e2e` tests the production build with real IndexedDB and a service worker. `CHROMIUM_PATH` selects an installed browser; `PLAYWRIGHT_BUNDLED_BROWSER=1` selects Playwright's browser. CI installs the pinned browser automatically.
 
-`npm run test:ui` and `npm run test:visual` use a clearly isolated in-document test harness with memory storage. They are useful when an execution environment blocks localhost navigation, but do **not** establish real persistence or offline support. See [QA](docs/QA.md).
+`npm run test:ui` and `npm run test:visual` use a clearly isolated in-document test harness with memory storage. They are useful when an execution environment blocks localhost navigation, but do **not** establish real persistence or offline support. See [QA](docs/QA.md) and the [1.4 design research](docs/DESIGN-RESEARCH.md).
+
+`npm run test:workbench` exercises the 14 requested viewport sizes, populated routes, 2,030-exercise search fixture, keyboard states and theme contrast. CI runs native capability and workbench suites in Chromium, Firefox and WebKit. These are browser engines, not a claim of physical iOS/Android testing. Native failures block deployment. `PLAYWRIGHT_ENGINE=firefox` or `webkit` selects an installed engine.
 
 ## Architecture
 

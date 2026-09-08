@@ -47,7 +47,9 @@ class MusicPracticeTests(unittest.TestCase):
             executable=shutil.which('chromium') or shutil.which('google-chrome')
         kwargs={'headless':True,'args':['--no-sandbox']}
         if executable:kwargs['executable_path']=executable
-        cls.browser=cls.pw.chromium.launch(**kwargs)
+        engine=os.environ.get('PLAYWRIGHT_ENGINE','chromium')
+        if engine not in ('chromium','firefox','webkit'):raise ValueError('Unsupported PLAYWRIGHT_ENGINE')
+        cls.browser=getattr(cls.pw,engine).launch(**(kwargs if engine=='chromium' else {'headless':True}))
 
     @classmethod
     def tearDownClass(cls):
@@ -55,7 +57,7 @@ class MusicPracticeTests(unittest.TestCase):
         if cls.server:cls.server.terminate();cls.server.wait(timeout=10)
 
     def setUp(self):
-        self.context=self.browser.new_context(viewport={'width':1440,'height':900},timezone_id='Europe/Berlin',color_scheme='light',accept_downloads=True)
+        self.context=self.browser.new_context(viewport={'width':1440,'height':900},timezone_id='Europe/Berlin',color_scheme='light',accept_downloads=True,has_touch=getattr(self,'touch',False))
         self.page=self.context.new_page();self.errors=[]
         self.page.on('pageerror',lambda e:self.errors.append(str(e)))
         self.page.set_default_timeout(7000)

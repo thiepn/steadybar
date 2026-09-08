@@ -2,7 +2,7 @@ import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import type { Accent, MetronomeConfig, Subdivision } from '../domain/models.js';
 import { el } from '../ui/dom.js';
-import { badge, button, confirmAction, field, formDialog, formNumber, formText, iconButton, input, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
+import { button, confirmAction, field, formDialog, formNumber, formText, iconButton, input, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 import { audio } from '../audio/engine.js';
 import { defaultAccents, tapTempo } from '../audio/scheduler.js';
 import { clampBpm } from '../domain/utils.js';
@@ -10,8 +10,8 @@ import { savePreset } from '../ui/editors.js';
 export function metronomePage():Page{
   let config=structuredClone(store.snapshot().settings.metronome),running=false,taps:number[]=[],disposed=false;
   let persistTimer:ReturnType<typeof setTimeout>|undefined;
-  const page=el('div',{class:'page metronome-page'},pageHeader('THE PULSE','Metronome','Tempo, meter, and accents.'));
-  const status=el('span',{class:'status-label'},'READY'),tempo=el('input',{type:'number',min:20,max:300,step:1,value:config.bpm,inputmode:'numeric',class:'metronome-bpm','aria-label':'BPM'}),slider=el('input',{type:'range',min:20,max:300,step:1,value:config.bpm,'aria-label':'Tempo slider'});
+  const page=el('div',{class:'page metronome-page'},pageHeader('','Metronome','Tempo, meter, and accents.'));
+  const status=el('span',{class:'status-label'},'Ready'),tempo=el('input',{type:'number',min:20,max:300,step:1,value:config.bpm,inputmode:'numeric',class:'metronome-bpm','aria-label':'BPM'}),slider=el('input',{type:'range',min:20,max:300,step:1,value:config.bpm,'aria-label':'Tempo slider'});
   const signature=el('select',{'aria-label':'Time signature'},['2/4','3/4','4/4','5/4','6/8','7/8','9/8','12/8'].map(m=>el('option',{value:m},m)));
   const subdivision=el('select',{'aria-label':'Subdivision'},[['1','Beat · 1 click'],['2','Eighths · 2 clicks'],['3','Triplets · 3 clicks'],['4','Sixteenths · 4 clicks']].map(([v,l])=>el('option',{value:v},l)));
   const countIn=el('select',{'aria-label':'Count-in'},[['0','None'],['1','1 bar'],['2','2 bars'],['4','4 bars']].map(([v,l])=>el('option',{value:v},l)));
@@ -19,11 +19,11 @@ export function metronomePage():Page{
   const persist=()=>{clearTimeout(persistTimer);persistTimer=setTimeout(()=>{void store.settings({metronome:config},false).catch(error=>notify(error.message,'error'));},200);};
   const apply=(next:MetronomeConfig)=>{config=structuredClone(next);if(audio.running)audio.update(config);renderControls();persist();};
   const setBpm=(bpm:number)=>{config.bpm=clampBpm(bpm);tempo.value=String(config.bpm);slider.value=String(config.bpm);if(audio.running)audio.update(config);persist();};
-  const stop=()=>{audio.stop();running=false;status.textContent='PAUSED';play.querySelector('span')!.textContent='Start metronome';play.setAttribute('aria-pressed','false');Array.from(beats.children).forEach(b=>b.classList.remove('on'));};
+  const stop=()=>{audio.stop();running=false;status.textContent='Paused';play.querySelector('span')!.textContent='Start metronome';play.setAttribute('aria-pressed','false');Array.from(beats.children).forEach(b=>b.classList.remove('on'));};
   const toggle=async()=>{
     if(running){stop();return;}
-    await audio.start(config,{onBeat:event=>{if(disposed)return;status.textContent=event.countingIn?`COUNT-IN · BAR ${event.bar+1}`:'RUNNING';Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',i===event.beat));},onInterrupted:()=>{stop();notify('Audio was suspended. Tap Start to resume.','info');}});
-    if(disposed){audio.stop();return;}running=true;status.textContent=config.countIn?'COUNT-IN':'RUNNING';play.querySelector('span')!.textContent='Pause metronome';play.setAttribute('aria-pressed','true');
+    await audio.start(config,{onBeat:event=>{if(disposed)return;const label=event.countingIn?`Count-in · bar ${event.bar+1}`:'Playing';if(status.textContent!==label)status.textContent=label;Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',i===event.beat));},onInterrupted:()=>{stop();notify('Audio was suspended. Tap Start to resume.','info');}});
+    if(disposed){audio.stop();return;}running=true;status.textContent=config.countIn?'Count-in':'Playing';play.querySelector('span')!.textContent='Pause metronome';play.setAttribute('aria-pressed','true');
   };
   const play=button('Start metronome',toggle,'primary metronome-play','play');play.setAttribute('aria-pressed','false');
   const tap=button('Tap tempo',()=>{const result=tapTempo(taps,performance.now());taps=result.taps;if(result.bpm)setBpm(result.bpm);tapCount.textContent=result.bpm?`${result.bpm} BPM from ${taps.length} taps`:`${taps.length} tap · keep going`;},'secondary','pulse'),tapCount=el('span',{class:'muted small'},'Tap a steady beat');
@@ -32,7 +32,7 @@ export function metronomePage():Page{
     const meter=`${config.meter.beats}/${config.meter.beatUnit}`;
     if(!Array.from(signature.options).some(o=>o.value===meter))signature.append(el('option',{value:meter},`${meter} · custom`));signature.value=meter;
     subdivision.value=String(config.subdivision);countIn.value=String(config.countIn);volume.value=String(config.volume);volumeLabel.textContent=`${Math.round(config.volume*100)}%`;
-    meterNote.textContent=`BPM counts ${config.meter.beatUnit===8?'eighth-note':'quarter-note'} beats in ${meter}. Subdivision divides each beat; note names above refer to x/4. Meter and subdivision changes take effect at the next bar.`;
+    meterNote.textContent=`${config.meter.beatUnit===8?'Eighth-note':'Quarter-note'} beat. Meter and subdivision changes apply at the next bar.`;
     beats.replaceChildren(...config.accents.map((accent,i)=>{
       const b=button(String(i+1),()=>{const next=[...config.accents];next[i]=((accent+2)%3) as Accent;apply({...config,accents:next});},`metronome-beat accent-${accent}`);
       b.setAttribute('aria-label',`Beat ${i+1}: ${accent===2?'accent':accent===1?'normal':'muted'}. Click to change.`);b.append(el('small',{},accent===2?'accent':accent===1?'beat':'mute'));return b;
@@ -44,12 +44,20 @@ export function metronomePage():Page{
   countIn.addEventListener('change',()=>apply({...config,countIn:Number(countIn.value) as 0|1|2|4}));
   volume.addEventListener('input',()=>{config.volume=Number(volume.value);volumeLabel.textContent=`${Math.round(config.volume*100)}%`;if(audio.running)audio.update(config);persist();});
   const customMeter=()=>formDialog('Custom time signature',[input('beats','Beats per bar',config.meter.beats,'number',{min:1,max:16,step:1,required:true}),select('unit','Beat unit',[['4','Quarter note'],['8','Eighth note']],String(config.meter.beatUnit))],async form=>{const beats=formNumber(form,'beats'),unit=formText(form,'unit')==='8'?8:4;apply({...config,meter:{beats,beatUnit:unit},accents:defaultAccents(beats,unit)});});
-  const main=el('section',{class:'panel metronome-main'},status,el('div',{class:'tempo-display'},tempo,el('span',{class:'bpm-unit'},'BPM')),beats,el('p',{class:'muted small accent-help'},'Tap a beat to cycle accent → normal → mute.'),
+  const main=el('section',{class:'panel metronome-main'},
+    el('div',{class:'instrument-heading'},el('label',{class:'label',for:'metronome-bpm'},'Tempo · BPM'),status),
+    el('div',{class:'tempo-display'},tempo),
     el('div',{class:'standalone-tempo-steps'},[-10,-5,-1,1,5,10].map(step=>button(step>0?`+${step}`:`−${Math.abs(step)}`,()=>setBpm(config.bpm+step),'tempo-step'))),slider,
     el('div',{class:'metronome-transport'},play,el('div',{class:'tap-tempo'},tap,tapCount)),
-    el('div',{class:'metronome-config'},field('Time signature',signature),field('Subdivision',subdivision),field('Count-in',countIn)),meterNote,
+    el('div',{class:'meter-workspace'},el('div',{class:'metronome-config'},field('Time signature',signature),field('Subdivision',subdivision),field('Count-in',countIn)),
+      beats,el('p',{class:'muted small accent-help'},'Tap a beat: accent → normal → mute.'),meterNote),
     el('div',{class:'volume-row'},field('Volume',volume),volumeLabel,button('Custom meter',customMeter,'ghost')));
-  const saved=el('aside',{class:'metronome-side'},el('section',{class:'panel'},sectionHeader('Your presets',undefined,[button('Save current',()=>savePreset(config),'ghost','plus')]),presets),el('section',{class:'panel quiet-panel'},sectionHeader('Playback & shortcuts'),el('p',{class:'muted small'},'The sound sets the timing; the visual pulse follows it.'),el('p',{class:'muted small'},'Keep this app in the foreground for dependable playback. By default, switching away pauses it.'),el('div',{class:'keyboard-hints'},badge('Space · start / pause'),badge('↑ ↓ · ±1 BPM'),badge('Shift + ↑ ↓ · ±5 BPM'))));
+  tempo.id='metronome-bpm';
+  const saved=el('aside',{class:'metronome-side'},
+    el('section',{class:'panel'},sectionHeader('Presets',undefined,[button('Save current',()=>savePreset(config),'ghost','plus')]),presets),
+    el('details',{class:'playback-help'},el('summary',{},'Playback & shortcuts'),
+      el('p',{class:'muted small'},'The sound sets the timing; the visual pulse follows it. Keep this app in the foreground for dependable playback.'),
+      el('dl',{class:'shortcut-list'},el('dt',{},'Start / pause'),el('dd',{},el('kbd',{},'Space')),el('dt',{},'Change tempo'),el('dd',{},el('kbd',{},'↑ ↓')),el('dt',{},'Change by 5 BPM'),el('dd',{},el('kbd',{},'Shift + ↑ ↓')))));
   const drawPresets=()=>{
     presets.replaceChildren();const saved=store.snapshot().metronomePresets;
     if(!saved.length)presets.append(el('p',{class:'muted small inset'},'Save a tempo, meter, and accent pattern you return to often.'));

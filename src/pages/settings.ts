@@ -17,7 +17,7 @@ import { formatDate } from '../domain/utils.js';
 export function settingsPage():Page{
   const data=store.snapshot(),settings=data.settings;
   let dirty=false;
-  const page=el('div',{class:'page settings-page'},pageHeader('MAKE IT YOURS','Settings','Appearance, practice defaults, and backups.'));
+  const page=el('div',{class:'page settings-page'},pageHeader('','Settings','Appearance, practice defaults, and backups.'));
   const colors=appearanceControls();
   const appearance=el('section',{class:'panel appearance-panel'},sectionHeader('Appearance'),colors.node);
   const prefs=el('form',{class:'panel settings-form'},sectionHeader('Practice defaults'));

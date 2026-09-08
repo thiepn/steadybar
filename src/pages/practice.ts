@@ -12,7 +12,7 @@ import { routineDuration } from '../domain/analytics.js';
 import { sessionPage } from './history.js';
 export function practicePage():Page{
   const data=store.snapshot(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=data.sessions.find(s=>s.status==='active');
-  const page=el('div',{class:'page practice-launcher'},pageHeader('STEP UP TO THE INSTRUMENT','Practice','Choose a plan, an exercise, or a timed free session.'));
+  const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Choose a plan, an exercise, or a timed free session.'));
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},'An unfinished session is saved.'),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
   const planned=el('section',{class:'panel launcher-plan'},sectionHeader('Today’s session',`${plan?.blocks.length||0} blocks · ${duration(routineDuration(plan?.blocks||[]))}`));
   if(plan?.blocks.length)planned.append(el('ol',{class:'launch-sequence'},plan.blocks.map(b=>el('li',{},el('span',{},b.title),el('span',{class:'muted'},`${duration(b.targetSeconds)} · ${b.bpm} BPM`)))),button('Start today’s plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary','play'));
@@ -47,49 +47,65 @@ export function activePracticePage():Page{
     if(!focus&&document.fullscreenElement)await document.exitFullscreen().catch(()=>{});
   };
   const focusButton=button(focus?'Exit focus':'Focus mode',()=>setFocus(!focus),'ghost','focus');
-  const header=el('header',{class:'practice-header'},button('Save & leave',async()=>{await practice.pause();await store.refresh();navigate('/');},'ghost','exit'),blockNumber,el('div',{class:'actions'},focusButton,button('Finish session',async()=>{if(await confirmAction('Finish this session?','Your time, attempts, and notes will be saved. Unfinished future blocks will be marked skipped.','Finish session')){await practice.finish();draw();}},'secondary','check')));
+  const leave=button('Leave',async()=>{await practice.pause();await store.refresh();navigate('/');},'ghost','exit');leave.setAttribute('aria-label','Save & leave');leave.title='Pause, save, and leave practice';
+  const header=el('header',{class:'practice-header'},leave,el('div',{class:'actions'},focusButton,button('Finish session',async()=>{if(await confirmAction('Finish this session?','Your time, attempts, and notes will be saved. Unfinished future blocks will be marked skipped.','Finish session')){await practice.finish();draw();}},'secondary','check')));
   const ratingButtons=RATINGS.map(rating=>button(rating==='acceptable'?'Acceptable':rating[0]!.toUpperCase()+rating.slice(1),async()=>{const bpm=practice.session!.runtime.bpm;await practice.attempt(rating);attemptText.textContent=`Recorded ${bpm} BPM · ${rating}.`;},`rating-button ${rating==='clean'?'clean-rating':''}`));
-  const main=el('section',{class:'practice-workspace'},el('div',{class:'practice-identity'},status,title,sticking),
-    el('div',{class:'tempo-display'},tempo,el('span',{class:'bpm-unit'},'BPM')),
-    beats,el('div',{class:'active-timer'},time,target),track,
-    el('div',{class:'active-tempo-controls'},[-5,-1,1,5].map(step=>button(step>0?`+${step}`:`−${Math.abs(step)}`,()=>practice.setBpm(practice.session!.runtime.bpm+step),'tempo-step'))),
+  const steps=el('div',{class:'active-tempo-controls'},[-5,-1,1,5].map(step=>button(step>0?`+${step}`:`−${Math.abs(step)}`,()=>practice.setBpm(practice.session!.runtime.bpm+step),'tempo-step')));
+  const transition=el('div',{class:'block-transition-controls'},
+    button('Finish block',()=>practice.finishBlock(),'secondary','check'),
+    button('Skip block',()=>practice.finishBlock(true),'ghost','skip'),
+    button('Restart block',async()=>{await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart'));
+  const main=el('section',{class:'practice-workspace'},
+    el('div',{class:'practice-identity'},el('div',{class:'practice-state'},blockNumber,status),title,sticking),
+    el('div',{class:'practice-readouts'},
+      el('div',{class:'time-readout'},el('span',{class:'label'},'Active time'),el('div',{class:'active-timer'},time,target),track),
+      el('div',{class:'tempo-readout'},el('label',{class:'label',for:'practice-bpm'},'Tempo · BPM'),tempo,steps)),
+    beats,
     el('div',{class:'practice-main-controls'},start,metro),
-    el('div',{class:'attempt-section'},el('div',{class:'label'},'Log an attempt'),el('div',{class:'rating-buttons'},ratingButtons),attemptText),
+    el('div',{class:'attempt-section'},el('div',{class:'label'},'Record this attempt'),el('div',{class:'rating-buttons'},ratingButtons),attemptText),
+    transition,
     el('div',{class:'practice-tools'},button('Quick note',note,'ghost','note'),button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress')),
-    progressText,notesText,error,
-    el('div',{class:'block-transition-controls'},button('Restart block',async()=>{await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart'),button('Skip block',()=>practice.finishBlock(true),'ghost','skip'),button('Finish block',()=>practice.finishBlock(),'secondary','check')),next);
+    progressText,notesText,error,next);
+  tempo.id='practice-bpm';
   const recovery=el('section',{class:'session-recovery',hidden:!practice.recovered},el('strong',{},'Saved session recovered.'),el('p',{},'Your saved time, attempts, and notes are intact. Time while the app was closed is not counted. After an abrupt close, up to five seconds since the last checkpoint may be missing.'),el('div',{class:'actions wrap'},button('Resume saved session',()=>practice.start(),'primary','play'),button('End and keep history',async()=>{if(await confirmAction('End this saved session?','The session will remain in history as ended early, with its saved time, attempts, and notes.','End session')){await practice.finish(true);navigate(`/history/${active.id}`);}},'secondary'),button('Discard saved session',async()=>{if(await confirmAction('Discard this session permanently?','Only this unfinished session and its attempts will be removed. All other practice history remains.','Discard session',true)){await practice.discard();navigate('/practice');}},'ghost danger-text')));
   body.append(main,queue);page.append(header,recovery,body);
-  let lastIndex=-1,lastId='',previousPhase='';
+  let lastIndex=-1,lastId='',lastState='',completedView=false;
+  const text=(node:Node,value:string)=>{if(node.textContent!==value)node.textContent=value;};
   const tick=()=>{
     const session=practice.session;if(!session||session.status!=='active')return;
     const block=session.blocks[session.activeBlockIndex]!,elapsed=practice.elapsed();
-    time.textContent=clock(elapsed);target.textContent=`/ ${clock(block.targetSeconds)}`;fill.style.width=`${Math.min(100,elapsed/block.targetSeconds*100)}%`;
-    if(block.tempoTrainer)progressText.textContent=trainerLabel(block.tempoTrainer,Math.max(0,elapsed-session.runtime.trainerStartSeconds),session.runtime.trainerCleanRounds);
-    else progressText.textContent=elapsed>=block.targetSeconds?'Target time reached. Finish when you are ready.':'';
+    text(time,clock(elapsed));text(target,`of ${clock(block.targetSeconds)}`);
+    const width=`${Math.min(100,elapsed/block.targetSeconds*100).toFixed(2)}%`;if(fill.style.width!==width)fill.style.width=width;
+    if(block.tempoTrainer)text(progressText,trainerLabel(block.tempoTrainer,Math.max(0,elapsed-session.runtime.trainerStartSeconds),session.runtime.trainerCleanRounds));
+    else text(progressText,elapsed>=block.targetSeconds?'Target time reached. Finish when you are ready.':'');
   };
   function draw():void{
     const session=practice.session;if(!session)return;
-    if(session.status!=='active'){page.replaceChildren(sessionPage(session.id,true).node);return;}
-    const block=session.blocks[session.activeBlockIndex]!,phase=session.runtime.phase;recovery.hidden=!practice.recovered;
-    title.textContent=block.titleSnapshot;sticking.textContent=block.stickingSnapshot;sticking.hidden=!block.stickingSnapshot;
-    blockNumber.textContent=`BLOCK ${session.activeBlockIndex+1} OF ${session.blocks.length}`;
-    if(document.activeElement!==tempo)tempo.value=String(session.runtime.bpm);
-    status.textContent=phase==='running'?'Practicing':phase==='countin'?`Count-in · bar ${(practice.beat?.bar||0)+1}`:phase==='paused'?'Paused':'Ready';
-    start.querySelector('span')!.textContent=phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start practice';
-    start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
-    metro.querySelector('span')!.textContent=session.runtime.metronomeOn?'Metronome on':'Metronome off';metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));
-    if(previousPhase!==phase){start.dataset.phase=phase;previousPhase=phase;}
-    ratingButtons.forEach(b=>{b.disabled=phase==='ready'||phase==='countin';});
-    error.hidden=!practice.error;error.textContent=practice.error;
-    notesText.textContent=block.notes;notesText.hidden=!block.notes;
+    if(session.status!=='active'){if(!completedView){completedView=true;page.replaceChildren(sessionPage(session.id,true).node);}return;}
+    const block=session.blocks[session.activeBlockIndex]!,phase=session.runtime.phase;
+    const state=JSON.stringify([block.id,phase,session.runtime.bpm,session.runtime.metronomeOn,block.notes,practice.error,practice.recovered]);
+    if(lastState!==state){
+      lastState=state;recovery.hidden=!practice.recovered;
+      text(title,block.titleSnapshot);text(sticking,block.stickingSnapshot);sticking.hidden=!block.stickingSnapshot;
+      text(blockNumber,`Block ${session.activeBlockIndex+1} / ${session.blocks.length}`);
+      if(document.activeElement!==tempo)tempo.value=String(session.runtime.bpm);
+      text(status,phase==='running'?'Practicing':phase==='countin'?'Count-in':phase==='paused'?'Paused':'Ready');
+      text(start.querySelector('span')!,phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start practice');
+      start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
+      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));
+      start.dataset.phase=phase;
+      ratingButtons.forEach(b=>{b.disabled=phase==='ready'||phase==='countin';});
+      error.hidden=!practice.error;text(error,practice.error);
+      text(notesText,block.notes);notesText.hidden=!block.notes;
+    }
     if(lastIndex!==session.activeBlockIndex||lastId!==block.id){
       lastIndex=session.activeBlockIndex;lastId=block.id;attemptText.textContent='';
+    const upcoming=session.blocks[session.activeBlockIndex+1];next.replaceChildren(el('span',{class:'label'},upcoming?'Up next':'Final block'),el('strong',{},upcoming?`${upcoming.titleSnapshot} · ${duration(upcoming.targetSeconds)}`:'Finish the block to review your session.'));
       beats.replaceChildren(...Array.from({length:block.meterSnapshot.beats},(_,i)=>el('span',{class:'practice-beat'},String(i+1))));
       queue.replaceChildren(sectionHeader('Session sequence'),...session.blocks.map((b,i)=>el('div',{class:`queue-block ${i===session.activeBlockIndex?'current':''}`},el('span',{class:'queue-number'},b.completed?'✓':b.skipped?'—':String(i+1).padStart(2,'0')),el('div',{},el('strong',{},b.titleSnapshot),el('span',{class:'muted small'},`${duration(b.targetSeconds)} · ${b.initialBpm} BPM`)))));
     }
     Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',!!practice.beat&&practice.beat.beat===i&&(phase==='running'||phase==='countin')));
-    const upcoming=session.blocks[session.activeBlockIndex+1];next.replaceChildren(el('span',{class:'label'},upcoming?'Up next':'Final block'),el('strong',{},upcoming?`${upcoming.titleSnapshot} · ${duration(upcoming.targetSeconds)}`:'Finish the block to review your session.'));
+
     tick();
   }
   const onKey=(event:KeyboardEvent)=>{
@@ -101,6 +117,6 @@ export function activePracticePage():Page{
     else if(event.key.toLowerCase()==='n'&&!event.ctrlKey&&!event.metaKey){event.preventDefault();note();}
     else if(event.key==='Escape'&&focus)void setFocus(false);
   };
-  window.addEventListener('keydown',onKey);const unsubscribe=practice.subscribe(draw),timer=setInterval(tick,100);draw();
+  window.addEventListener('keydown',onKey);const unsubscribe=practice.subscribe(draw),timer=setInterval(tick,250);draw();
   return {node:page,cleanup:()=>{unsubscribe();clearInterval(timer);window.removeEventListener('keydown',onKey);if(!practice.external&&practice.session?.status==='active'&&['running','countin'].includes(practice.session.runtime.phase))void practice.pause().catch(()=>{});if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});}};
 }

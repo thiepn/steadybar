@@ -13,7 +13,7 @@ export function editSessionReview(session:PracticeSession):void{
 }
 export function historyPage():Page{
   const sessions=finishedSessions(store.snapshot().sessions).sort((a,b)=>b.startedAt.localeCompare(a.startedAt));
-  const page=el('div',{class:'page'},pageHeader('THE PRACTICE RECORD','Session history','Review sessions, attempts, and notes.'));
+  const page=el('div',{class:'page'},pageHeader('','History','Review sessions, attempts, and notes.'));
   if(!sessions.length){page.append(empty('No practice history yet.','Finish your first session and your practice record will begin here.',link('Start practice','/practice','button primary','play'),'history'));return {node:page};}
   const search=el('input',{type:'search',placeholder:'Find a session by exercise, song, or note…','aria-label':'Search practice history'}),list=el('div',{class:'history-list'});let visible=30;
   const more=button('Show more sessions',()=>{visible+=30;draw();},'secondary');
@@ -26,7 +26,7 @@ export function historyPage():Page{
 export function sessionPage(id:string,review=false):Page{
   const data=store.snapshot(),session=data.sessions.find(s=>s.id===id);if(!session)return {node:empty('Session not found.','This session may have been removed by a data restore.',link('History','/history','button primary'))};
   const clean=session.blocks.flatMap(b=>b.tempoAttempts).filter(a=>a.rating==='clean'||a.rating==='effortless');
-  const page=el('div',{class:'page session-review'},link(review?'Back to today':'Practice history',review?'/':'/history','back-link'),pageHeader(review?'PRACTICE, RECORDED':formatDate(session.startedAt,true),review?'Session complete.':'Session details',review?'Review your time, attempts, and notes.':`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
+  const page=el('div',{class:'page session-review'},link(review?'Back to today':'Practice history',review?'/':'/history','back-link'),pageHeader(review?'':formatDate(session.startedAt,true),review?'Session complete.':'Session details',review?'Review your time, attempts, and notes.':`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
   page.append(el('div',{class:'stats-strip'},stat('Active practice',duration(sessionTime(session))),stat('Blocks completed',`${session.blocks.filter(b=>b.completed).length} / ${session.blocks.length}`),stat('Clean attempts',clean.length),stat('Session reflection',session.sessionRating?`${session.sessionRating} / 5`:'Not rated')));
   if(session.sessionNotes)page.append(el('section',{class:'panel'},sectionHeader('Reflection'),el('p',{class:'pre-line'},session.sessionNotes)));
   const records=el('section',{class:'panel'},sectionHeader('Practice blocks','Snapshots are kept even when source exercises or songs change.'));

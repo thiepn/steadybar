@@ -6,12 +6,16 @@ export type AccentColor = typeof ACCENTS[number];
 export const APPEARANCE_EVENT = 'steadybar-appearance';
 const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : undefined;
 let pending: Promise<unknown> = Promise.resolve();
+let applied = "";
 
 /** IndexedDB is authoritative. Local storage is only a first-paint color hint. */
 export function applyAppearance(settings: Settings): void {
   const mode = settings.theme;
   const resolved = mode === 'system' ? (media?.matches ? 'dark' : 'light') : mode;
   const accent = settings.accent && ACCENTS.includes(settings.accent) ? settings.accent : 'graphite';
+  const key = `${mode}/${resolved}/${accent}`;
+  if (applied === key) return;
+  applied = key;
   const root = document.documentElement;
   root.dataset.theme = resolved;
   root.dataset.mode = mode;

@@ -1,42 +1,47 @@
-# Steadybar 1.2.0 — delivery and verification
+# Steadybar 1.4 — verification guide
 
-## Delivered application
+## What is measured
 
-The complete Music Practice OS 1.1 project has been rebranded as **Steadybar**, with its source code, compiled build, automated tests, local icons, documentation and GitHub Pages workflow intact. The package is prepared for `thiepn/steadybar`.
+The release keeps production storage, audio and session logic separate from views. `npm run check` runs strict TypeScript, builds the application and executes 133 Node tests. The six new tests cover the single-pass clean-tempo index, including 200,000 attempts and equivalence with the existing analytics.
 
-Changed public names include the app sidebar, onboarding, browser titles, initial loading view, PWA name and short name, Apple installation title, relevant error/reset dialogs, package metadata and backup filenames.
+`tests/ci_render.py` runs 29 Chromium workflows in an explicitly isolated memory harness: 26 run and three real-origin-only cases are skipped. The harness never enters the production build. `tests/ui_polish.py --render` runs six appearance/navigation tests and explicitly skips its native reload test. Its checks include 121 route/width combinations and 72 contrast pairs.
 
-Existing IndexedDB, Web Lock, BroadcastChannel, service-worker cache and version-1 backup-format identifiers were deliberately preserved. This protects existing data and backup compatibility on the same browser origin. It does not transfer data between domains, browsers or devices.
+`tests/workbench.py` uses populated, validated test fixtures and checks all 14 requested viewport dimensions across 16 routes/detail views (224 combinations), active controls at all 14 sizes, large collections, extra contrast pairs, keyboard dialogs/search, chart resizing, long titles and reduced-motion/forced-color reflow. Fixtures are not added to users' workspaces. A 2,030-exercise fixture initially renders 60 rows; every exercise remains searchable and additional results are reachable with Show more.
 
-## Verification performed in this run
+The workbench performance sample measures synthetic search-handler time and time to the next animation frame. It is **not field INP**, a physical-device benchmark, or a universal lag-free guarantee. CI artifacts retain raw results.
 
-| Check | Result |
-| --- | --- |
-| Strict TypeScript type checking | Passed |
-| Logic/repository-adapter/service-worker/branding tests | 121 passed; zero failures or skips |
-| Rendered Chromium workflows | 26 passed; three native-origin-only tests explicitly skipped |
-| Responsive route matrix | 13 routes at six sizes: 78 combinations passed |
-| Visual inspection | Rebranded desktop Today, mobile Focus Mode and dark Metronome screenshots inspected |
-| Production build | Passed |
-| Native localhost browser probe | Blocked by browser policy: ERR_BLOCKED_BY_ADMINISTRATOR |
-| Network npm ci | Blocked by container DNS resolution |
-| GitHub Actions run | Not run: complete source was not committed |
-| GitHub Pages deployment | Not deployed |
+## Native browser gates
 
-The local checks used the preinstalled **TypeScript 5.8.3**, exactly matching the locked development dependency. `npm ci` could not fetch its package in this environment; this is not recorded as a successful network installation. The repository workflow performs a normal install before verification.
+The Pages workflow requires all of the following before deployment:
 
-The rendered-browser tests use an explicitly test-only validated-memory storage adapter. They do not verify native IndexedDB reload, actual backup/restore/reload or service-worker offline reopening. These real-origin tests remain mandatory before the included workflow deploys. The test harness is absent from `dist/`.
+- Normal locked `npm ci`, strict checking and 133 Node tests.
+- Complete rendered UI suite and appearance suite.
+- Native IndexedDB recovery, transactional backup/restore, service-worker offline reopening, Web Audio scheduling, count-in and reordering checks.
+- Populated workbench matrix and interaction checks in Chromium, Firefox and WebKit.
 
-## Repository status
+The additional engines use Playwright builds, not branded Safari or physical iOS/Android devices. A failure in either native engine blocks publication. Current run status is available in the repository Actions tab; this document describes the gates rather than asserting that a future run passed.
 
-The connected GitHub account confirmed `thiepn/steadybar` was empty and writable. Initialization succeeded at commit `a468fca2107cb97c4b9e5799c0e904ed38f4e3de`. Subsequent source-upload requests were partly rejected by the connection's safety-status check. No incomplete application tree was committed or made the default branch.
+## Local environment and limits
 
-A final repository read confirmed that `main` contains only `.gitignore`. The complete application is in the accompanying ZIP, not yet on GitHub. No Pages setting was changed.
+The development container has TypeScript 5.8.3, exactly matching the lockfile. Its outbound npm DNS and native localhost browser navigation are blocked. Local execution therefore uses the exact preinstalled compiler and the explicit render harness. These restrictions are not counted as successful npm installation, persistence or offline tests; the real-origin gates run on GitHub-hosted runners.
 
-## Upload and run
+Screenshot checks cover populated and empty desktop/tablet/mobile pages, details, active practice, metronome, appearance variants, search and an edit dialog. Geometry and token-contrast checks supplement visual inspection but are not a full accessibility conformance audit. Physical music-stand ergonomics, mobile virtual keyboards, assistive technologies and hardware/Bluetooth audio latency need device/user validation.
 
-Extract `steadybar-v1.2.0.zip`. Upload the **contents** of the extracted `steadybar` folder to the repository root, including `.github/`, rather than uploading the ZIP itself or nesting the project under another directory. GitHub Desktop can preserve the directory structure and hidden workflow folder.
+## Reproduce
 
-For the included compiled build, run `npm run preview` from that folder and open `http://localhost:4173`. Development uses `npm ci` followed by `npm run dev`.
+```sh
+npm ci
+npm run check
+python3 -m pip install -r tests/requirements.txt
+python3 -m playwright install --with-deps chromium firefox webkit
+PLAYWRIGHT_BUNDLED_BROWSER=1 python3 tests/ci_render.py
+PLAYWRIGHT_BUNDLED_BROWSER=1 python3 tests/ci_native.py
+PLAYWRIGHT_BUNDLED_BROWSER=1 python3 tests/ui_polish.py
+PLAYWRIGHT_BUNDLED_BROWSER=1 python3 tests/workbench.py
+PLAYWRIGHT_ENGINE=firefox python3 tests/ci_native.py
+PLAYWRIGHT_ENGINE=firefox python3 tests/workbench.py
+PLAYWRIGHT_ENGINE=webkit python3 tests/ci_native.py
+PLAYWRIGHT_ENGINE=webkit python3 tests/workbench.py
+```
 
-For GitHub Pages, select **Settings → Pages → Build and deployment → Source: GitHub Actions** after uploading. The workflow runs type checking, all Node tests and real-browser tests before deploying `dist/`. A configuration failure is not a test pass or a successful deployment.
+The release ZIP includes `dist/`, so `npm run preview` requires Node but no dependency installation. GitHub checkouts build from source. Existing database/lock/backup identifiers are unchanged. Updates use the existing explicit PWA update flow; do not clear browser storage to update the application.

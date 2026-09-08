@@ -62,3 +62,19 @@ export function goalProgress(goal: Goal, data: Data, now = new Date()): { value:
 export function filterSessions(sessions: PracticeSession[], from?: string, to?: string): PracticeSession[] {
   return finishedSessions(sessions).filter(s => { const date=localDate(s.startedAt);return (!from || date>=from) && (!to || date<=to); });
 }
+
+/** One pass for collection views; do not rescan every session in a sort comparator. */
+export function buildCleanTempoIndex(sessions: PracticeSession[]): Map<string, number> {
+  const index = new Map<string, number>();
+  for (const session of sessions) {
+    if (session.status === 'active') continue;
+    for (const block of session.blocks) {
+      if (!block.sourceExerciseId) continue;
+      for (const attempt of block.tempoAttempts) {
+        if (attempt.rating !== 'clean' && attempt.rating !== 'effortless') continue;
+        index.set(block.sourceExerciseId, Math.max(index.get(block.sourceExerciseId) ?? 0, attempt.bpm));
+      }
+    }
+  }
+  return index;
+}

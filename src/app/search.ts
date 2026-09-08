@@ -19,11 +19,13 @@ export function openSearch():void{
     ...data.setlists.map(s=>({label:s.name,type:'Setlist',icon:'setlist' as const,action:()=>navigate(`/setlists/${s.id}`)})),
     ...data.goals.map(g=>({label:g.title,type:'Goal',icon:'goal' as const,action:()=>navigate('/goals')})),
   ];
+  const indexed=items.map(item=>({...item,searchText:`${item.label} ${item.type}`.toLocaleLowerCase()}));
   let selected=0;let buttons:HTMLButtonElement[]=[];
-  const handle=dialog('Find your next action',[query,results,el('p',{class:'command-hint muted tiny'},'↑ ↓ to move · Enter to open · Esc to close')]);handle.dialog.classList.add('command-dialog');
-  const highlight=()=>buttons.forEach((b,i)=>{b.classList.toggle('highlighted',i===selected);if(i===selected)b.scrollIntoView({block:'nearest'});});
+  const announcement=el('p',{class:'sr-only',role:'status'});
+  const handle=dialog('Search',[query,results,announcement,el('p',{class:'command-hint muted tiny'},'↑ ↓ to move · Enter to open · Esc to close')]);handle.dialog.classList.add('command-dialog');
+  const highlight=()=>{announcement.textContent=buttons[selected]?`${buttons[selected]!.textContent}. Result ${selected+1} of ${buttons.length}.`:'';buttons.forEach((b,i)=>{b.classList.toggle('highlighted',i===selected);b.setAttribute('aria-current',String(i===selected));if(i===selected)b.scrollIntoView({block:'nearest'});});};
   const render=()=>{
-    const q=query.value.trim().toLowerCase(),filtered=items.filter(item=>`${item.label} ${item.type}`.toLowerCase().includes(q)).slice(0,30);selected=0;results.replaceChildren();
+    const q=query.value.trim().toLowerCase(),filtered=indexed.filter(item=>item.searchText.includes(q)).slice(0,30);selected=0;results.replaceChildren();
     buttons=filtered.map(item=>{
       const b=button(item.label,async()=>{handle.close();await item.action();},'command-item');b.prepend(icon(item.icon));b.append(el('small',{},item.type));results.append(el('div',{role:'listitem'},b));return b;
     });
