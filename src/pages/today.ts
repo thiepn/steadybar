@@ -15,7 +15,7 @@ import type { RoutineBlock } from '../domain/models.js';
 export function todayPage(): Page {
   const data = store.view(),profile=activeProfile(store.snapshot());
   const plan = data.dailyPlans.find(p => p.date === localDate());
-  const active = data.sessions.find(s => s.status === 'active');
+  const active = store.snapshot().sessions.find(s => s.status === 'active');
   const date = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   const weekStart = isoWeekStart(), weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);

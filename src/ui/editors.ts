@@ -6,7 +6,7 @@ import type { Experience, ProtocolKind } from '../domain/practice-types.js';
 import { store } from '../app/store.js';
 import type { Exercise, Goal, Preset, Routine, RoutineBlock, Setlist, Song, SongSection, TrainerConfig } from '../domain/models.js';
 import { validateExercise, validateGoal, validateRoutine, validateRoutineBlock, validateSetlist, validateSong, validateTrainer } from '../domain/validation.js';
-import { freshBlocks, metadata, uuid } from '../domain/utils.js';
+import { freshBlocks, metadata, nowISO, uuid } from '../domain/utils.js';
 import { el } from './dom.js';
 import { checkbox, formDialog, formNumber, formText, input, notify, select, textarea } from './components.js';
 import { navigate } from '../app/navigation.js';
@@ -65,8 +65,16 @@ export function editSong(song?:Song):void{
     select('status','Preparation status',[['learning','Learning'],['practicing','Practicing'],['performance-ready','Performance-ready'],['archived','Archived']],s.status),
     textarea('notes','Arrangement / practice notes',s.notes),
   ],async data=>{
-    const saved=validateSong({...s,title:formText(data,'title'),artist:formText(data,'artist'),bpm:formNumber(data,'bpm'),meter:parseMeter(data),key:formText(data,'key'),difficulty:formNumber(data,'difficulty'),status:formText(data,'status'),notes:formText(data,'notes')});
-    await store.save('songs',saved);notify('Song saved.');if(!song)navigate(`/songs/${saved.id}`);
+    const changes={title:formText(data,'title'),artist:formText(data,'artist'),bpm:formNumber(data,'bpm'),meter:parseMeter(data),key:formText(data,'key'),difficulty:formNumber(data,'difficulty'),status:formText(data,'status'),notes:formText(data,'notes')};
+    let saved:Song|undefined;
+    if(song){
+      await store.workspace(workspace=>{
+        const current=workspace.songs.find(item=>item.id===song.id);if(!current)throw new Error('This song no longer exists.');
+        const merged=validateSong({...current,...changes,updatedAt:nowISO()});saved=merged;
+        workspace.songs=workspace.songs.map(item=>item.id===song.id?merged:item);return workspace;
+      });
+    }else{saved=validateSong({...s,...changes});await store.save('songs',saved);}
+    if(!saved)throw new Error('The song could not be saved.');notify('Song saved.');if(!song)navigate(`/songs/${saved.id}`);
   },'Save song');
 }
 export function editSection(song:Song,section?:SongSection,partId?:string):void{

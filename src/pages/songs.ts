@@ -7,7 +7,7 @@ import { el } from '../ui/dom.js';
 import { button, confirmAction, empty, formDialog, formNumber, formText, iconButton, input, link, notify, pageHeader, sectionHeader, select, stat } from '../ui/components.js';
 import { editSection, editSong } from '../ui/editors.js';
 import { addToday, launchPractice, songBlock } from '../practice/launch.js';
-import { duration, formatDate, reorder, titleCase } from '../domain/utils.js';
+import { duration, formatDate, nowISO, reorder, titleCase } from '../domain/utils.js';
 import { finishedSessions } from '../domain/analytics.js';
 const selectedParts = new Map<string,string>();
 const songView = { query: '', status: 'active', visible: 60 };
@@ -75,6 +75,10 @@ export function songPage(id:string,requestedPart?:string):Page{
   const past=el('section',{class:'panel'},sectionHeader('Recent song practice'));
   if(!history.length)past.append(el('p',{class:'muted inset'},'Finish a song or section session to see your practice here.'));
   else past.append(...history.slice(0,15).map(h=>el('div',{class:'history-block-row'},link(formatDate(h.session.startedAt),`/history/${h.session.id}`),el('strong',{},h.block.titleSnapshot),el('span',{class:'muted'},duration(h.block.actualActiveSeconds)),h.block.notes?el('p',{class:'small muted pre-line'},h.block.notes):null)));
-  page.append(past,el('div',{class:'page-footer'},button('Add song to today',()=>addToday(songBlock(original,undefined,600,part?.id??'shared')),'secondary','plus'),button(original.status==='archived'?'Restore song':'Archive song',async()=>{await store.save('songs',{...original,status:original.status==='archived'?'learning':'archived'});notify(original.status==='archived'?'Song restored.':'Song archived. Practice history is unchanged.');},'ghost',original.status==='archived'?'restart':'trash')));
+  page.append(past,el('div',{class:'page-footer'},button('Add song to today',()=>addToday(songBlock(original,undefined,600,part?.id??'shared')),'secondary','plus'),button(original.status==='archived'?'Restore song':'Archive song',async()=>{
+    const status=original.status==='archived'?'learning':'archived';
+    await store.workspace(workspace=>{const current=workspace.songs.find(item=>item.id===original.id);if(!current)throw new Error('This song no longer exists.');current.status=status;current.updatedAt=nowISO();return workspace;});
+    notify(status==='learning'?'Song restored.':'Song archived. Practice history is unchanged.');
+  },'ghost',original.status==='archived'?'restart':'trash')));
   return {node:page};
 }

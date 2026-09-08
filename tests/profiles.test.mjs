@@ -127,6 +127,14 @@ test('song part goals and session snapshots are scoped to the right instrumental
 test('recommendations are deterministic, profile-filtered and explain their priority',()=>{
  const d=dataset('bass'),g=dataset('guitar');d.exercises.push(...g.exercises);d.profiles.push(...g.profiles);const a=suggestedExercises(d),b=suggestedExercises(d);assert.deepEqual(a,b);assert.equal(a.length,3);assert.ok(a.every(r=>r.reason&&d.exercises.find(e=>e.id===r.id).profileId===d.settings.activeProfileId));
 });
+test('recommendations match compound and hyphenated focus names accurately',()=>{
+ const piano=dataset('piano'),pp=piano.profiles[0];pp.focusAreas=['Sight Reading'];const sight=piano.exercises.find(e=>e.skillArea==='sight-reading');assert.ok(sight);for(const e of piano.exercises)e.archived=e.id!==sight.id;sight.level=pp.level;
+ const p=suggestedExercises(piano).find(r=>r.id===sight.id);assert.equal(p?.reason,'Matches Sight Reading');
+ const voice=dataset('voice'),vp=voice.profiles[0];vp.focusAreas=['Ear Training'];const ear=voice.exercises.find(e=>e.skillArea==='ear-training');assert.ok(ear);for(const e of voice.exercises)e.archived=e.id!==ear.id;ear.level=vp.level;
+ const v=suggestedExercises(voice).find(r=>r.id===ear.id);assert.equal(v?.reason,'Matches Ear Training');
+ const guitar=dataset('guitar'),gp=guitar.profiles[0];gp.focusAreas=['Chords & Rhythm'];const chord=guitar.exercises.find(e=>e.skillArea==='chords');assert.ok(chord);for(const e of guitar.exercises)e.archived=e.id!==chord.id;chord.level=gp.level;
+ assert.equal(suggestedExercises(guitar).find(r=>r.id===chord.id)?.reason,'Matches Chords & Rhythm');
+});
 
 test('migration keeps dangling legacy future blocks usable and explains the repair',()=>{
  const d=seedData(at);d.routines[0].blocks[0].exerciseId='deleted-exercise';d.dailyPlans=[{id:'old-plan',createdAt:at,updatedAt:at,date:'2026-09-08',sourceRoutineId:d.routines[0].id,blocks:[{...d.routines[0].blocks[0]}]}];

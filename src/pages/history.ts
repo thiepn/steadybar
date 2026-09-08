@@ -6,13 +6,20 @@ import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
 import { badge, button, empty, formDialog, formNumber, formText, link, notify, pageHeader, sectionHeader, select, stat, textarea } from '../ui/components.js';
 import { calculateBestCleanBpm, exerciseAttempts, finishedSessions, sessionTime } from '../domain/analytics.js';
-import { duration, formatDate, titleCase } from '../domain/utils.js';
+import { duration, formatDate, nowISO, titleCase } from '../domain/utils.js';
 import type { PracticeSession } from '../domain/models.js';
 export function editSessionReview(session:PracticeSession):void{
   formDialog('Session review',[
     select('rating','How did the session feel?',[['','Not rated'],['1','1 · Difficult'],['2','2 · Below usual'],['3','3 · Solid'],['4','4 · Good focus'],['5','5 · Excellent focus']],session.sessionRating?String(session.sessionRating):''),textarea('notes','Session notes',session.sessionNotes,4),
     el('p',{class:'field-hint'},'Timing, attempts, and historical snapshots are preserved. This only updates your reflection.'),
-  ],async data=>{await store.save('sessions',{...session,sessionRating:formText(data,'rating')?formNumber(data,'rating') as 1|2|3|4|5:undefined,sessionNotes:formText(data,'notes')});notify('Session review saved.');},'Save review');
+  ],async data=>{
+    const sessionRating=formText(data,'rating')?formNumber(data,'rating') as 1|2|3|4|5:undefined,sessionNotes=formText(data,'notes');
+    await store.workspace(workspace=>{
+      const current=workspace.sessions.find(item=>item.id===session.id);if(!current)throw new Error('This session no longer exists.');
+      current.sessionRating=sessionRating;current.sessionNotes=sessionNotes;current.updatedAt=nowISO();return workspace;
+    });
+    notify('Session review saved.');
+  },'Save review');
 }
 export function historyPage():Page{
   const sessions=finishedSessions(store.view().sessions).sort((a,b)=>b.startedAt.localeCompare(a.startedAt));

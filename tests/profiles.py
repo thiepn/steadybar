@@ -16,6 +16,17 @@ class Profiles(e2e.MusicPracticeTests):
         self.assertEqual(self.read("load('app/store.js').store.snapshot().profiles.find(p=>p.id===load('app/store.js').store.snapshot().settings.activeProfileId).instrumentType"),kind)
 
     def state(self): return self.read("load('app/store.js').store.snapshot()")
+    def wait_read(self,expression,predicate,timeout_ms=7000):
+        deadline=time.monotonic()+timeout_ms/1000;last=None;last_error=None
+        while time.monotonic()<deadline:
+            try:
+                last=self.read(expression)
+                if predicate(last):return last
+                last_error=None
+            except Exception as error:last_error=error
+            self.page.wait_for_timeout(40)
+        if last_error is not None:self.fail(f'Timed out waiting for browser state. Last error: {last_error}')
+        self.fail(f'Timed out waiting for browser state. Last value: {last!r}')
     def profile(self):
         data=self.state();return next(p for p in data['profiles'] if p['id']==data['settings']['activeProfileId'])
     def exercise(self,kind):
@@ -26,7 +37,9 @@ class Profiles(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('heading',name=exercise['name'],exact=True)).to_be_visible()
         self.page.get_by_role('button',name='Start practice',exact=True).click()
         expect(self.page.locator('.active-title')).to_be_visible()
-        self.start();return exercise
+        self.start()
+        self.wait_read("load('practice/controller.js').practice.session.runtime.phase",lambda value:value=='running')
+        return exercise
     def add_profile(self,kind,name=None,family=None):
         self.route('/settings');self.page.get_by_role('button',name='Add profile',exact=True).click()
         self.page.locator('dialog[open]').get_by_label('Instrument',exact=True).select_option(kind)
@@ -64,7 +77,6 @@ class Profiles(e2e.MusicPracticeTests):
             self.page.locator('dialog[open]').get_by_label('Fatigue',exact=True).select_option('1')
             self.save_dialog('Save review')
         self.finish()
-        session=self.state()['sessions'][-1]
         # Native IndexedDB orders by ID, not insertion. Locate the actual completed exercise.
         session=next(s for s in self.state()['sessions'] if s['status']=='completed' and any(b.get('sourceExerciseId')==exercise['id'] for b in s['blocks']))
         self.assertEqual(session['profileId'],self.profile()['id'])
@@ -130,18 +142,19 @@ class Profiles(e2e.MusicPracticeTests):
         p=exercise['protocol'];expected=p['tuning'][len(p['tuning'])-p['strings'][0]]%12
         labels=('C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B')
         self.page.get_by_role('group',name='Note answers',exact=True).get_by_role('button',name=labels[expected],exact=True).click()
-        current=self.read("load('practice/controller.js').practice.session.blocks[0]")
+        current=self.wait_read("load('practice/controller.js').practice.session.blocks[0]",lambda block:len(block.get('outcomes',[]))==1)
         self.assertTrue(current['outcomes'][0]['correct']);self.assertEqual(current['protocolState']['clean'],1)
         self.finish();expect(self.page.locator('.outcome-history').first).to_contain_text('— correct')
-        saved=self.state()['sessions'][-1]['blocks'][0]['outcomes'][0]
+        session=next(s for s in self.state()['sessions'] if any(b.get('sourceExerciseId')==exercise['id'] for b in s['blocks']))
+        saved=session['blocks'][0]['outcomes'][0]
         self.assertEqual(saved['answer'],saved['expected']);self.assertTrue(saved['correct'])
 
     def test_65_multiple_profiles_isolate_plans_and_pin_history(self):
         self.onboard_type('drums');original=self.profile();guitar=self.add_profile('guitar','Electric guitar')
         self.assertEqual(self.read("load('app/store.js').store.view().dailyPlans.length"),0)
         self.route('/');self.page.get_by_role('button',name='Build a plan',exact=True).click()
-        self.assertEqual(self.read("load('app/store.js').store.view().dailyPlans.length"),1)
-        self.complete_example('guitar');session=self.state()['sessions'][0]
+        self.wait_read("load('app/store.js').store.view().dailyPlans.length",lambda value:value==1)
+        _,session=self.complete_example('guitar')
         self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Electric guitar',exact=True))
         row.get_by_role('button',name='Edit',exact=True).click();self.dialog_fill('Profile name','Stage guitar');self.save_dialog('Save profile')
         self.assertEqual(self.state()['sessions'][0]['profileNameSnapshot'],'Electric guitar')
@@ -186,7 +199,8 @@ class Profiles(e2e.MusicPracticeTests):
         self.dialog_fill('Name','Ukulele notes');self.page.get_by_label('Practice method',exact=True).select_option('fretboard')
         self.dialog_fill('Tuning, low to high','G4, C4, E4, A4')
         self.dialog_fill('Strings to test','1, 2, 3, 4');self.save_dialog('Save exercise')
-        self.assertEqual(self.state()['exercises'][-1].get('profileId',custom['id']),custom['id'])
+        saved=next(e for e in self.state()['exercises'] if e['name']=='Ukulele notes')
+        self.assertEqual(saved['profileId'],custom['id']);self.assertEqual(saved['protocol']['kind'],'fretboard')
 
     def test_68_task_edit_retains_previous_work_as_an_immutable_segment(self):
         self.onboard_type('guitar');self.launch('chord-changes')
@@ -252,7 +266,15 @@ class Profiles(e2e.MusicPracticeTests):
         self.route('/settings')
         with self.page.expect_download() as download:self.page.get_by_role('button',name='Export pre-upgrade backup',exact=True).click()
         path=e2e.ARTIFACTS/'actual-pre-upgrade.json';download.value.save_as(path)
-        backup=json.loads(path.read_text());self.assertEqual(backup['version'],1);self.assertEqual(backup['data'],legacy)
+        backup=json.loads(path.read_text());self.assertEqual(backup['version'],1)
+        def canonical(data):
+            value=json.loads(json.dumps(data))
+            for name in ('exercises','songs','routines','dailyPlans','sessions','goals','setlists','metronomePresets'):
+                value[name]=sorted(value[name],key=lambda row:row['id'])
+            return value
+        self.assertEqual(canonical(backup['data']),canonical(legacy))
+        for name in ('exercises','songs','routines','dailyPlans','sessions','goals','setlists','metronomePresets'):
+            self.assertEqual({row['id'] for row in backup['data'][name]},{row['id'] for row in legacy[name]})
 
     def test_71_large_library_preserves_bounded_dom(self):
         self.onboard_type('guitar')
@@ -265,6 +287,33 @@ class Profiles(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('link',name='Large library task 999',exact=True)).to_be_visible()
         self.assertLess(self.page.locator('#main *').count(),1000)
         (e2e.ARTIFACTS/'profiles-performance-results.json').write_text(json.dumps({'environment':'automated browser; not field INP','routeMilliseconds':timings,'additionalExercises':1000}))
+
+    def test_72_cross_profile_active_session_stays_recoverable(self):
+        self.onboard_type('drums');drums=self.profile();guitar=self.add_profile('guitar','Recovery guitar')
+        self.use_profile(drums['name']);self.launch('tempo')
+        self.page.get_by_role('button',name='Save & leave',exact=True).click();expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
+        self.read("load('app/store.js').store.workspace(d=>{d.settings.activeProfileId="+json.dumps(guitar['id'])+";return d})")
+        self.route('/');expect(self.page.get_by_text('Unfinished session',exact=True)).to_be_visible();expect(self.page.get_by_role('link',name='Resume session',exact=True)).to_be_visible()
+        self.route('/practice');expect(self.page.get_by_text('An unfinished session is saved.',exact=True)).to_be_visible()
+        self.route('/practice/active');self.finish()
+
+    def test_73_session_reflection_preserves_newer_block_data(self):
+        self.onboard_type('guitar');exercise,session=self.complete_example('guitar');self.route('/history/'+session['id'])
+        self.page.get_by_role('button',name='Add reflection',exact=True).click()
+        self.read("load('app/store.js').store.workspace(d=>{const s=d.sessions.find(s=>s.id==="+json.dumps(session['id'])+");s.blocks[0].notes='Concurrent persisted block note';return d})")
+        self.dialog_fill('Session notes','Reflection added after concurrent update');self.save_dialog('Save review')
+        saved=next(s for s in self.state()['sessions'] if s['id']==session['id'])
+        self.assertEqual(saved['blocks'][0]['notes'],'Concurrent persisted block note');self.assertEqual(saved['sessionNotes'],'Reflection added after concurrent update')
+        self.assertTrue(any(b.get('sourceExerciseId')==exercise['id'] for b in saved['blocks']))
+
+    def test_74_editing_song_details_preserves_newer_parts_and_sections(self):
+        self.onboard_type('guitar');song_id=self.create_song('Concurrent song');profile=self.profile()
+        self.page.get_by_role('button',name='Edit song',exact=True).click()
+        expression="load('app/store.js').store.workspace(d=>{const s=d.songs.find(s=>s.id==="+json.dumps(song_id)+");s.sections.push({id:'concurrent-section',name:'Concurrent section',bars:4,notes:'Keep this',order:s.sections.length});s.parts=[...(s.parts??[]),{id:'concurrent-part',profileId:"+json.dumps(profile['id'])+",name:'Concurrent guitar part',instrumentType:'guitar',notes:'Keep part',key:'D',status:'learning',tuning:'E A D G B E',role:'Rhythm',range:'',sections:[]}];return d})"
+        self.read(expression);self.dialog_fill('Title','Concurrent song renamed');self.dialog_fill('Arrangement / practice notes','Base edit');self.save_dialog('Save song')
+        saved=next(s for s in self.state()['songs'] if s['id']==song_id)
+        self.assertEqual(saved['title'],'Concurrent song renamed');self.assertEqual(saved['notes'],'Base edit')
+        self.assertEqual([s['name'] for s in saved['sections']],['Concurrent section']);self.assertEqual([p['name'] for p in saved['parts']],['Concurrent guitar part'])
 
     def matrix(self,kind):
         self.onboard_type(kind);exercise,_=self.complete_example(kind)

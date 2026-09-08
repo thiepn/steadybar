@@ -17,7 +17,7 @@ import { trainerLabel } from '../domain/trainer.js';
 import { routineDuration } from '../domain/analytics.js';
 import { sessionPage } from './history.js';
 export function practicePage():Page{
-  const data=store.view(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=data.sessions.find(s=>s.status==='active');
+  const data=store.view(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=store.snapshot().sessions.find(s=>s.status==='active');
   const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Choose a plan, an exercise, or a timed free session.'));
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},'An unfinished session is saved.'),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
   const planned=el('section',{class:'panel launcher-plan'},sectionHeader('Today’s session',`${plan?.blocks.length||0} blocks · ${duration(routineDuration(plan?.blocks||[]))}`));
