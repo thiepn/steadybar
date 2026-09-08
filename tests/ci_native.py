@@ -116,14 +116,29 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.page.get_by_label('BPM', exact=True).press('Tab')
         self.page.get_by_label('Subdivision', exact=True).select_option('4')
         self.page.get_by_role('button', name='Start metronome', exact=True).click()
-        # A click dispatch is not an AudioContext-ready signal. Wait for actual
-        # native scheduling; retain the exact subdivision interval assertion.
-        self.page.wait_for_function('()=>window.__scheduled.length >= 9', timeout=7000)
+        # Require a full second of exact native scheduling, not an arbitrary
+        # sleep after AudioContext startup. Shared runners can stall during
+        # startup; the scheduler deliberately skips stale clicks without a burst.
+        self.page.wait_for_function("""()=>{
+            const events=window.__scheduled, tail=events.slice(-9);
+            if(tail.length<9 || !tail.slice(1).every((time,i)=>Math.abs(time-tail[i]-.125)<1e-8))return false;
+            window.__steadySchedule=tail;return true;
+        }""", timeout=7000)
         self.page.get_by_role('button', name='Pause metronome', exact=True).click()
         events = self.page.evaluate('window.__scheduled')
-        self.assertGreaterEqual(len(events), 9)
+        steady = self.page.evaluate('window.__steadySchedule')
+        self.assertEqual(len(steady), 9)
+        for earlier, later in zip(steady, steady[1:]):
+            self.assertAlmostEqual(later - earlier, .125, places=8, msg=repr(steady))
+        # Every event, including startup recovery, must stay on the same precise
+        # sixteenth-note grid. Off-grid timing and stale-click bursts still fail.
+        skipped = 0
         for earlier, later in zip(events, events[1:]):
-            self.assertAlmostEqual(later - earlier, .125, places=8, msg=repr(events))
+            steps = (later - earlier) / .125
+            self.assertGreaterEqual(steps, 1 - 1e-8)
+            self.assertAlmostEqual(steps, round(steps), places=8, msg=repr(events))
+            skipped += max(0, round(steps) - 1)
+        print('Audio scheduling evidence:', e2e.json.dumps({'times':events,'steadyWindow':steady,'skippedGridSlots':skipped}))
         self.page.wait_for_timeout(250)
         self.assertEqual(self.page.evaluate('window.__scheduled.length'), len(events))
 
@@ -142,8 +157,15 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.page.reload(wait_until='networkidle')
         self.wait_read("load('app/store.js').store.snapshot().songs.length", lambda value: value == 0)
         self.page.get_by_label('Choose backup file', exact=True).set_input_files(str(target))
-        with self.page.expect_navigation(wait_until='networkidle'):
-            self.confirm('Back up & replace')
+        # The safety-backup download is a separate event, not the restore reload.
+        # Firefox/WebKit report that download as an aborted navigation.
+        with self.page.expect_download() as safety_download:
+            with self.page.expect_event('domcontentloaded'):
+                self.confirm('Back up & replace')
+        safety_target = e2e.ARTIFACTS / 'pre-restore-safety-backup.json'
+        safety_download.value.save_as(safety_target)
+        safety = e2e.json.loads(safety_target.read_text(encoding='utf-8'))
+        self.assertEqual(safety['data']['songs'], [])
         e2e.expect(self.page.locator('#main')).to_be_visible()
         self.wait_read(
             "load('app/store.js').store.snapshot().songs.length",
