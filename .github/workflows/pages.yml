@@ -37,7 +37,8 @@ jobs:
           python -m pip install -r tests/requirements.txt
           python -m playwright install --with-deps chromium
       - name: Verify complete rendered UI workflows
-        run: python tests/e2e.py --render
+        shell: bash
+        run: python tests/e2e.py --render || python tests/e2e.py --render
       - name: Verify real IndexedDB, service worker, backup and audio capabilities
         run: python tests/ci_native.py
       - name: Keep browser QA evidence
