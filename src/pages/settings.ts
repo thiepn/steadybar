@@ -1,3 +1,4 @@
+import { appearanceControls } from '../ui/appearance.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -16,8 +17,9 @@ import { formatDate } from '../domain/utils.js';
 export function settingsPage():Page{
   const data=store.snapshot(),settings=data.settings;
   let dirty=false;
-  const page=el('div',{class:'page settings-page'},pageHeader('MAKE IT YOURS','Settings','Your workspace, your preferences, your data.'));
-  const appearance=el('section',{class:'panel'},sectionHeader('Appearance'),el('div',{class:'theme-options'},(['system','light','dark'] as const).map(theme=>{const b=button(theme[0]!.toUpperCase()+theme.slice(1),async()=>{if(dirty && !await confirmAction('Discard unsaved preferences?','Save your practice defaults first, or discard those edits to change appearance.','Discard edits'))return;dirty=false;await store.settings({theme});notify('Appearance saved.');},`theme-choice ${settings.theme===theme?'selected':''}`,theme==='dark'?'moon':theme==='light'?'sun':'settings');b.setAttribute('aria-pressed',String(settings.theme===theme));return b;})),el('p',{class:'field-hint'},'System follows your device’s appearance. No remote fonts or theme assets are required.'));
+  const page=el('div',{class:'page settings-page'},pageHeader('MAKE IT YOURS','Settings','Appearance, practice defaults, and backups.'));
+  const colors=appearanceControls();
+  const appearance=el('section',{class:'panel appearance-panel'},sectionHeader('Appearance'),colors.node);
   const prefs=el('form',{class:'panel settings-form'},sectionHeader('Practice defaults'));
   const bpm=input('bpm','Default BPM',settings.metronome.bpm,'number',{min:20,max:300,step:1,required:true});
   const meter=select('meter','Default meter',[...new Set(['2/4','3/4','4/4','5/4','6/8','7/8','9/8','12/8',`${settings.metronome.meter.beats}/${settings.metronome.meter.beatUnit}`])],`${settings.metronome.meter.beats}/${settings.metronome.meter.beatUnit}`);
@@ -34,7 +36,7 @@ export function settingsPage():Page{
     event.preventDefault();if(!prefs.reportValidity())return;save.disabled=true;error.textContent='';
     try{
       const form=new FormData(prefs),[beats,unit]=formText(form,'meter').split('/').map(Number);
-      const validated=validateSettings({...settings,instrument:formText(form,'instrument'),wakeLock:form.has('wake'),defaultFocus:form.has('focus'),pauseWhenHidden:form.has('hidden'),metronome:{...settings.metronome,bpm:Number(form.get('bpm')),meter:{beats:beats||4,beatUnit:unit===8?8:4},accents:beats===settings.metronome.meter.beats && unit===settings.metronome.meter.beatUnit ? [...settings.metronome.accents] : defaultAccents(beats||4,unit||4),subdivision:Number(form.get('subdivision')) as Subdivision,countIn:Number(form.get('countIn')),volume:Number(form.get('volume'))}});
+      const validated=validateSettings({...store.snapshot().settings,instrument:formText(form,'instrument'),wakeLock:form.has('wake'),defaultFocus:form.has('focus'),pauseWhenHidden:form.has('hidden'),metronome:{...settings.metronome,bpm:Number(form.get('bpm')),meter:{beats:beats||4,beatUnit:unit===8?8:4},accents:beats===settings.metronome.meter.beats && unit===settings.metronome.meter.beatUnit ? [...settings.metronome.accents] : defaultAccents(beats||4,unit||4),subdivision:Number(form.get('subdivision')) as Subdivision,countIn:Number(form.get('countIn')),volume:Number(form.get('volume'))}});
       dirty=false;await store.save('settings',validated);notify('Practice preferences saved.');
     }catch(e){dirty=true;error.textContent=e instanceof Error?e.message:'Preferences could not be saved.';}finally{save.disabled=false;}
   });
@@ -76,5 +78,5 @@ export function settingsPage():Page{
     await withWorkspaceIdle(async()=>{await exportBackup();await replaceData(seedData());});location.reload();
   },'Back up & reset');
   page.append(el('div',{class:'settings-grid'},el('div',{},appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
-  return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};
+  return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{colors.cleanup();window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};
 }

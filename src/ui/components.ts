@@ -13,17 +13,26 @@ export function notify(message:string,kind:'success'|'error'|'info'='success'):v
 export function button(label:string,action:Action,variant='secondary',symbol?:IconName):HTMLButtonElement{
   const b=el('button',{type:'button',class:`button ${variant}`},symbol?icon(symbol):null,el('span',{},label));
   b.addEventListener('click',async()=>{
-    b.disabled=true;b.setAttribute('aria-busy','true');
-    try{await action();}catch(error){notify(errorMessage(error),'error');}
+    // Synchronous actions may open a dialog. Preserve the focused trigger until
+    // the dialog records it; only pending async work needs a disabled control.
+    try{const result=action();if(result){b.disabled=true;b.setAttribute('aria-busy','true');await result;}}catch(error){notify(errorMessage(error),'error');}
     finally{b.disabled=false;b.removeAttribute('aria-busy');}
   });return b;
 }
 export function iconButton(label:string,symbol:IconName,action:Action):HTMLButtonElement{const b=button(label,action,'icon-button',symbol);b.title=label;b.setAttribute('aria-label',label);b.querySelector('span')?.remove();return b;}
 export function link(label:string,path:string,variant='text-link',symbol?:IconName):HTMLAnchorElement{return el('a',{href:`#${path}`,class:variant},symbol?icon(symbol):null,label);}
 export const badge=(text:string,variant='neutral'):HTMLElement=>el('span',{class:`badge ${variant}`},text);
-export function pageHeader(eyebrow:string,title:string,description:string,actions:Child[]=[]):HTMLElement{return el('header',{class:'page-heading'},el('div',{},el('div',{class:'eyebrow'},eyebrow),el('h1',{},title),el('p',{},description)),el('div',{class:'actions'},actions));}
+export function pageHeader(eyebrow:string,title:string,description:string,actions:Child[]=[]):HTMLElement{
+  const promotional = ['THE WORKBENCH','PLAY THE MUSIC','YOUR REPERTOIRE','BE READY TO PLAY','PERFORMANCE PREPARATION','A DIRECTION, NOT A SCORE','EVIDENCE, NOT GUESSWORK','THE PRACTICE RECORD','PRACTICE, RECORDED','MAKE IT YOURS','REPEAT WHAT WORKS','STARTER TEMPLATE','YOUR ROUTINE','STEP UP TO THE INSTRUMENT','THE PULSE'].includes(eyebrow);
+  return el('header',{class:'page-heading'},el('div',{class:'page-heading-text'},
+    eyebrow && !promotional ? el('div',{class:'eyebrow'},eyebrow) : null,
+    el('h1',{},title),description ? el('p',{},description) : null),
+    actions.length ? el('div',{class:'actions'},actions) : null);
+}
 export function sectionHeader(title:string,meta?:string,actions:Child[]=[]):HTMLElement{return el('div',{class:'section-heading'},el('div',{class:'section-title'},el('h2',{},title),meta?el('span',{class:'muted small'},meta):null),el('div',{class:'actions'},actions));}
-export function empty(title:string,description:string,action?:Child,symbol:IconName='routine'):HTMLElement{return el('div',{class:'empty-state'},el('div',{class:'empty-icon'},icon(symbol,25)),el('h3',{},title),el('p',{},description),action);}
+export function empty(title:string,description:string,action?:Child,_symbol:IconName='routine'):HTMLElement{
+  return el('div',{class:'empty-state'},el('h3',{},title),el('p',{},description),action);
+}
 export function stat(label:string,value:string|number,detail?:string):HTMLElement{return el('div',{class:'stat'},el('span',{class:'label'},label),el('strong',{class:'stat-value'},value),detail?el('span',{class:'muted small'},detail):null);}
 export function field(label:string,control:HTMLElement,hint?:string):HTMLElement{
   const id=control.id || `field-${uuid()}`;control.id=id;

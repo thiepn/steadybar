@@ -5,12 +5,12 @@ import { brandMark } from '../ui/icons.js';
 import { freshBlocks, localDate, metadata } from '../domain/utils.js';
 import { freeBlock } from '../practice/launch.js';
 export function showOnboarding():void{
-  const instrument=select('instrument','01 · What do you play?',['Drums','Guitar','Piano','Bass','Vocals','Other'],'Drums');
-  const aim=select('aim','02 · What would you like to improve?',['Technique','Timing','Speed','Songs','Consistency','General Practice'],'Technique');
-  const handle=dialog('A little direction. Then play.',[
+  const instrument=select('instrument','Instrument',['Drums','Guitar','Piano','Bass','Vocals','Other'],'Drums');
+  const aim=select('aim','Practice focus',['Technique','Timing','Speed','Songs','Consistency','General Practice'],'Technique');
+  const handle=dialog('Set up Steadybar',[
     el('div',{class:'welcome-mark'},brandMark(),el('span',{class:'eyebrow'},'STEADYBAR')),
-    el('p',{class:'welcome-intro'},'A private workspace for deliberate practice. Your instrument, a useful plan, and an honest record of improvement.'),instrument,aim,
-    el('p',{class:'field-hint'},'Drums have the richest starter library. Other instruments use the same practice tools with your own exercises and songs. No account. Nothing leaves your device.'),
+    el('p',{class:'welcome-intro'},'Plan a session, practice with a metronome, and keep a record of your progress.'),instrument,aim,
+    el('p',{class:'field-hint'},'The starter library is for drums. For other instruments, add your own exercises and songs. Your practice data stays on this device.'),
   ]);handle.dialog.classList.add('onboarding-dialog');
   const finish=async(useStarter:boolean)=>{
     const value=instrument.querySelector('select')!.value,goal=aim.querySelector('select')!.value;

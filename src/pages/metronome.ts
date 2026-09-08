@@ -10,7 +10,7 @@ import { savePreset } from '../ui/editors.js';
 export function metronomePage():Page{
   let config=structuredClone(store.snapshot().settings.metronome),running=false,taps:number[]=[],disposed=false;
   let persistTimer:ReturnType<typeof setTimeout>|undefined;
-  const page=el('div',{class:'page metronome-page'},pageHeader('THE PULSE','Metronome','A steady reference. Everything else is your playing.'));
+  const page=el('div',{class:'page metronome-page'},pageHeader('THE PULSE','Metronome','Tempo, meter, and accents.'));
   const status=el('span',{class:'status-label'},'READY'),tempo=el('input',{type:'number',min:20,max:300,step:1,value:config.bpm,inputmode:'numeric',class:'metronome-bpm','aria-label':'BPM'}),slider=el('input',{type:'range',min:20,max:300,step:1,value:config.bpm,'aria-label':'Tempo slider'});
   const signature=el('select',{'aria-label':'Time signature'},['2/4','3/4','4/4','5/4','6/8','7/8','9/8','12/8'].map(m=>el('option',{value:m},m)));
   const subdivision=el('select',{'aria-label':'Subdivision'},[['1','Beat · 1 click'],['2','Eighths · 2 clicks'],['3','Triplets · 3 clicks'],['4','Sixteenths · 4 clicks']].map(([v,l])=>el('option',{value:v},l)));
@@ -49,7 +49,7 @@ export function metronomePage():Page{
     el('div',{class:'metronome-transport'},play,el('div',{class:'tap-tempo'},tap,tapCount)),
     el('div',{class:'metronome-config'},field('Time signature',signature),field('Subdivision',subdivision),field('Count-in',countIn)),meterNote,
     el('div',{class:'volume-row'},field('Volume',volume),volumeLabel,button('Custom meter',customMeter,'ghost')));
-  const saved=el('aside',{class:'metronome-side'},el('section',{class:'panel'},sectionHeader('Your presets',undefined,[button('Save current',()=>savePreset(config),'ghost','plus')]),presets),el('section',{class:'panel quiet-panel'},sectionHeader('Built for keeping time'),el('p',{class:'muted small'},'Sound is scheduled on the Web Audio clock. The visual pulse follows the sound, never the other way around.'),el('p',{class:'muted small'},'Keep this app in the foreground for dependable playback. By default, switching away pauses it.'),el('div',{class:'keyboard-hints'},badge('Space · start / pause'),badge('↑ ↓ · ±1 BPM'),badge('Shift + ↑ ↓ · ±5 BPM'))));
+  const saved=el('aside',{class:'metronome-side'},el('section',{class:'panel'},sectionHeader('Your presets',undefined,[button('Save current',()=>savePreset(config),'ghost','plus')]),presets),el('section',{class:'panel quiet-panel'},sectionHeader('Playback & shortcuts'),el('p',{class:'muted small'},'The sound sets the timing; the visual pulse follows it.'),el('p',{class:'muted small'},'Keep this app in the foreground for dependable playback. By default, switching away pauses it.'),el('div',{class:'keyboard-hints'},badge('Space · start / pause'),badge('↑ ↓ · ±1 BPM'),badge('Shift + ↑ ↓ · ±5 BPM'))));
   const drawPresets=()=>{
     presets.replaceChildren();const saved=store.snapshot().metronomePresets;
     if(!saved.length)presets.append(el('p',{class:'muted small inset'},'Save a tempo, meter, and accent pattern you return to often.'));

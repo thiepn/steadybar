@@ -2,12 +2,12 @@
   "id": "./",
   "name": "Steadybar",
   "short_name": "Steadybar",
-  "description": "Practice with purpose. Your local-first music practice workspace.",
+  "description": "Music practice, metronome, routines, and session history. Stored on your device.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f5f5f0",
-  "theme_color": "#1f2923",
+  "background_color": "#f6f6f7",
+  "theme_color": "#f6f6f7",
   "icons": [
     {
       "src": "icon-192.png",
