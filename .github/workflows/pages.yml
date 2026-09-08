@@ -34,13 +34,13 @@ jobs:
           python -m pip install -r tests/requirements.txt
           python -m playwright install --with-deps chromium
       - name: Verify complete rendered UI workflows
-        run: python tests/ci_render.py
+        run: python tests/run_suite.py tests/ci_render.py
       - name: Verify real IndexedDB, service worker, backup and audio capabilities
-        run: python tests/ci_native.py
+        run: python tests/run_suite.py tests/ci_native.py
       - name: Verify responsive layouts and appearance persistence
-        run: python tests/ui_polish.py
+        run: python tests/run_suite.py tests/ui_polish.py
       - name: Verify practice workbench and exact responsive matrix
-        run: python tests/workbench.py
+        run: python tests/run_suite.py tests/workbench.py
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,10 +86,17 @@ jobs:
         run: |
           python -m pip install -r tests/requirements.txt
           python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Provide a real audio output to headless browser engines
+        run: |
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=steadybar_test
+          pactl set-default-sink steadybar_test
+          pactl info
       - name: Verify native persistence, recovery, offline, audio and restore
-        run: python tests/ci_native.py
+        run: python tests/run_suite.py tests/ci_native.py
       - name: Verify workbench layouts and interactions
-        run: python tests/workbench.py
+        run: python tests/run_suite.py tests/workbench.py
       - name: Keep engine evidence
         if: always()
         uses: actions/upload-artifact@v4
