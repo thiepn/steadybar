@@ -1,0 +1,70 @@
+name: Verify non-blocking vocal review pause
+on:
+  push:
+    branches: [transfer/profile-system-v201]
+    paths: [.github/workflows/fix-voice-review-pause.yml]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      PLAYWRIGHT_BUNDLED_BROWSER: '1'
+      PLAYWRIGHT_ENGINE: firefox
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/profile-system-v2.0.1
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - name: Make high-fatigue pause non-blocking after durable review save
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/ui/protocol-practice.ts')
+          text=path.read_text()
+          old="""      ],async form=>{const fatigue=formNumber(form,'fatigue');await log({...base(),kind:'voice',rootMidi:root,pitch:formNumber(form,'pitch'),ease:formNumber(form,'ease'),breath:formNumber(form,'breath'),fatigue,note:formText(form,'note')},step);if(fatigue>=4){await practice.pause();notify('Session paused. Rest your voice rather than pushing through fatigue.','info');}},'Save review');},'secondary'));"""
+          new="""      ],async form=>{
+        const fatigue=formNumber(form,'fatigue');
+        await log({...base(),kind:'voice',rootMidi:root,pitch:formNumber(form,'pitch'),ease:formNumber(form,'ease'),breath:formNumber(form,'breath'),fatigue,note:formText(form,'note')},step);
+        if(fatigue>=4){
+          // The review is already durable. Stop playback/timers immediately, but
+          // do not keep the modal open while the pause checkpoint completes.
+          // pause() performs its safety-critical stop work before its first await.
+          feedback.textContent='Review saved. Pausing for vocal rest…';
+          void practice.pause()
+            .then(()=>notify('Session paused. Rest your voice rather than pushing through fatigue.','info'))
+            .catch(error=>notify(error instanceof Error?error.message:'Practice could not be paused.','error'));
+        }
+      },'Save review');},'secondary'));"""
+          if text.count(old)!=1: raise SystemExit('Expected voice review save fragment exactly once')
+          path.write_text(text.replace(old,new))
+          PY
+      - name: Verify full code suite
+        run: npm ci && npm run check
+      - name: Install Firefox and audio support
+        run: |
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps firefox
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=steadybar_test
+          pactl set-default-sink steadybar_test
+      - name: Re-run complete Firefox profile suite
+        run: python tests/run_suite.py tests/profiles.py
+      - name: Commit exact verified product fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/ui/protocol-practice.ts
+          git commit -m 'Close vocal reviews before asynchronous rest checkpoint'
+          git push origin HEAD:fix/profile-system-v2.0.1
