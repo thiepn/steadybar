@@ -25,13 +25,13 @@ class Workbench(e2e.MusicPracticeTests):
             d.setlists=[{...meta(),name:'Sunday rehearsal',date:new Date().toISOString().slice(0,10),songIds:d.songs.map(s=>s.id),notes:'Opening set · transitions and dynamics.'}];
             d.goals=[{...meta(),type:'bpm',title:'Double strokes at 110 BPM',description:'Even hands, no tension.',exerciseId:'rudiment-2',targetValue:110,unit:'BPM',completed:false},{...meta(),type:'weekly-sessions',title:'Three sessions this week',description:'Short, focused practice.',targetValue:3,unit:'sessions',completed:false},{...meta(),type:'song-mastery',title:'Prepare Quiet Waters',description:'Ready for rehearsal.',songId:d.songs[1].id,targetValue:1,unit:'song',completed:false}];
             d.sessions=Array.from({length:12},(_,i)=>{
-                const s=load('practice/logic.js').createSession(d.routines[0].blocks,d),day=new Date();day.setDate(day.getDate()-i);
+                const s=load('practice/logic.js').createSession(d.routines.find(r=>r.id==='routine-1').blocks,d),day=new Date();day.setDate(day.getDate()-i);
                 const at=day.toISOString();s.status='completed';s.createdAt=at;s.updatedAt=at;s.startedAt=at;s.endedAt=at;s.runtime.phase='paused';
-                s.blocks.forEach((b,j)=>{b.actualActiveSeconds=240+j*30;b.completed=true;b.finalBpm=90-i;b.tempoAttempts=[{id:id(),bpm:90-i,rating:j===0?'messy':'clean',timestamp:at,note:''}];b.notes=j===1?'Keep the left hand relaxed.':'';});return s;
+                s.blocks.forEach((b,j)=>{b.actualActiveSeconds=240+j*30;b.completed=true;if(b.protocolSnapshot.kind==='tempo'){b.finalBpm=90-i;b.tempoAttempts=[{id:id(),bpm:90-i,rating:j===0?'messy':'clean',timestamp:at,note:''}];}b.notes=j===1?'Keep the left hand relaxed.':'';});return s;
             });
             await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
         })()""")
-        return self.read("({song:load('app/store.js').store.snapshot().songs[0].id,setlist:load('app/store.js').store.snapshot().setlists[0].id,routine:load('app/store.js').store.snapshot().routines[0].id,session:load('app/store.js').store.snapshot().sessions[0].id})")
+        return self.read("({song:load('app/store.js').store.snapshot().songs[0].id,setlist:load('app/store.js').store.snapshot().setlists[0].id,routine:load('app/store.js').store.snapshot().routines.find(r=>r.id==='routine-1').id,session:load('app/store.js').store.snapshot().sessions[0].id})")
 
     def assert_bounds(self,width):
         self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width+1)

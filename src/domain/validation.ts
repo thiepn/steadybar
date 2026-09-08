@@ -1,50 +1,11 @@
+import { patternFits, exerciseProtocol, protocolPulse } from './protocols.js';
+import { validateProfile, validateProtocol, validateOutcome, validateProtocolState, validateSongPart, assertProtocolCompatible, assertOutcomeMatches } from './practice-validation.js';
+export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
 import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan } from './models.js';
 
-/** Small typed runtime validators, used at every persistence boundary. No coercion. */
-export type Validator<T> = (input: unknown, path?: string) => T;
-export class ValidationError extends Error { constructor(path: string, message: string) { super(`${path}: ${message}`); this.name = 'ValidationError'; } }
-const fail = (path: string, message: string): never => { throw new ValidationError(path, message); };
-const text = (max = 10000, min = 0): Validator<string> => (v, p = 'Value') => typeof v === 'string' && v.length >= min && v.length <= max ? v : fail(p, `expected text (${min}–${max} characters)`);
-const num = (min = 0, max = Number.MAX_SAFE_INTEGER, integer = false): Validator<number> => (v, p = 'Value') => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max && (!integer || Number.isInteger(v)) ? v : fail(p, `expected ${integer ? 'a whole number' : 'a number'} from ${min} to ${max}`);
-const bool: Validator<boolean> = (v,p = 'Value') => typeof v === 'boolean' ? v : fail(p, 'expected true or false');
-const one = <T extends string | number>(...items: T[]): Validator<T> => (v,p = 'Value') => items.includes(v as T) ? v as T : fail(p, `expected ${items.join(', ')}`);
-const optional = <T>(validator: Validator<T>): Validator<T | undefined> => (v,p) => v === undefined ? undefined : validator(v,p);
-const arr = <T>(validator: Validator<T>, max = 100000): Validator<T[]> => (v,p = 'Value') => Array.isArray(v) && v.length <= max ? v.map((x,i) => validator(x,`${p}[${i}]`)) : fail(p, `expected a list (maximum ${max} items)`);
-const obj = <S extends Record<string, Validator<unknown>>>(shape: S): Validator<{ [K in keyof S]: ReturnType<S[K]> }> => (v,p = 'Value') => {
-  if (v === null || typeof v !== 'object' || Array.isArray(v)) return fail(p, 'expected an object');
-  const source = v as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const [key, validator] of Object.entries(shape)) {
-    const result = validator(source[key], `${p}.${key}`);
-    if (result !== undefined) out[key] = result;
-  }
-  return out as { [K in keyof S]: ReturnType<S[K]> };
-};
-const iso: Validator<string> = (v,p = 'Date') => {
-  if(typeof v!=='string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(v) || !Number.isFinite(Date.parse(v)))return fail(p,'expected an ISO timestamp with a timezone');
-  dateOnly(v.slice(0,10),p);
-  if(Number(v.slice(11,13))>23 || Number(v.slice(14,16))>59 || Number(v.slice(17,19))>59)return fail(p,'invalid clock time');
-  return new Date(v).toISOString();
-};
-export const dateOnly: Validator<string> = (v,p = 'Date') => {
-  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return fail(p,'use YYYY-MM-DD');
-  const date = new Date(`${v}T12:00:00`);
-  if (!Number.isFinite(date.getTime()) || `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}` !== v) return fail(p,'invalid calendar date');
-  return v;
-};
-const id: Validator<string> = (v,p='ID') => {
-  const value=text(120,1)(v,p);
-  return /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value) ? value : fail(p,'use a route-safe identifier without spaces, slashes or URL control characters');
-};
-const name: Validator<string> = (v,p='Name') => {
-  const value=text(200,1)(v,p);
-  return value.trim() ? value : fail(p,'cannot be blank');
-};
-const bpm = num(20,300,true), order = num(0,10000,true);
-function uniqueIds(items:{id:string}[],p:string):void {
-  if(new Set(items.map(item=>item.id)).size!==items.length)fail(p,'contains duplicate IDs; each item must be unique');
-}
+import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
+export { ValidationError, dateOnly, type Validator } from './schema.js';
 const entity = { id, createdAt: iso, updatedAt: iso };
 const meter = obj({ beats:num(1,16,true), beatUnit:one(4,8) });
 const subdivision = one(1,2,3,4);
@@ -73,18 +34,19 @@ export const validateTrainer: Validator<TrainerConfig> = (v,p = 'Tempo trainer')
     default: return fail(p,'unknown tempo trainer mode');
   }
 };
-const rawExercise = obj({ ...entity, name, instrument:name, category:one('rudiment','technique','groove','coordination','warmup','timing','other'), description:text(), instructions:text(), sticking:text(1000), accents:text(1000), defaultBpm:bpm, targetBpm:optional(bpm), minBpm:bpm, maxBpm:bpm, meter, subdivision, tags:arr(text(80),50), notes:text(), builtin:bool, archived:bool });
+const rawExercise = obj({ ...entity, name, profileId:optional(id), skillArea:optional(text(100,1)), protocol:optional(validateProtocol), level:optional(one('beginner','intermediate','advanced')), defaultSeconds:optional(num(1,86400,true)), instrument:name, category:one('rudiment','technique','groove','coordination','warmup','timing','other'), description:text(), instructions:text(), sticking:optional(text(1000)), accents:optional(text(1000)), defaultBpm:optional(bpm), targetBpm:optional(bpm), minBpm:optional(bpm), maxBpm:optional(bpm), meter:optional(meter), subdivision:optional(subdivision), tags:arr(text(80),50), notes:text(), builtin:bool, archived:bool });
 export const validateExercise: Validator<Exercise> = (v,p='Exercise') => {
   const exercise=rawExercise(v,p);
-  if(exercise.minBpm>exercise.maxBpm)fail(p,'minimum BPM cannot exceed maximum BPM');
+  if(exercise.minBpm!==undefined && exercise.maxBpm!==undefined && exercise.minBpm>exercise.maxBpm)fail(p,'minimum BPM cannot exceed maximum BPM');
+  if(!exercise.protocol && (exercise.defaultBpm===undefined || !exercise.meter || !exercise.subdivision))fail(p,'legacy exercises require tempo and meter');
   return exercise;
 };
 const section = obj({ id, name, bars:optional(num(1,1000,true)), bpmOverride:optional(bpm), notes:text(), order });
-const rawSong = obj({ ...entity, title:name, artist:text(200), bpm, meter, key:text(40), difficulty:one(1,2,3,4,5), status:one('learning','practicing','performance-ready','archived'), notes:text(), sections:arr(section,200) });
+const rawSong = obj({ ...entity, title:name, artist:text(200), bpm, meter, key:text(40), difficulty:one(1,2,3,4,5), status:one('learning','practicing','performance-ready','archived'), notes:text(), sections:arr(section,200), parts:optional(arr(validateSongPart,100)) });
 export const validateSong: Validator<Song> = (v,p='Song') => {
-  const song=rawSong(v,p);uniqueIds(song.sections,`${p}.sections`);return song;
+  const song=rawSong(v,p);uniqueIds(song.sections,`${p}.sections`);if(song.parts)uniqueIds(song.parts,`${p}.parts`);return song;
 };
-const rawRoutineBlock = obj({ id, type:one('exercise','song','song-section','free'), exerciseId:optional(id), songId:optional(id), songSectionId:optional(id), title:name, targetSeconds:num(1,86400,true), bpm, notes:text(), tempoTrainer:optional(validateTrainer), order });
+const rawRoutineBlock = obj({ id, profileId:optional(id), songPartId:optional(id), protocol:optional(validateProtocol), type:one('exercise','song','song-section','free'), exerciseId:optional(id), songId:optional(id), songSectionId:optional(id), title:name, targetSeconds:num(1,86400,true), bpm:optional(bpm), notes:text(), tempoTrainer:optional(validateTrainer), order });
 export const validateRoutineBlock: Validator<RoutineBlock> = (v,p='Block') => {
   const block=rawRoutineBlock(v,p);
   if(block.type==='exercise' && !block.exerciseId)fail(p,'an exercise block needs an exercise ID');
@@ -92,20 +54,20 @@ export const validateRoutineBlock: Validator<RoutineBlock> = (v,p='Block') => {
   if(block.type==='song-section' && !block.songSectionId)fail(p,'a section block needs a section ID');
   return block;
 };
-const rawRoutine = obj({ ...entity, name, description:text(), blocks:arr(validateRoutineBlock,200), scheduledDays:arr(num(0,6,true),7), tags:arr(text(80),50), builtin:bool, archived:bool });
+const rawRoutine = obj({ ...entity, profileId:optional(id), name, description:text(), blocks:arr(validateRoutineBlock,200), scheduledDays:arr(num(0,6,true),7), tags:arr(text(80),50), builtin:bool, archived:bool });
 export const validateRoutine: Validator<Routine> = (v,p='Routine') => {
   const routine=rawRoutine(v,p);uniqueIds(routine.blocks,`${p}.blocks`);
   if(new Set(routine.scheduledDays).size!==routine.scheduledDays.length)fail(p,'scheduled weekdays must be unique');
   return routine;
 };
-const rawPlan = obj({ ...entity, date:dateOnly, sourceRoutineId:optional(id), blocks:arr(validateRoutineBlock,200) });
+const rawPlan = obj({ ...entity, profileId:optional(id), date:dateOnly, sourceRoutineId:optional(id), blocks:arr(validateRoutineBlock,200) });
 export const validatePlan: Validator<DailyPlan> = (v,p='Daily plan') => {
   const plan=rawPlan(v,p);uniqueIds(plan.blocks,`${p}.blocks`);return plan;
 };
 const attempt = obj({ id, bpm, rating:one('failed','messy','acceptable','clean','effortless'), timestamp:iso, durationSeconds:optional(num(0,31536000)), note:text() });
-const practiceBlock = obj({ id, type:one('exercise','song','song-section','free'), sourceExerciseId:optional(id), sourceSongId:optional(id), sourceSongSectionId:optional(id), titleSnapshot:name, categorySnapshot:text(100), stickingSnapshot:text(1000), meterSnapshot:meter, subdivisionSnapshot:subdivision, targetSeconds:num(1,86400,true), actualActiveSeconds:num(0,31536000), initialBpm:bpm, finalBpm:bpm, tempoAttempts:arr(attempt,10000), notes:text(), startedAt:optional(iso), endedAt:optional(iso), completed:bool, skipped:bool, tempoTrainer:optional(validateTrainer) });
+const practiceBlock = obj({ id, profileId:optional(id), profileNameSnapshot:optional(name), protocolSnapshot:optional(validateProtocol), instructionsSnapshot:optional(text()), outcomes:optional(arr(validateOutcome,10000)), protocolState:optional(validateProtocolState), sourceSongPartId:optional(id), type:one('exercise','song','song-section','free'), sourceExerciseId:optional(id), sourceSongId:optional(id), sourceSongSectionId:optional(id), titleSnapshot:name, categorySnapshot:text(100), stickingSnapshot:text(1000), meterSnapshot:meter, subdivisionSnapshot:subdivision, targetSeconds:num(1,86400,true), actualActiveSeconds:num(0,31536000), initialBpm:optional(bpm), finalBpm:optional(bpm), tempoAttempts:arr(attempt,10000), notes:text(), startedAt:optional(iso), endedAt:optional(iso), completed:bool, skipped:bool, tempoTrainer:optional(validateTrainer) });
 const runtime = obj({ phase:one('ready','countin','running','paused'), runStartedAt:optional(iso), bpm, trainerCleanRounds:num(0,100000,true), trainerStartSeconds:num(0,31536000), checkpointAt:iso, metronomeOn:bool });
-const rawSession = obj({ ...entity, status:one('active','completed','abandoned'), startedAt:iso, endedAt:optional(iso), activeBlockIndex:order, blocks:arr(practiceBlock,200), sessionNotes:text(), sessionRating:optional(one(1,2,3,4,5)), sourceRoutineId:optional(id), sourceDailyPlanId:optional(id), runtime });
+const rawSession = obj({ ...entity, profileId:optional(id), profileNameSnapshot:optional(name), status:one('active','completed','abandoned'), startedAt:iso, endedAt:optional(iso), activeBlockIndex:order, blocks:arr(practiceBlock,200), sessionNotes:text(), sessionRating:optional(one(1,2,3,4,5)), sourceRoutineId:optional(id), sourceDailyPlanId:optional(id), runtime });
 export const validateSession: Validator<PracticeSession> = (v,p = 'Session') => {
   const s = rawSession(v,p);
   if(s.blocks.length === 0 || s.activeBlockIndex >= s.blocks.length) fail(p,'the active block index must refer to an existing block');
@@ -113,14 +75,25 @@ export const validateSession: Validator<PracticeSession> = (v,p = 'Session') => 
   if(s.status!=='active' && (!s.endedAt || s.runtime.phase==='running' || s.runtime.phase==='countin'))fail(p,'an ended session needs an end timestamp and a stopped timer');
   if(new Set(s.blocks.map(b=>b.id)).size!==s.blocks.length)fail(p,'block IDs must be unique within a session');
   for(const b of s.blocks){
+    if(b.outcomes){uniqueIds(b.outcomes,`${p}.outcomes`);if(!b.protocolSnapshot)fail(p,'outcomes require a protocol snapshot');for(const outcome of b.outcomes)assertOutcomeMatches(outcome,b.protocolSnapshot!);}
+    if(b.protocolSnapshot){
+      const p=b.protocolSnapshot;
+      if(p.kind!=='tempo'&&(b.tempoAttempts.length||b.tempoTrainer))fail('Session','non-tempo tasks cannot contain tempo attempts or a tempo trainer');
+      if(b.protocolState?.rootMidi!==undefined&&p.kind==='vocal-pattern'&&!patternFits(p,b.protocolState.rootMidi))fail('Session','saved vocal root is outside the comfortable range');
+      if((b.outcomes??[]).filter(o=>o.kind==='reading'&&o.firstRead).length>1)fail('Session','only one first-read outcome is allowed in a segment');
+    }
+    if(b.protocolState && b.protocolState.clean>b.protocolState.total)fail(p,'clean count exceeds attempts');
     if(b.completed && b.skipped)fail(p,'a block cannot be both completed and skipped');
     if(new Set(b.tempoAttempts.map(a=>a.id)).size!==b.tempoAttempts.length)fail(p,'attempt IDs must be unique within a block');
   }
   return s;
 };
-const rawGoal = obj({ ...entity, type:one('bpm','weekly-sessions','song-mastery','custom'), title:name, description:text(), exerciseId:optional(id), songId:optional(id), targetValue:num(1,10000), unit:text(80), deadline:optional(dateOnly), completed:bool, completedAt:optional(iso) });
+const rawGoal = obj({ ...entity, profileId:optional(id), songPartId:optional(id), metric:optional(one('clean-count','keys-practiced','recall-correct','pitch-sessions')), type:one('bpm','weekly-sessions','weekly-minutes','protocol','song-mastery','custom'), title:name, description:text(), exerciseId:optional(id), songId:optional(id), targetValue:num(1,10000), unit:text(80), deadline:optional(dateOnly), completed:bool, completedAt:optional(iso) });
 export const validateGoal: Validator<Goal> = (v,p='Goal') => {
   const goal=rawGoal(v,p);
+  if(goal.type==='protocol' && !goal.metric)fail(p,'choose a protocol metric');
+  if(goal.metric==='keys-practiced'&&goal.targetValue>12)fail(p,'key coverage cannot exceed twelve pitch classes');
+  if(goal.type==='protocol'&&!Number.isInteger(goal.targetValue))fail(p,'task targets must be whole numbers');
   if(goal.type==='bpm'){
     if(!goal.exerciseId)fail(p,'a BPM goal needs an exercise ID');
     bpm(goal.targetValue,`${p}.targetValue`);
@@ -131,20 +104,51 @@ export const validateGoal: Validator<Goal> = (v,p='Goal') => {
 };
 export const validateSetlist: Validator<Setlist> = obj({ ...entity, name, date:optional(dateOnly), songIds:arr(id,200), notes:text() });
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
-export const validateSettings: Validator<Settings> = obj({ id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), metronomePresets:arr(validatePreset), settings:validateSettings });
+export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), profiles:optional(arr(validateProfile,100)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
   for(const [key,value] of Object.entries(d))if(Array.isArray(value))uniqueIds(value,`Data.${key}`);
-  if(new Set(d.dailyPlans.map(p=>p.date)).size!==d.dailyPlans.length)fail('Daily plans','contains duplicate dates');
+  if(new Set(d.dailyPlans.map(p=>`${p.profileId??''}/${p.date}`)).size!==d.dailyPlans.length)fail('Daily plans','contains duplicate dates');
   if(d.sessions.filter(s=>s.status==='active').length>1)fail('Sessions','data may contain only one active session');
+  if(d.schemaVersion===2){
+    if(!d.profiles?.length)fail('Profiles','at least one profile is required');
+    const profiles=new Map(d.profiles!.map(p=>[p.id,p]));
+    const requireProfile=(id:string|undefined)=>{const p=id?profiles.get(id):undefined;if(!p)fail('Profile','missing or unknown profile ID');return p!;};
+    if(requireProfile(d.settings.activeProfileId).archived || requireProfile(d.settings.primaryProfileId).archived)fail('Settings','active and primary profiles must not be archived');
+    for(const e of d.exercises){const p=requireProfile(e.profileId);if(!e.protocol||!e.skillArea)fail('Exercise','v2 exercises require a protocol and skill area');assertProtocolCompatible(e.protocol!,p);}
+    const exercises=new Map(d.exercises.map(e=>[e.id,e])),songs=new Map(d.songs.map(s=>[s.id,s]));
+    for(const r of [...d.routines,...d.dailyPlans]){requireProfile(r.profileId);for(const b of r.blocks){
+      if(b.protocol)assertProtocolCompatible(b.protocol,requireProfile(r.profileId));
+      const effective=b.protocol??(b.exerciseId&&exercises.has(b.exerciseId)?exerciseProtocol(exercises.get(b.exerciseId)!):undefined);
+      if(effective&&b.tempoTrainer&&effective.kind!=='tempo')fail('Block','tempo trainer is not valid for this task');
+      if(effective&&!protocolPulse(effective)&&b.bpm!==undefined)fail('Block','self-paced tasks cannot carry a tempo override');
+      if(b.profileId && b.profileId!==r.profileId)fail('Block','profile differs from its plan or routine');
+      if(b.exerciseId){const e=exercises.get(b.exerciseId);if(!e||e.profileId!==r.profileId)fail('Block','exercise must belong to this profile');}
+      if(b.songId){const song=songs.get(b.songId);if(!song)fail('Block','song does not exist');const part=b.songPartId?song!.parts?.find(p=>p.id===b.songPartId):undefined;if(b.songPartId&&(!part||part.profileId!==r.profileId))fail('Block','song part must belong to this profile');if(b.songSectionId && !(part?.sections??song!.sections).some(s=>s.id===b.songSectionId))fail('Block','song section does not exist');}
+    }}
+    for(const s of d.sessions){requireProfile(s.profileId);for(const b of s.blocks){const p=requireProfile(b.profileId);if(!b.protocolSnapshot)fail('Session','version 2 blocks require a protocol snapshot');assertProtocolCompatible(b.protocolSnapshot!,p);}}
+    for(const g of d.goals){
+      if(g.profileId)requireProfile(g.profileId);
+      const exercise=g.exerciseId?exercises.get(g.exerciseId):undefined;
+      if(g.exerciseId&&(!exercise||(g.profileId&&exercise.profileId!==g.profileId)))fail('Goal','exercise does not belong to the goal profile');
+      if(g.type==='bpm'&&exercise&&exerciseProtocol(exercise).kind!=='tempo')fail('Goal','BPM goals require a tempo-practice exercise');
+      if(g.type==='protocol'&&exercise){const kind=exerciseProtocol(exercise).kind;const allowed:Record<string,string[]>={'clean-count':['repetitions','chord-changes'],'keys-practiced':['scale-cycle'],'recall-correct':['fretboard'],'pitch-sessions':['pitch-match','vocal-pattern']};if(!allowed[g.metric!]?.includes(kind))fail('Goal','the exercise does not produce this metric');}
+      const song=g.songId?songs.get(g.songId):undefined;
+      if(g.songId&&!song)fail('Goal','song does not exist');
+      if(g.songPartId){const part=song?.parts?.find(p=>p.id===g.songPartId);if(!part||part.profileId!==g.profileId)fail('Goal','song part must belong to the goal profile');}
+    }
+    for(const setlist of d.setlists)for(const id of setlist.songIds)if(!songs.has(id))fail('Setlist','song does not exist');
+    for(const s of d.songs)for(const part of s.parts??[]){const p=requireProfile(part.profileId);if(p.instrumentType!==part.instrumentType)fail('Song part','instrument identity must match its profile');}
+  }
   return d;
 }
 export function validateBackup(input: unknown): Backup {
   if (typeof input !== 'object' || input === null) fail('Backup','expected a JSON object');
   const head = input as Record<string, unknown>;
   if(head.format !== 'music-practice-os') fail('Backup','this is not a Steadybar backup');
-  if(head.version !== 1) fail('Backup','this backup uses an unsupported format version');
-  return {format:'music-practice-os',version:1,exportedAt:iso(head.exportedAt,'Exported at'),data:validateData(head.data)};
+  if(head.version !== 1 && head.version !== 2) fail('Backup','this backup uses an unsupported format version');
+  if(head.version===2 && (head.data===null||typeof head.data!=='object'||!('schemaVersion' in head.data)||head.data.schemaVersion!==2))fail('Backup','version 2 requires a version 2 workspace');
+  return {format:'music-practice-os',version:head.version as 1|2,exportedAt:iso(head.exportedAt,'Exported at'),data:validateData(head.data)};
 }

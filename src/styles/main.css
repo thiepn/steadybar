@@ -425,3 +425,64 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 @media (forced-colors:active) {
   .theme-choice[aria-pressed=true],.accent-choice[aria-pressed=true],.nav-link.active,.metronome-beat.on,.practice-beat.on {outline:2px solid Highlight}.accent-swatch {forced-color-adjust:none}.progress-fill {background:Highlight}
 }
+
+/* Practice profiles share the existing visual language, not instrument-colored skins. */
+.profile-trigger{max-width:100%;min-height:44px;justify-content:space-between;padding:8px 12px;overflow:hidden;text-overflow:ellipsis}
+.sidebar>.profile-trigger{margin:0 12px 12px;width:calc(100% - 24px);border:1px solid var(--border-strong)}
+.profile-picker-list{display:flex;flex-direction:column;gap:8px}.profile-choice{justify-content:flex-start;min-height:44px}
+.profile-choice[aria-pressed=true]{background:var(--accent-soft);color:var(--accent-text);border-color:var(--accent)}
+.profile-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}
+.profile-row:last-child{border-bottom:0}.profile-row>div{min-width:0}.profile-row .actions{flex-wrap:wrap;justify-content:flex-end;max-width:55%}
+.profile-row strong{overflow-wrap:anywhere}.profiles-panel .button{min-height:44px}
+.plan-builder{display:flex;gap:12px;align-items:flex-end;margin:0 0 20px;flex-wrap:wrap}
+.plan-builder .field{max-width:150px;margin:0}.plan-builder .field-hint{flex:1;min-width:160px;margin:0}
+.protocol-editor{display:flex;flex-direction:column;gap:12px;border-block:1px solid var(--border);padding:16px 0}
+.protocol-editor .field{margin:0}.protocol-editor .form-grid{margin:0}.protocol-editor [hidden]{display:none!important}
+.key-options{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;border:0;padding:0;margin:0}
+.key-options legend{margin-bottom:8px}.key-options .checkbox{min-height:44px;gap:6px}.key-options input{min-width:18px}
+.protocol-task:empty{display:none}.protocol-task{padding:18px 0;margin:0;border-top:1px solid var(--border)}
+.task-heading{font-size:14px;font-weight:600;margin:0 0 8px;color:var(--muted)}
+.task-cue{font-size:clamp(18px,2.5vw,26px);line-height:1.35;font-weight:600;margin:0 0 8px;overflow-wrap:anywhere}
+.task-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 8px}.task-actions>.button{min-height:44px}
+.task-feedback{font-size:13px;min-height:20px;margin:4px 0;color:var(--accent-text)}
+.task-result{margin:4px 0 12px;overflow-wrap:anywhere}.note-answers{display:grid;grid-template-columns:repeat(6,minmax(44px,1fr));gap:6px;width:100%}
+.note-answer{min-height:48px;padding:8px}.voice-safety{font-size:13px;line-height:1.55;border-left:2px solid var(--border-strong);padding:4px 0 4px 12px;color:var(--muted);margin:10px 0}
+.without-tempo .practice-readouts{grid-template-columns:1fr}.practice-workspace [hidden]{display:none!important}
+.protocol-summary{margin:20px 0}.metric-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;row-gap:4px;padding:14px 0;border-bottom:1px solid var(--border)}
+.metric-row>span{text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.metric-row .field-hint{grid-column:1/-1;margin:0}
+.block-cue:not(.sticking){font-size:12px;font-family:var(--font-ui);line-height:1.4;overflow-wrap:anywhere;color:var(--muted);margin:4px 0 0;max-width:55ch}
+.library-toolbar{flex-wrap:wrap}.library-toolbar>select{min-width:120px}
+@media(min-width:641px) and (max-width:1100px){.sidebar>.profile-trigger{padding:8px 4px;font-size:12px}.sidebar>.profile-trigger span{white-space:normal;overflow-wrap:anywhere}.profile-row{flex-direction:column}.profile-row .actions{max-width:100%;justify-content:flex-start}}
+@media(max-width:640px){
+ .topbar .profile-trigger{max-width:120px;font-size:12px;padding:6px;overflow-wrap:anywhere}.topbar .actions{gap:4px}
+ .profile-row{flex-direction:column;gap:10px}.profile-row .actions{max-width:100%;justify-content:flex-start}
+ .plan-builder{gap:8px}.plan-builder .field-hint{flex-basis:100%}
+ .key-options{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .note-answers{grid-template-columns:repeat(4,minmax(44px,1fr))}
+ .task-actions>.button{flex:1 1 auto;min-height:44px}.task-cue{font-size:20px}.protocol-task{padding:12px 0}
+ .practice-route .practice-main-controls{position:fixed;z-index:20;bottom:0;left:0;right:0;display:flex;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--border);margin:0}
+ .practice-route .practice-main-controls .button{flex:1 1 0;min-width:0;min-height:48px;padding:8px 6px;font-size:12px;white-space:normal}
+ .practice-route .practice-main-controls .button svg{display:none}
+ .practice-route .active-page{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+ .practice-route .practice-header{flex-wrap:wrap;gap:4px}.practice-route .practice-header .actions{gap:2px}.practice-route .practice-header .button{font-size:11px;padding:6px;min-height:44px}
+ .practice-route .practice-header .button svg{display:none}
+ .protocol-practice .practice-readouts{margin-bottom:8px}.protocol-practice .active-time{font-size:48px}
+ .library-toolbar>select{flex:1 1 130px;min-width:0}.library-toolbar>.search-field{flex-basis:100%}
+}
+@media(prefers-reduced-motion:reduce){.protocol-task *{scroll-behavior:auto}}
+
+.song-part-workspace{margin:0 0 24px;padding:16px 0;border-block:1px solid var(--border)}
+.song-part-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.song-part-toolbar .field{min-width:200px;flex:1}
+.part-notes{padding-top:12px}.part-notes>p{margin-top:6px}.outcome-history{margin:12px 0;padding-left:20px}.outcome-history>li{padding:6px 0;font-size:13px;line-height:1.55}.session-profile{margin:8px 0 20px}
+@media(max-width:640px){.song-part-toolbar .field{min-width:100%}.song-part-toolbar>.button{min-height:44px;flex:1}.outcome-history{font-size:12px}.song-part-workspace{margin-bottom:16px}}
+
+.active-cues{padding:8px 0;border-top:1px solid var(--border)}
+.active-cues>summary{min-height:44px;display:list-item;cursor:pointer;padding:12px 0;font-size:13px;color:var(--text)}
+.active-cues>p{font-size:14px;line-height:1.6;padding:0 0 12px;max-width:65ch}
+
+/* Practice transport remains usable from a music stand at every breakpoint. */
+.practice-main-controls > .button {min-height:44px}
+@media (min-width:641px) {
+ .practice-main-controls{grid-template-columns:minmax(0,1.1fr) repeat(2,minmax(0,1fr))}
+ .without-tempo .practice-main-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

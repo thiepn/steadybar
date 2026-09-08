@@ -92,7 +92,7 @@ class MusicPracticeTests(unittest.TestCase):
         if OPTIONS.render:
             return self.page.evaluate("async (expr)=>{const load=__qa.load;return await (new Function('load','return ('+expr+')'))(load)}",expression)
         # Expressions have synchronous load references; load only the known module set first.
-        return self.page.evaluate("async (expr)=>{const names=['app/store.js','practice/controller.js','db/database.js','db/backup.js','domain/analytics.js','audio/engine.js','domain/models.js','practice/logic.js'];const entries=await Promise.all(names.map(async id=>[id,await import('./app/'+id)]));const modules=Object.fromEntries(entries);return await (new Function('load','return ('+expr+')'))(id=>modules[id]);}",expression)
+        return self.page.evaluate("async (expr)=>{const names=['app/store.js','practice/controller.js','db/database.js','db/backup.js','domain/analytics.js','audio/engine.js','domain/models.js','practice/logic.js','db/seed.js','app/profiles.js','audio/reference.js','domain/protocols.js'];const entries=await Promise.all(names.map(async id=>[id,await import('./app/'+id)]));const modules=Object.fromEntries(entries);return await (new Function('load','return ('+expr+')'))(id=>modules[id]);}",expression)
 
     def dialog_fill(self,name,value):
         self.page.locator('dialog[open]').last.get_by_label(name,exact=True).fill(str(value))
@@ -433,8 +433,9 @@ class MusicPracticeTests(unittest.TestCase):
         self.assertNotIn('Page not found.',self.page.locator('body').inner_text())
 
     def test_20_recovery_choices_retain_or_discard_only_current_session(self):
-        self.onboard();self.route('/practice')
-        self.page.get_by_role('button',name='Start free practice',exact=True).click();self.start()
+        # A tempo attempt now belongs to a tempo task, not untimed free practice.
+        self.onboard();self.route('/library/rudiment-2')
+        self.page.get_by_role('button',name='Start practice',exact=True).click();self.start()
         self.page.get_by_role('button',name='Clean',exact=True).click()
         self.page.get_by_role('button',name='Save & leave',exact=True).click()
         self.read("load('practice/controller.js').practice.recover()")
@@ -450,8 +451,9 @@ class MusicPracticeTests(unittest.TestCase):
         self.assertEqual(self.read("load('app/store.js').store.snapshot().sessions[0].blocks[0].tempoAttempts.length"),1)
 
     def test_21_completed_history_ignores_practice_shortcuts(self):
-        self.onboard();self.route('/practice')
-        self.page.get_by_role('button',name='Start free practice',exact=True).click();self.start()
+        # A tempo attempt now belongs to a tempo task, not untimed free practice.
+        self.onboard();self.route('/library/rudiment-2')
+        self.page.get_by_role('button',name='Start practice',exact=True).click();self.start()
         self.page.get_by_role('button',name='Clean',exact=True).click();self.finish()
         before=self.read("JSON.stringify(load('app/store.js').store.snapshot().sessions[0])")
         self.page.locator('h1').click()

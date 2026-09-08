@@ -1,3 +1,5 @@
+import { currentSongPart } from '../app/song-parts.js';
+import { activeProfile } from '../domain/profiles.js';
 import { store } from '../app/store.js';
 import { navigate, type Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -8,7 +10,7 @@ import { finishedSessions } from '../domain/analytics.js';
 import type { Routine, RoutineBlock, Setlist } from '../domain/models.js';
 import { songBlock } from '../practice/launch.js';
 function prepareRoutine(setlist:Setlist):void{
-  const data=store.snapshot(),songs=setlist.songIds.map(id=>data.songs.find(s=>s.id===id)).filter(s=>s!==undefined);
+  const data=store.snapshot(),songs=setlist.songIds.map(id=>data.songs.find(s=>s.id===id)).filter(s=>s!==undefined).map(song=>{const part=currentSongPart(song);return {...song,sections:part?.sections??song.sections};});
   if(!songs.length){notify('Add at least one song before generating a routine.','info');return;}
   const mode=select('mode','What to practice',[['whole','Entire songs'],['sections','Selected sections']], 'whole');
   const sections=el('div',{class:'setlist-section-picker',hidden:true},songs.map(song=>el('fieldset',{},el('legend',{},song.title),song.sections.length?song.sections.map(section=>checkbox(`section-${section.id}`,section.name,false)):el('p',{class:'muted small'},'No sections defined. This song will be included in full.'))));
@@ -24,7 +26,7 @@ function prepareRoutine(setlist:Setlist):void{
       else for(const section of song.sections)if(form.has(`section-${section.id}`))blocks.push(songBlock(song,section.id,seconds));
     }
     if(!blocks.length)throw new Error('Select at least one section, or choose Entire songs.');
-    const routine:Routine={...metadata(),name:formText(form,'name'),description:`Prepared from ${setlist.name}. ${setlist.notes}`.trim(),blocks:blocks.map((b,order)=>({...b,order})),scheduledDays:[],tags:['setlist-preparation'],builtin:false,archived:false};
+    const routine:Routine={...metadata(),profileId:activeProfile(data).id,name:formText(form,'name'),description:`Prepared from ${setlist.name}. ${setlist.notes}`.trim(),blocks:blocks.map((b,order)=>({...b,order})),scheduledDays:[],tags:['setlist-preparation'],builtin:false,archived:false};
     await store.save('routines',routine);notify('Preparation routine created.');navigate(`/routines/${routine.id}`);
   },'Generate routine');
 }
@@ -41,12 +43,12 @@ export function setlistPage(id:string):Page{
   if(!setlist.songIds.length)panel.append(empty('Add the first song.','Songs remain in your library when removed from a setlist.',button('Choose a song',()=>selectSongDialog(async song=>{await store.save('setlists',{...setlist,songIds:[song.id]});}),'ghost','plus'),'song'));
   let dragged=-1;
   setlist.songIds.forEach((songId,index)=>{
-    const song=data.songs.find(s=>s.id===songId);const last=finishedSessions(data.sessions).filter(s=>s.blocks.some(b=>b.sourceSongId===songId)).sort((a,b)=>b.startedAt.localeCompare(a.startedAt))[0];
+    const song=data.songs.find(s=>s.id===songId),part=song?currentSongPart(song):undefined;const last=finishedSessions(store.view().sessions).filter(s=>s.blocks.some(b=>b.sourceSongId===songId)).sort((a,b)=>b.startedAt.localeCompare(a.startedAt))[0];
     const move=async(to:number)=>store.save('setlists',{...setlist,songIds:reorder(setlist.songIds,index,to)});
     const up=iconButton(`Move ${song?.title||'song'} up`,'up',()=>move(index-1));up.disabled=index===0;const down=iconButton(`Move ${song?.title||'song'} down`,'down',()=>move(index+1));down.disabled=index===setlist.songIds.length-1;
     const row=el('div',{class:'setlist-song-row',draggable:true,onDragstart:()=>{dragged=index;},onDragover:(event:DragEvent)=>event.preventDefault(),onDrop:(event:DragEvent)=>{event.preventDefault();if(dragged>=0)void store.save('setlists',{...setlist,songIds:reorder(setlist.songIds,dragged,index)}).catch(error=>notify(error instanceof Error?error.message:'The setlist order could not be saved.','error'));dragged=-1;}},
       el('span',{class:'block-index'},String(index+1).padStart(2,'0')),el('div',{class:'song-row-title'},song?link(song.title,`/songs/${song.id}`):el('strong',{},'Song unavailable'),el('span',{class:'muted small'},song?.artist||'')),
-      el('div',{class:'song-row-meta'},song?el('strong',{},`${song.bpm} BPM · ${song.meter.beats}/${song.meter.beatUnit}`):null,song?badge(titleCase(song.status),song.status==='performance-ready'?'accent':'neutral'):null,el('span',{class:'muted small'},last?`Practiced ${formatDate(last.startedAt)}`:'Not practiced yet')),
+      el('div',{class:'song-row-meta'},song?el('strong',{},`${song.bpm} BPM · ${song.meter.beats}/${song.meter.beatUnit}`):null,song?badge(titleCase(part?.status??song.status),(part?.status??song.status)==='performance-ready'?'accent':'neutral'):null,part?el('span',{class:'muted small'},[part.name,part.key,part.role,part.notes].filter(Boolean).join(' · ')):null,el('span',{class:'muted small'},last?`Practiced ${formatDate(last.startedAt)}`:'Not practiced yet')),
       el('div',{class:'actions'},up,down,iconButton(`Remove ${song?.title||'song'} from setlist`,'close',async()=>{await store.save('setlists',{...setlist,songIds:setlist.songIds.filter((_,i)=>i!==index)});})));panel.append(row);
   });
   page.append(panel,el('div',{class:'page-footer'},button('Delete setlist',async()=>{if(await confirmAction('Delete this setlist?','The songs and practice history will remain unchanged.','Delete setlist',true)){await store.delete('setlists',id);navigate('/setlists');}},'ghost','trash')));

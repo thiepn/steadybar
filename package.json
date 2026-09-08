@@ -1,6 +1,6 @@
 {
   "name": "steadybar",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "private": true,
   "description": "Steadybar \u2014 a local-first music practice workspace.",
   "type": "module",
@@ -17,7 +17,8 @@
     "check": "npm run typecheck && npm test",
     "test:ui": "python3 tests/e2e.py --render",
     "test:visual": "python3 tests/e2e.py --render --visual",
-    "test:workbench": "python3 tests/workbench.py"
+    "test:workbench": "python3 tests/workbench.py",
+    "test:profiles": "python3 tests/profiles.py"
   },
   "devDependencies": {
     "typescript": "5.8.3"

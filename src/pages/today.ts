@@ -1,3 +1,6 @@
+import { activeProfile } from '../domain/profiles.js';
+import { prepareStarterPlan } from '../app/profiles.js';
+import { confirmAction, select } from '../ui/components.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -10,15 +13,18 @@ import { launchPractice, routineToday } from '../practice/launch.js';
 import type { RoutineBlock } from '../domain/models.js';
 
 export function todayPage(): Page {
-  const data = store.snapshot();
+  const data = store.view(),profile=activeProfile(store.snapshot());
   const plan = data.dailyPlans.find(p => p.date === localDate());
   const active = data.sessions.find(s => s.status === 'active');
   const date = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   const weekStart = isoWeekStart(), weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const week = filterSessions(data.sessions, localDate(weekStart), localDate(weekEnd));
-  const savePlan = async (blocks: RoutineBlock[]) => store.save('dailyPlans', { ...(plan || metadata()), date: localDate(), blocks });
-  const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', date));
+  const savePlan = async (blocks: RoutineBlock[]) => store.save('dailyPlans', { ...(plan || metadata()), profileId:profile.id,date: localDate(), blocks });
+  const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`));
+  const budget=select('timeBudget','Session time',[['15','15 min'],['20','20 min'],['30','30 min'],['45','45 min'],['60','60 min']],String(profile.defaultSessionMinutes));
+  const prepare=button('Build a plan',async()=>{if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a profile-specific starter sequence for this time budget. Existing history is unchanged.','Build plan'))return;await prepareStarterPlan(Number(budget.querySelector('select')!.value));},'secondary');
+  page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},profile.instrumentType==='voice'?'Voice routines include rest and listening.':'Uses this profile’s saved starter routine; you can edit every block.')));
   if (active) page.append(el('div', { class: 'recovery-banner' }, el('div', {},
     el('strong', {}, 'Unfinished session'), el('span', {}, active.blocks[active.activeBlockIndex]?.titleSnapshot || 'Saved practice')),
     link('Resume session', '/practice/active', 'button primary', 'play')));
@@ -54,12 +60,12 @@ export function todayPage(): Page {
       link('View progress', '/progress', 'text-link')));
   page.append(el('div', { class: 'today-grid' }, planPanel, side));
 
-  const relevant = data.goals.filter(g => !goalProgress(g, data).done).slice(0, 3);
+  const relevant = data.goals.filter(g => !goalProgress(g, store.snapshot()).done).slice(0, 3);
   const goals = el('section', { class: 'overview-panel' }, sectionHeader('Current goals', undefined,
     [relevant.length ? link('All goals', '/goals', 'text-link') : button('Create a goal', () => editGoal(), 'ghost compact', 'plus')]));
   if (!relevant.length) goals.append(el('p', { class: 'muted small' }, 'No active targets.'));
   else goals.append(...relevant.map(g => {
-    const progress = goalProgress(g, data);
+    const progress = goalProgress(g, store.snapshot());
     return el('div', { class: 'goal-summary' }, el('strong', {}, g.title),
       el('div', { class: 'split muted small' }, el('span', {}, progress.label), g.deadline ? el('span', {}, formatDate(g.deadline)) : null),
       progressBar(progress.fraction, g.title));

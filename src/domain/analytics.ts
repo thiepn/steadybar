@@ -1,3 +1,4 @@
+import { protocolResults } from './protocol-analytics.js';
 import type { Data, Goal, PracticeSession, TempoAttempt } from './models.js';
 import { isoWeekStart, localDate } from './utils.js';
 export const calculateBestCleanBpm = (attempts: TempoAttempt[]): number | undefined => {
@@ -46,14 +47,26 @@ export function practiceByDay(sessions: PracticeSession[]): {date:string;seconds
 }
 export const routineDuration = (blocks: {targetSeconds:number}[]): number => blocks.reduce((s,b) => s+b.targetSeconds,0);
 export function goalProgress(goal: Goal, data: Data, now = new Date()): { value:number;target:number;label:string;done:boolean;fraction:number } {
+  if(goal.profileId)data={...data,sessions:data.sessions.filter(s=>s.profileId===goal.profileId)};
   let value = 0, target = goal.targetValue, label = '';
   switch(goal.type) {
     case 'bpm': value = calculateBestCleanBpm(exerciseAttempts(data.sessions,goal.exerciseId || '')) || 0; label = `${value || '—'} / ${target} clean BPM`; break;
     case 'weekly-sessions': value=calculateWeeklySessionCount(data.sessions,now);label=`${value} / ${target} sessions this week`;break;
+    case 'weekly-minutes': {const start=isoWeekStart(now),end=new Date(start);end.setDate(end.getDate()+7);value=calculateTotalPracticeTime(data.sessions.filter(s=>new Date(s.startedAt)>=start&&new Date(s.startedAt)<end))/60;label=`${Math.floor(value)} / ${target} minutes this week`;break;}
+    case 'protocol': {
+      const results=protocolResults(data.sessions,goal.exerciseId);
+      switch(goal.metric){
+        case 'clean-count':value=results.reduce((n,r)=>n+(r.kind==='count'?r.clean:0),0);label=`${value} / ${target} clean repetitions recorded`;break;
+        case 'keys-practiced':value=new Set(results.filter(r=>r.kind==='scale').map(r=>r.key)).size;label=`${value} / ${target} keys practiced`;break;
+        case 'recall-correct':value=results.filter(r=>r.kind==='recall'&&r.correct).length;label=`${value} / ${target} correct recall answers`;break;
+        case 'pitch-sessions':value=finishedSessions(data.sessions).filter(s=>s.blocks.some(b=>(!goal.exerciseId||b.sourceExerciseId===goal.exerciseId)&&b.outcomes?.some(r=>r.kind==='pitch'||r.kind==='voice'))).length;label=`${value} / ${target} pitch-work sessions`;break;
+      }break;
+    }
     case 'song-mastery': {
       const song = data.songs.find(s => s.id === goal.songId);
-      value = song?.status === 'performance-ready' ? 1 : 0;target=1;
-      label = song ? song.status.replaceAll('-',' ') : 'Song unavailable';break;
+      const part=goal.songPartId?song?.parts?.find(p=>p.id===goal.songPartId):undefined;
+      value = (goal.songPartId?part?.status:song?.status) === 'performance-ready' ? 1 : 0;target=1;
+      label = goal.songPartId ? (part?`${part.name}: ${part.status.replaceAll('-',' ')}`:'Part unavailable') : song ? song.status.replaceAll('-',' ') : 'Song unavailable';break;
     }
     case 'custom':value=goal.completed ? 1 : 0;target=1;label=goal.completed ? 'Complete' : 'In progress';break;
   }
