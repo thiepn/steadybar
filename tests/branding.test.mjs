@@ -18,7 +18,7 @@ test('browser and Apple install metadata use Steadybar', () => {
  assert.doesNotMatch(html,/Music Practice OS|Practice OS/);
 });
 test('the UI and onboarding use Steadybar instead of the working title', () => {
- assert.match(read('dist/app/main.js'),/Steadybar/);assert.match(read('dist/app/app/onboarding.js'),/STEADYBAR/);
+ assert.match(read('dist/app/main.js'),/Steadybar/);assert.match(read('dist/app/app/onboarding.js'),/Steadybar/i);
  assert.doesNotMatch(read('dist/app/main.js'),/Music Practice OS|OS \/ LOCAL WORKSPACE/);
 });
 test('PWA assets, launch URL and scope remain relative for repository subpaths', () => {

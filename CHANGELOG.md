@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.0 — Practice workbench
+
+- Researched task-grouped music tools, structured collections, accessibility and interaction performance; documented route-by-route decisions in `docs/DESIGN-RESEARCH.md`.
+- Replaced the layered stylesheet with a coherent warm-neutral/charcoal visual system and six mode-specific accent palettes.
+- Rebuilt Today as an editable agenda with secondary routine/progress context.
+- Grouped the active timer, BPM, beat feedback, transport, attempt ratings and block controls; kept static identity/queue out of beat-time DOM updates.
+- Reworked metronome, repertoire rows, routine previews, setlist programs and review/settings sections without removing capabilities.
+- Added bounded exercise rendering and retained search/filter/view context; indexed best clean tempo in one pass.
+- Made chart coordinates respond to their containers without shrinking text.
+- Improved search selection announcements, dialog styling and mobile/rail navigation.
+- Added cross-engine native/browser gates, exact responsive geometry tests, large-library and contrast regressions.
+- Preserved database, backup, lock identifiers, audio scheduler, history and safe offline updates.
+
+
 ## 1.3.0 — interface and appearance — 2026-09-08
 
 - Replace promotional headings and redundant dashboard cards with a plan-first Today view and list-first exercise library.

@@ -33,12 +33,16 @@ jobs:
         run: |
           python -m pip install -r tests/requirements.txt
           python -m playwright install --with-deps chromium
+      - name: Verify independent colors, contrasts and native preference persistence
+        run: python tests/run_suite.py tests/colors.py
       - name: Verify complete rendered UI workflows
-        run: python tests/ci_render.py
+        run: python tests/run_suite.py tests/ci_render.py
       - name: Verify real IndexedDB, service worker, backup and audio capabilities
-        run: python tests/ci_native.py
+        run: python tests/run_suite.py tests/ci_native.py
       - name: Verify responsive layouts and appearance persistence
-        run: python tests/ui_polish.py
+        run: python tests/run_suite.py tests/ui_polish.py
+      - name: Verify practice workbench and exact responsive matrix
+        run: python tests/run_suite.py tests/workbench.py
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,9 +58,62 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist
+  browser-compatibility:
+    name: Native ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    env:
+      PLAYWRIGHT_BUNDLED_BROWSER: '1'
+      PLAYWRIGHT_ENGINE: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+      - run: npm ci
+      - run: npm run build
+      - name: Install browser engine
+        run: |
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps ${{ matrix.browser }}
+      - name: Provide a real audio output to headless browser engines
+        run: |
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=steadybar_test
+          pactl set-default-sink steadybar_test
+          pactl info
+      - name: Verify independent colors, contrasts and native preference persistence
+        run: python tests/run_suite.py tests/colors.py
+      - name: Verify native persistence, recovery, offline, audio and restore
+        run: python tests/run_suite.py tests/ci_native.py
+      - name: Verify workbench layouts and interactions
+        run: python tests/run_suite.py tests/workbench.py
+      - name: Keep engine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-${{ matrix.browser }}
+          path: |
+            .qa/*results.json
+            .qa/*.png
+          include-hidden-files: true
+          retention-days: 14
   deploy:
     if: github.event_name != 'pull_request'
-    needs: verify
+    needs: [verify, browser-compatibility]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

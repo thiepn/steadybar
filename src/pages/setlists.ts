@@ -29,14 +29,14 @@ function prepareRoutine(setlist:Setlist):void{
   },'Generate routine');
 }
 export function setlistsPage():Page{
-  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('BE READY TO PLAY','Setlists','Organize songs and prepare a rehearsal plan.',[button('New setlist',()=>editSetlist(),'primary','plus')]));
+  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('','Setlists','Organize songs and prepare a rehearsal plan.',[button('New setlist',()=>editSetlist(),'primary','plus')]));
   if(!data.setlists.length)page.append(empty('No setlists yet','Create a performance or worship setlist, then turn it into a practice routine.',button('Create setlist',()=>editSetlist(),'primary','plus'),'setlist'));
-  else page.append(el('div',{class:'routine-grid'},[...data.setlists].sort((a,b)=>(b.date||b.createdAt).localeCompare(a.date||a.createdAt)).map(s=>el('article',{class:'routine-card'},el('div',{class:'split'},badge(s.date?formatDate(s.date):'No date'),el('span',{class:'muted small'},`${s.songIds.length} songs`)),el('h2',{},link(s.name,`/setlists/${s.id}`)),s.notes?el('p',{class:'muted line-clamp'},s.notes):null,el('ol',{class:'setlist-preview'},s.songIds.slice(0,5).map(id=>el('li',{},data.songs.find(song=>song.id===id)?.title||'Song unavailable'))),link('Open setlist',`/setlists/${s.id}`,'text-link','arrow')))));
+  else page.append(el('div',{class:'setlist-collection'},[...data.setlists].sort((a,b)=>(b.date||b.createdAt).localeCompare(a.date||a.createdAt)).map(s=>el('article',{class:'setlist-card'},el('div',{class:'split'},badge(s.date?formatDate(s.date):'No date'),el('span',{class:'muted small'},`${s.songIds.length} songs`)),el('h2',{},link(s.name,`/setlists/${s.id}`)),s.notes?el('p',{class:'muted line-clamp'},s.notes):null,el('ol',{class:'setlist-preview'},s.songIds.slice(0,5).map(id=>el('li',{},data.songs.find(song=>song.id===id)?.title||'Song unavailable'))),link('Open setlist',`/setlists/${s.id}`,'text-link','arrow')))));
   return {node:page};
 }
 export function setlistPage(id:string):Page{
   const data=store.snapshot(),setlist=data.setlists.find(s=>s.id===id);if(!setlist)return {node:empty('Setlist not found.','Choose another setlist.',link('Setlists','/setlists','button primary'))};
-  const page=el('div',{class:'page'},link('All setlists','/setlists','back-link'),pageHeader(setlist.date?formatDate(setlist.date):'PERFORMANCE PREPARATION',setlist.name,setlist.notes,[button('Edit details',()=>editSetlist(setlist),'secondary','edit'),button('Generate practice routine',()=>prepareRoutine(setlist),'primary','routine')]));
+  const page=el('div',{class:'page'},link('All setlists','/setlists','back-link'),pageHeader(setlist.date?formatDate(setlist.date):'',setlist.name,setlist.notes,[button('Edit details',()=>editSetlist(setlist),'secondary','edit'),button('Generate practice routine',()=>prepareRoutine(setlist),'primary','routine')]));
   const panel=el('section',{class:'panel'},sectionHeader('Running order',`${setlist.songIds.length} songs`,[button('Add song',()=>selectSongDialog(async song=>{await store.save('setlists',{...setlist,songIds:[...setlist.songIds,song.id]});},setlist.songIds),'secondary','plus')]));
   if(!setlist.songIds.length)panel.append(empty('Add the first song.','Songs remain in your library when removed from a setlist.',button('Choose a song',()=>selectSongDialog(async song=>{await store.save('setlists',{...setlist,songIds:[song.id]});}),'ghost','plus'),'song'));
   let dragged=-1;

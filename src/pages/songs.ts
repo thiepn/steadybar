@@ -1,19 +1,36 @@
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, confirmAction, empty, formDialog, formNumber, formText, iconButton, input, link, notify, pageHeader, sectionHeader, select, stat } from '../ui/components.js';
+import { button, confirmAction, empty, formDialog, formNumber, formText, iconButton, input, link, notify, pageHeader, sectionHeader, select, stat } from '../ui/components.js';
 import { editSection, editSong } from '../ui/editors.js';
 import { addToday, launchPractice, songBlock } from '../practice/launch.js';
 import { duration, formatDate, reorder, titleCase } from '../domain/utils.js';
 import { finishedSessions } from '../domain/analytics.js';
-export function songsPage():Page{
-  const data=store.snapshot(),search=el('input',{type:'search',placeholder:'Search songs or artists…','aria-label':'Search songs'}),status=el('select',{'aria-label':'Filter song status'},[['active','All active songs'],['learning','Learning'],['practicing','Practicing'],['performance-ready','Performance-ready'],['archived','Archived']].map(([v,l])=>el('option',{value:v},l))),list=el('div',{class:'song-grid'});
-  const draw=()=>{
-    const query=search.value.toLowerCase(),songs=data.songs.filter(s=>(status.value==='active'?s.status!=='archived':s.status===status.value)&&`${s.title} ${s.artist}`.toLowerCase().includes(query)).sort((a,b)=>a.title.localeCompare(b.title));list.replaceChildren();
-    if(!songs.length)list.append(empty('No songs found','Add a song you are learning or preparing. Keep sections, tempos, and arrangement notes together.',button('Add song',()=>editSong(),'primary','plus'),'song'));
-    for(const s of songs)list.append(el('article',{class:'song-card'},el('div',{class:'split'},badge(titleCase(s.status),s.status==='performance-ready'?'accent':'neutral'),el('span',{class:'song-tempo'},`${s.bpm} `,el('small',{},'BPM'))),el('h2',{},link(s.title,`/songs/${s.id}`)),el('p',{class:'muted'},s.artist||'No artist specified'),el('div',{class:'split'},el('span',{class:'muted small'},`${s.meter.beats}/${s.meter.beatUnit}${s.key?` · Key ${s.key}`:''} · ${s.sections.length} sections`),iconButton(`Practice ${s.title}`,'play',()=>launchPractice([songBlock(s)])))));
-  };search.addEventListener('input',draw);status.addEventListener('change',draw);draw();
-  return {node:el('div',{class:'page'},pageHeader('PLAY THE MUSIC','Song library','Your songs, sections, and arrangements.',[button('Add song',()=>editSong(),'primary','plus')]),el('div',{class:'library-toolbar'},search,status),list)};
+const songView = { query: '', status: 'active', visible: 60 };
+export function songsPage(): Page {
+  const data = store.snapshot();
+  const search = el('input', { type: 'search', value: songView.query, placeholder: 'Search songs or artists…', 'aria-label': 'Search songs' });
+  const status = el('select', { 'aria-label': 'Filter song status' }, [['active', 'All active songs'], ['learning', 'Learning'], ['practicing', 'Practicing'], ['performance-ready', 'Performance-ready'], ['archived', 'Archived']].map(([v, l]) => el('option', { value: v }, l)));
+  status.value = songView.status;
+  const list = el('div', { class: 'song-collection' });
+  const count = el('span', { class: 'muted small', role: 'status' });
+  const more = button('Show more songs', () => { songView.visible += 60; draw(); }, 'secondary');
+  const draw = () => {
+    songView.query = search.value; songView.status = status.value;
+    const query = search.value.toLocaleLowerCase();
+    const songs = data.songs.filter(s => (status.value === 'active' ? s.status !== 'archived' : s.status === status.value) && `${s.title} ${s.artist}`.toLocaleLowerCase().includes(query)).sort((a, b) => a.title.localeCompare(b.title));
+    list.replaceChildren(); count.textContent = `${songs.length} songs`; more.hidden = songs.length <= songView.visible;
+    if (!songs.length) list.append(empty('No songs found', 'Add a song, then break it into sections for practice.', button('Add song', () => editSong(), 'secondary', 'plus')));
+    for (const s of songs.slice(0, songView.visible)) list.append(el('article', { class: 'song-card song-row' },
+      el('div', { class: 'repertoire-identity' }, el('h2', {}, link(s.title, `/songs/${s.id}`)), s.artist ? el('p', { class: 'muted small' }, s.artist) : null),
+      el('div', { class: 'repertoire-arrangement' }, el('span', { class: 'song-status', 'data-status': s.status }, titleCase(s.status)), el('span', { class: 'muted tiny' }, `${s.meter.beats}/${s.meter.beatUnit}${s.key ? ` · ${s.key}` : ''} · ${s.sections.length} sections`)),
+      el('div', { class: 'song-tempo' }, el('strong', {}, s.bpm), el('small', {}, 'BPM')),
+      iconButton(`Practice ${s.title}`, 'play', () => launchPractice([songBlock(s)]))));
+  };
+  search.addEventListener('input', () => { songView.visible = 60; draw(); });
+  status.addEventListener('change', () => { songView.visible = 60; draw(); }); draw();
+  return { node: el('div', { class: 'page' }, pageHeader('', 'Songs', 'Repertoire, sections, and arrangement notes.', [button('Add song', () => editSong(), 'primary', 'plus')]),
+    el('div', { class: 'library-toolbar' }, search, status), el('div', { class: 'result-meta' }, count), list, el('div', { class: 'page-footer' }, more)) };
 }
 export function songPage(id:string):Page{
   const data=store.snapshot(),song=data.songs.find(s=>s.id===id);if(!song)return {node:empty('Song not found.','Your historical practice remains available in History.',link('Songs','/songs','button primary'))};
@@ -28,7 +45,7 @@ export function songPage(id:string):Page{
       const block=songBlock(song,from.id,formNumber(form,'minutes')*60);block.title=`${song.title} · ${from.name} → ${to.name}`;block.notes=`Transition: ${from.name} → ${to.name}.\n${from.notes}\n${to.notes}`.trim();await launchPractice([block]);
     },'Start transition');
   };
-  const page=el('div',{class:'page'},link('Song library','/songs','back-link'),pageHeader(song.artist||'YOUR REPERTOIRE',song.title,`${song.bpm} BPM · ${song.meter.beats}/${song.meter.beatUnit}${song.key?` · Key ${song.key}`:''}`,[button('Edit song',()=>editSong(song),'secondary','edit'),button('Practice song',()=>launchPractice([songBlock(song)]),'primary','play')]));
+  const page=el('div',{class:'page'},link('Songs','/songs','back-link'),pageHeader(song.artist||'',song.title,`${song.bpm} BPM · ${song.meter.beats}/${song.meter.beatUnit}${song.key?` · Key ${song.key}`:''}`,[button('Edit song',()=>editSong(song),'secondary','edit'),button('Practice song',()=>launchPractice([songBlock(song)]),'primary','play')]));
   page.append(el('div',{class:'stats-strip'},stat('Preparation',titleCase(song.status)),stat('Sections',song.sections.length),stat('Practice time',duration(history.reduce((s,h)=>s+h.block.actualActiveSeconds,0))),stat('Last practiced',history[0]?formatDate(history[0].session.startedAt):'—')));
   const sections=el('section',{class:'panel'},sectionHeader('Song sections',undefined,[button('Practice transition',transition,'ghost','arrow'),button('Add section',()=>editSection(song),'secondary','plus')]));
   if(!song.sections.length)sections.append(empty('No sections yet','Add an intro, verse, chorus, bridge, or any section that needs focused practice.',button('Add first section',()=>editSection(song),'ghost','plus'),'song'));

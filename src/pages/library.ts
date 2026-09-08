@@ -4,33 +4,61 @@ import { el } from '../ui/dom.js';
 import { badge, button, empty, iconButton, link, notify, pageHeader, sectionHeader, stat } from '../ui/components.js';
 import { editExercise, trainerDialog } from '../ui/editors.js';
 import { CATEGORIES } from '../domain/models.js';
-import { calculateBestCleanBpm, calculateHighestAttemptedBpm, exerciseAttempts, buildTempoProgressionSeries, finishedSessions, latestSuccessfulBpm } from '../domain/analytics.js';
+import { buildCleanTempoIndex, calculateBestCleanBpm, calculateHighestAttemptedBpm, exerciseAttempts, buildTempoProgressionSeries, finishedSessions, latestSuccessfulBpm } from '../domain/analytics.js';
 import { duration, formatDate, titleCase } from '../domain/utils.js';
 import { addToday, exerciseBlock, launchPractice } from '../practice/launch.js';
 import { lineChart } from '../ui/charts.js';
-export function libraryPage():Page{
-  const data=store.snapshot();const search=el('input',{type:'search',placeholder:'Search exercises or tags…','aria-label':'Search exercises'});
-  const category=el('select',{'aria-label':'Filter category'},el('option',{value:''},'All categories'),CATEGORIES.map(c=>el('option',{value:c},titleCase(c))));
-  const source=el('select',{'aria-label':'Filter source'},[['all','All exercises'],['builtin','Built-in'],['custom','My exercises'],['archived','Archived']].map(([v,l])=>el('option',{value:v},l)));
-  const sort=el('select',{'aria-label':'Sort exercises'},[['name','Name A–Z'],['category','Category'],['clean','Best clean BPM']].map(([v,l])=>el('option',{value:v},l)));
-  const results=el('div',{class:'exercise-grid'}),count=el('span',{class:'muted small'});let mode='list';
-  const render=()=>{
-    const query=search.value.toLowerCase().trim();
-    const exercises=data.exercises.filter(e=>(source.value==='archived'?e.archived:!e.archived)&&(!category.value||e.category===category.value)&&(source.value!=='builtin'||e.builtin)&&(source.value!=='custom'||!e.builtin)&&`${e.name} ${e.tags.join(' ')} ${e.description}`.toLowerCase().includes(query));
-    exercises.sort((a,b)=>sort.value==='clean'?(calculateBestCleanBpm(exerciseAttempts(data.sessions,b.id))||0)-(calculateBestCleanBpm(exerciseAttempts(data.sessions,a.id))||0):sort.value==='category'?a.category.localeCompare(b.category)||a.name.localeCompare(b.name):a.name.localeCompare(b.name));
-    count.textContent=`${exercises.length} exercises`;results.className=mode==='grid'?'exercise-grid':'exercise-list';results.replaceChildren();
-    if(!exercises.length){results.append(empty('No exercises match.','Try another filter, or create an exercise for what you are working on.',button('New exercise',()=>editExercise(),'primary','plus'),'library'));return;}
-    for(const e of exercises){const best=calculateBestCleanBpm(exerciseAttempts(data.sessions,e.id));results.append(el('article',{class:'exercise-card'},
-      el('div',{class:'exercise-card-top'},badge(titleCase(e.category)),el('span',{class:'muted tiny'},e.builtin?'Built-in':'Custom')),
-      el('h2',{},link(e.name,`/library/${e.id}`)),e.sticking?el('p',{class:'sticking small-sticking'},e.sticking):el('p',{class:'muted exercise-description'},e.description),
-      el('div',{class:'exercise-card-bottom'},el('div',{},best?el('span',{class:'muted tiny'},'Best clean'):null,best?el('strong',{},`${best} BPM`):null),
-        iconButton(`Practice ${e.name}`,'play',()=>launchPractice([exerciseBlock(e)])))));}
+// Keep collection context when opening an item and returning, or saving elsewhere.
+const libraryView = { query: '', category: '', source: 'all', sort: 'name', mode: 'list', visible: 60 };
+export function libraryPage(): Page {
+  const data = store.snapshot();
+  const clean = buildCleanTempoIndex(data.sessions);
+  const indexed = data.exercises.map(exercise => ({ exercise, text: `${exercise.name} ${exercise.tags.join(' ')} ${exercise.description}`.toLocaleLowerCase() }));
+  const search = el('input', { type: 'search', value: libraryView.query, placeholder: 'Search exercises…', 'aria-label': 'Search exercises' });
+  const category = el('select', { 'aria-label': 'Filter category' }, el('option', { value: '' }, 'All categories'), CATEGORIES.map(c => el('option', { value: c }, titleCase(c))));
+  const source = el('select', { 'aria-label': 'Filter source' }, [['all', 'All exercises'], ['builtin', 'Built-in'], ['custom', 'My exercises'], ['archived', 'Archived']].map(([v, l]) => el('option', { value: v }, l)));
+  const sort = el('select', { 'aria-label': 'Sort exercises' }, [['name', 'Name A–Z'], ['category', 'Category'], ['clean', 'Best clean BPM']].map(([v, l]) => el('option', { value: v }, l)));
+  category.value = libraryView.category; source.value = libraryView.source; sort.value = libraryView.sort;
+  const results = el('div'), count = el('span', { class: 'muted small', role: 'status' });
+  const more = button('Show more exercises', () => { libraryView.visible += 60; render(); }, 'secondary');
+  const render = () => {
+    Object.assign(libraryView, { query: search.value, category: category.value, source: source.value, sort: sort.value });
+    const q = search.value.toLocaleLowerCase().trim();
+    const exercises = indexed.filter(({ exercise: e, text }) =>
+      (source.value === 'archived' ? e.archived : !e.archived) && (!category.value || e.category === category.value) &&
+      (source.value !== 'builtin' || e.builtin) && (source.value !== 'custom' || !e.builtin) && text.includes(q)).map(item => item.exercise);
+    exercises.sort((a, b) => sort.value === 'clean' ? (clean.get(b.id) || 0) - (clean.get(a.id) || 0) || a.name.localeCompare(b.name)
+      : sort.value === 'category' ? a.category.localeCompare(b.category) || a.name.localeCompare(b.name) : a.name.localeCompare(b.name));
+    count.textContent = `${exercises.length} exercises${exercises.length > libraryView.visible ? ` · showing ${libraryView.visible}` : ''}`;
+    results.className = libraryView.mode === 'grid' ? 'exercise-grid' : 'exercise-list';
+    more.hidden = exercises.length <= libraryView.visible;
+    const rows: HTMLElement[] = [];
+    if (!exercises.length) rows.push(empty('No matching exercises', 'Change a filter or add an exercise.', button('New exercise', () => editExercise(), 'secondary', 'plus')));
+    for (const e of exercises.slice(0, libraryView.visible)) {
+      const best = clean.get(e.id);
+      rows.push(el('article', { class: 'exercise-card' },
+        el('div', { class: 'exercise-card-top' }, badge(titleCase(e.category)), el('span', { class: 'muted tiny' }, e.archived ? 'Archived' : e.builtin ? 'Built-in' : 'Custom')),
+        el('h2', {}, link(e.name, `/library/${e.id}`)),
+        e.sticking ? el('p', { class: 'sticking small-sticking' }, e.sticking) : el('p', { class: 'muted exercise-description' }, e.description),
+        el('div', { class: 'exercise-card-bottom' }, el('div', {}, el('span', { class: 'muted tiny' }, best ? 'Best clean' : 'Starting tempo'),
+          el('strong', {}, `${best || e.defaultBpm} BPM`)), iconButton(`Practice ${e.name}`, 'play', () => launchPractice([exerciseBlock(e)])))));
+    }
+    results.replaceChildren(...rows);
   };
-  for(const control of [search,category,source,sort])control.addEventListener(control===search?'input':'change',render);
-  const grid=button('Grid',()=>{mode='grid';render();grid.classList.add('selected');list.classList.remove('selected');grid.setAttribute('aria-pressed','true');list.setAttribute('aria-pressed','false');},'segmented-button');
-  const list=button('List',()=>{mode='list';render();list.classList.add('selected');grid.classList.remove('selected');list.setAttribute('aria-pressed','true');grid.setAttribute('aria-pressed','false');},'segmented-button selected');
-  grid.setAttribute('aria-pressed','false');list.setAttribute('aria-pressed','true');
-  render();return {node:el('div',{class:'page'},pageHeader('THE WORKBENCH','Exercise library','Browse exercises or add your own.',[button('New exercise',()=>editExercise(),'primary','plus')]),el('div',{class:'library-toolbar'},el('div',{class:'search-field'},search),category,source,sort),el('div',{class:'split result-meta'},count,el('div',{class:'segmented'},grid,list)),results)};
+  for (const control of [search, category, source, sort]) control.addEventListener(control === search ? 'input' : 'change', () => { libraryView.visible = 60; render(); });
+  const viewButtons = ['List', 'Grid'].map(label => {
+    const b = button(label, () => {
+      libraryView.mode = label.toLowerCase();
+      viewButtons.forEach(x => { x.setAttribute('aria-pressed', String(x.dataset.view === libraryView.mode)); });
+      render();
+    }, 'segmented-button');
+    b.dataset.view = label.toLowerCase(); b.setAttribute('aria-pressed', String(libraryView.mode === b.dataset.view)); return b;
+  });
+  render();
+  return { node: el('div', { class: 'page library-page' }, pageHeader('', 'Exercise library', 'Exercises, sticking patterns, and tempo records.', [button('New exercise', () => editExercise(), 'primary', 'plus')]),
+    el('div', { class: 'library-toolbar' }, el('div', { class: 'search-field' }, search), category, source, sort),
+    el('div', { class: 'split result-meta' }, count, el('div', { class: 'segmented', role: 'group', 'aria-label': 'Exercise view' }, viewButtons)), results,
+    el('div', { class: 'page-footer' }, more)) };
 }
 export function exercisePage(id:string):Page{
   const data=store.snapshot(),exercise=data.exercises.find(e=>e.id===id);

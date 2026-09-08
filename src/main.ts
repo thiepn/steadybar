@@ -1,3 +1,4 @@
+import { observeCharts } from './ui/charts.js';
 import { applyAppearance, trackSystemAppearance } from './app/appearance.js';
 import { openAppearance } from './ui/appearance.js';
 import { store } from './app/store.js';
@@ -47,39 +48,56 @@ function moreMenu():void{
 }
 function render():void{
   const path=routePath(),changed=path!==renderedPath;
+  const focused=document.activeElement as HTMLElement|null;
+  const focusLabel=!changed&&focused&&root.contains(focused)?focused.getAttribute('aria-label'):null;
+  const previousScroll=window.scrollY;
   current?.cleanup?.();applyAppearance(store.snapshot().settings);
   const active=path==='/practice/active';document.body.classList.toggle('practice-route',active);
+  if(active&&changed)document.querySelectorAll('#notifications .toast:not(.error)').forEach(note=>note.remove());
   try{current=route(path);}catch(error){current={node:el('div',{class:'empty-state'},el('h1',{},'This view could not open.'),el('p',{},errorMessage(error)),button('Reload workspace',()=>location.reload(),'primary','restart'))};}
+  current.node.classList.add(`route-${path.split('/').filter(Boolean)[0]||'today'}`);
   const main=el('main',{id:'main',tabindex:-1,class:active?'active-main':'main-content'},current.node);
   if(active)root.replaceChildren(main);
   else{
-    const title=navigation.find(([p])=>activeLink(p,path))?.[1]||'Workspace';
     const nav=el('nav',{'aria-label':'Main navigation',class:'sidebar-nav'});
     for(const [href,label,symbol] of navigation){
+      const group=href==='/'?'Practice':href==='/library'?'Collection':href==='/goals'?'Review':null;
+      if(group)nav.append(el('div',{class:'nav-group-label','aria-hidden':'true'},group));
       const a=el('a',{href:`#${href}`,title:label,'aria-label':label,class:`nav-link ${activeLink(href,path)?'active':''}`},icon(symbol),el('span',{},label));
       if(activeLink(href,path))a.setAttribute('aria-current','page');
-      if(href==='/library'||href==='/goals'||href==='/settings')nav.append(el('div',{class:'nav-divider'}));nav.append(a);
+      if(href==='/settings')a.classList.add('settings-nav');
+      nav.append(a);
     }
+    const makeSearch=()=>{
+      const b=button('Search',openSearch,'search-trigger','search');b.setAttribute('aria-label','Search');
+      b.append(el('kbd',{'aria-hidden':'true'},'Ctrl K'));return b;
+    };
+    const appearance=button('Appearance',openAppearance,'sidebar-appearance','sun');
+    appearance.setAttribute('aria-haspopup','dialog');appearance.title='Appearance';
     const sidebar=el('aside',{class:'sidebar'},
-      el('a',{href:'#/',class:'brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),nav);
-    const search=button('Search',openSearch,'search-trigger','search');
-    search.setAttribute('aria-label','Search');
-    search.append(el('kbd',{'aria-hidden':'true'},'Ctrl K'));
-    const appearance=iconButton('Appearance','sun',openAppearance);
+      el('a',{href:'#/',class:'brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
+      makeSearch(),nav,el('div',{class:'sidebar-footer'},appearance));
     const header=el('header',{class:'topbar'},
       el('a',{href:'#/',class:'mobile-brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
-      el('div',{class:'breadcrumb'},el('strong',{},title)),
-      el('div',{class:'actions'},search,appearance));
+      el('div',{class:'actions'},makeSearch(),iconButton('Appearance','sun',openAppearance)));
     const mobile=el('nav',{class:'mobile-nav','aria-label':'Mobile navigation'});
     for(const [href,label,symbol] of [navigation[0]!,navigation[1]!,navigation[2]!,navigation[3]!]){
-      const a=el('a',{href:`#${href}`,class:activeLink(href,path)?'active':''},icon(symbol,21),el('span',{},label));if(activeLink(href,path))a.setAttribute('aria-current','page');mobile.append(a);
+      const a=el('a',{href:`#${href}`,class:activeLink(href,path)?'active':''},icon(symbol,20),el('span',{},label));if(activeLink(href,path))a.setAttribute('aria-current','page');mobile.append(a);
     }
-    const more=button('More',moreMenu,'mobile-more','more');more.setAttribute('aria-haspopup','dialog');if(!['/','/practice','/metronome','/library'].some(href=>activeLink(href,path)))more.classList.add('active');mobile.append(more);
+    const more=button('More',moreMenu,'mobile-more','more');more.setAttribute('aria-haspopup','dialog');
+    if(!['/','/practice','/metronome','/library'].some(href=>activeLink(href,path)))more.classList.add('active');mobile.append(more);
     root.replaceChildren(el('div',{class:'app-shell'},sidebar,el('div',{class:'app-body'},header,el('div',{id:'update-banner'}),main),mobile));
     drawPwaState();
   }
+  const disconnectCharts=path==='/progress'?()=>{}:observeCharts(main),cleanup=current.cleanup;
+  current.cleanup=()=>{disconnectCharts();cleanup?.();};
   document.title=`${path==='/practice/active'?'Practice':navigation.find(([p])=>activeLink(p,path))?.[1]||'Steadybar'} · Steadybar`;
-  renderedPath=path;if(changed){window.scrollTo(0,0);main.focus({preventScroll:true});}
+  renderedPath=path;
+  if(changed){window.scrollTo(0,0);main.focus({preventScroll:true});}
+  else if(focusLabel&&!document.querySelector('dialog[open]')){
+    const next=root.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusLabel)}"]`);
+    next?.focus({preventScroll:true});window.scrollTo(0,previousScroll);
+  }
 }
 function drawPwaState():void{
   const status=document.querySelector('#offline-status');if(status)status.textContent=pwaState.ready?'Available offline':'Local workspace';

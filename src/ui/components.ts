@@ -3,6 +3,9 @@ import { icon, type IconName } from './icons.js';
 import { errorMessage, uuid } from '../domain/utils.js';
 export type Action=()=>void|Promise<unknown>;
 export function notify(message:string,kind:'success'|'error'|'info'='success'):void{
+  // During practice, confirmations belong in the player's status line, not over its controls.
+  const feedback=document.querySelector('.practice-route .attempt-feedback');
+  if(kind!=='error'&&feedback){feedback.textContent=message;return;}
   const root=document.querySelector('#notifications');if(!root)return;
   const note=el('div',{class:`toast ${kind}`,role:kind==='error'?'alert':'status'},icon(kind==='error'?'help':kind==='success'?'check':'note'),el('span',{},message));
   const close=el('button',{class:'icon-button',type:'button','aria-label':'Dismiss notification',onClick:()=>note.remove()},icon('close',16));
@@ -23,9 +26,8 @@ export function iconButton(label:string,symbol:IconName,action:Action):HTMLButto
 export function link(label:string,path:string,variant='text-link',symbol?:IconName):HTMLAnchorElement{return el('a',{href:`#${path}`,class:variant},symbol?icon(symbol):null,label);}
 export const badge=(text:string,variant='neutral'):HTMLElement=>el('span',{class:`badge ${variant}`},text);
 export function pageHeader(eyebrow:string,title:string,description:string,actions:Child[]=[]):HTMLElement{
-  const promotional = ['THE WORKBENCH','PLAY THE MUSIC','YOUR REPERTOIRE','BE READY TO PLAY','PERFORMANCE PREPARATION','A DIRECTION, NOT A SCORE','EVIDENCE, NOT GUESSWORK','THE PRACTICE RECORD','PRACTICE, RECORDED','MAKE IT YOURS','REPEAT WHAT WORKS','STARTER TEMPLATE','YOUR ROUTINE','STEP UP TO THE INSTRUMENT','THE PULSE'].includes(eyebrow);
   return el('header',{class:'page-heading'},el('div',{class:'page-heading-text'},
-    eyebrow && !promotional ? el('div',{class:'eyebrow'},eyebrow) : null,
+    eyebrow ? el('div',{class:'eyebrow'},eyebrow) : null,
     el('h1',{},title),description ? el('p',{},description) : null),
     actions.length ? el('div',{class:'actions'},actions) : null);
 }

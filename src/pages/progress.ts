@@ -1,3 +1,4 @@
+import { observeCharts } from '../ui/charts.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -6,14 +7,17 @@ import { buildTempoProgressionSeries, calculateAverageSessionLength, calculateBe
 import { duration, localDate, titleCase } from '../domain/utils.js';
 import { dayChart, lineChart } from '../ui/charts.js';
 export function progressPage():Page{
-  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('EVIDENCE, NOT GUESSWORK','Your progress','Practice time and clean tempo, over time.'));
-  if(!finishedSessions(data.sessions).length){page.append(empty('No practice data yet','Finish a session to see your practice time and recorded attempts here.',link('Start practice','/practice','button primary','play'),'progress'));return {node:page};}
+  let chartCleanup=()=>{},drawVersion=0,disposed=false;
+  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('','Progress','Practice time and clean tempo, over time.'));
+  if(!finishedSessions(data.sessions).length){page.append(empty('No practice data yet','Finish a session to see your practice time and recorded attempts here.',link('Start practice','/practice','button primary','play'),'progress'));return {node:page,cleanup:()=>{disposed=true;chartCleanup();}};}
   const range=el('select',{'aria-label':'Progress date range'},[['7','7 days'],['30','30 days'],['90','3 months'],['365','1 year'],['all','All time'],['custom','Custom range']].map(([v,l])=>el('option',{value:v,selected:v==='30'},l)));
   const from=el('input',{type:'date','aria-label':'From date',value:localDate()}),to=el('input',{type:'date','aria-label':'To date',value:localDate()}),custom=el('div',{class:'actions',hidden:true},field('From',from),field('To',to));
   const exercise=el('select',{'aria-label':'Progress exercise'},data.exercises.map(e=>el('option',{value:e.id},e.name)));
   const recorded=data.exercises.find(e=>exerciseAttempts(data.sessions,e.id).length>0);if(recorded)exercise.value=recorded.id;
   const content=el('div');
   const draw=()=>{
+    const version=++drawVersion;chartCleanup();
+    queueMicrotask(()=>{if(!disposed&&version===drawVersion)chartCleanup=observeCharts(content);});
     let start:string|undefined,end:string|undefined=localDate();custom.hidden=range.value!=='custom';
     if(range.value==='custom'){start=from.value||undefined;end=to.value||undefined;}
     else if(range.value!=='all'){const date=new Date();date.setDate(date.getDate()-Number(range.value)+1);start=localDate(date);}
@@ -39,5 +43,5 @@ export function progressPage():Page{
     content.append(el('div',{class:'two-column'},consistency,goals),el('details',{class:'data-details'},el('summary',{},'View session totals'),el('table',{},el('thead',{},el('tr',{},el('th',{scope:'col'},'Session date'),el('th',{scope:'col'},'Active time'),el('th',{scope:'col'},'Status'))),el('tbody',{},sessions.map(s=>el('tr',{},el('td',{},link(localDate(s.startedAt),`/history/${s.id}`)),el('td',{},duration(sessionTime(s))),el('td',{},s.status)))))));
   };
   range.addEventListener('change',draw);from.addEventListener('change',draw);to.addEventListener('change',draw);exercise.addEventListener('change',draw);draw();
-  page.append(el('div',{class:'range-toolbar'},field('Date range',range),custom),content);return {node:page};
+  page.append(el('div',{class:'range-toolbar'},field('Date range',range),custom),content);return {node:page,cleanup:()=>{disposed=true;chartCleanup();}};
 }

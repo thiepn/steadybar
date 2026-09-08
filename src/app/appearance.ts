@@ -1,25 +1,32 @@
 import type { Settings } from '../domain/models.js';
+import { accentColor, surfaceTheme } from '../domain/appearance.js';
 import { store } from './store.js';
+export { ACCENTS } from '../domain/appearance.js';
+export type { AccentColor } from '../domain/appearance.js';
 
-export const ACCENTS = ['graphite', 'blue', 'forest', 'plum', 'amber', 'rose'] as const;
-export type AccentColor = typeof ACCENTS[number];
 export const APPEARANCE_EVENT = 'steadybar-appearance';
 const media = typeof matchMedia === 'function' ? matchMedia('(prefers-color-scheme: dark)') : undefined;
 let pending: Promise<unknown> = Promise.resolve();
+let applied = '';
 
-/** IndexedDB is authoritative. Local storage is only a first-paint color hint. */
+/** IndexedDB is authoritative; local storage is only a validated first-paint hint. */
 export function applyAppearance(settings: Settings): void {
   const mode = settings.theme;
   const resolved = mode === 'system' ? (media?.matches ? 'dark' : 'light') : mode;
-  const accent = settings.accent && ACCENTS.includes(settings.accent) ? settings.accent : 'graphite';
+  const accent = accentColor(settings.accent);
+  const palette = surfaceTheme(settings.surfaceTheme);
+  const key = `${mode}/${resolved}/${accent}/${palette}`;
+  if (applied === key) return;
   const root = document.documentElement;
   root.dataset.theme = resolved;
   root.dataset.mode = mode;
   root.dataset.accent = accent;
+  root.dataset.palette = palette;
   root.style.colorScheme = resolved;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content',
     getComputedStyle(root).getPropertyValue('--bg').trim());
-  try { localStorage.setItem('steadybar-appearance', JSON.stringify({ mode, accent })); } catch { /* Storage may be restricted. */ }
+  try { localStorage.setItem('steadybar-appearance', JSON.stringify({ mode, accent, palette })); } catch { /* Restricted storage must not block color changes. */ }
+  applied = key;
   window.dispatchEvent(new Event(APPEARANCE_EVENT));
 }
 
@@ -30,8 +37,8 @@ export function trackSystemAppearance(): void {
   });
 }
 
-/** Do not re-render the current page: changing colors must not discard a form or stop audio. */
-export function saveAppearance(change: Pick<Partial<Settings>, 'theme' | 'accent'>): Promise<void> {
+/** Serialize rapid selections. Never rebuild the page, discard a form, or restart audio. */
+export function saveAppearance(change: Pick<Partial<Settings>, 'theme' | 'accent' | 'surfaceTheme'>): Promise<void> {
   const task = pending.then(async () => {
     await store.settings(change, false);
     applyAppearance(store.snapshot().settings);

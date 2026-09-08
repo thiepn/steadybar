@@ -49,7 +49,7 @@ class UIPolish(e2e.MusicPracticeTests):
             expect(self.page.locator('html')).to_have_attribute('data-theme', scheme)
         self.mode('light'); self.page.emulate_media(color_scheme='dark')
         expect(self.page.locator('html')).to_have_attribute('data-theme', 'light')
-        self.assertEqual(self.page.locator('meta[name="theme-color"]').get_attribute('content'), '#f6f6f7')
+        self.assertEqual(self.page.locator('meta[name="theme-color"]').get_attribute('content'), '#f5f5f5')
         (e2e.ARTIFACTS/'palette-results.json').write_text(json.dumps(evidence,indent=2))
 
     def test_31_appearance_preserves_unsaved_preferences(self):
@@ -120,7 +120,7 @@ class UIPolish(e2e.MusicPracticeTests):
         expect(self.page.locator('html')).to_have_attribute('data-theme','dark')
         expect(self.page.locator('html')).to_have_attribute('data-accent','plum')
         expect(self.page.get_by_role('button',name='Plum accent',exact=True)).to_have_attribute('aria-pressed','true')
-        self.assertEqual(json.loads(self.page.evaluate("localStorage.getItem('steadybar-appearance')")),{'mode':'dark','accent':'plum'})
+        self.assertEqual(json.loads(self.page.evaluate("localStorage.getItem('steadybar-appearance')")),{'mode':'dark','accent':'plum','palette':'neutral'})
 
     def test_36_mobile_navigation_reaches_every_destination(self):
         self.onboard();self.page.set_viewport_size({'width':390,'height':844})
@@ -133,7 +133,7 @@ class UIPolish(e2e.MusicPracticeTests):
             nav.get_by_role('button',name='More',exact=True).click()
             self.page.get_by_role('dialog').get_by_role('button',name=name,exact=True).click()
             expect(self.page.get_by_role('dialog')).to_have_count(0)
-            title={'Songs':'Song library','Goals':'Practice goals','Progress':'Your progress','History':'Session history','Routines':'Practice routines'}.get(name,name)
+            title={'Songs':'Songs','Goals':'Goals','Progress':'Progress','History':'History','Routines':'Routines'}.get(name,name)
             expect(self.page.get_by_role('heading',name=title,exact=True)).to_be_visible()
 
 if __name__=='__main__':
