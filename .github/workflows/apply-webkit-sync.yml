@@ -1,0 +1,46 @@
+name: Apply Steadybar 2.0 WebKit synchronization fix
+on:
+  push:
+    branches: [transfer/profiles-v2-webkit-sync]
+    paths: [.github/workflows/apply-webkit-sync.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 0cd9edaf1fd709a7c3e0fc59977dd9b3ec9cd19d
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Synchronize Save and leave before forcing the next route
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/profiles.py')
+          text=p.read_text()
+          old="        self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click()\n        self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Stage guitar',exact=True))"
+          new="        self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click()\n        expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()\n        self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Stage guitar',exact=True))"
+          if text.count(old)!=1:
+              raise SystemExit('Expected exactly one unsynchronized Save & leave sequence')
+          p.write_text(text.replace(old,new))
+          PY
+      - name: Clean-install verification
+        run: |
+          npm ci
+          npm run check
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          python tests/profiles.py --render --test test_65
+      - name: Commit exact fix to feature branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/profiles.py
+          git commit -m 'Synchronize profile switch test after saved practice leave'
+          git push origin HEAD:feat/practice-profiles-v2
