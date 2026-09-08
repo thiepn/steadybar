@@ -1,0 +1,42 @@
+name: Apply Steadybar 2.0 release hardening
+on:
+  push:
+    branches: [transfer/practice-profiles-v2-finalize]
+    paths: [.github/workflows/apply-profiles-v2-finalize.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: transfer/practice-profiles-v2-finalize
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify patch and feature-branch baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .transfer/finalize-fixes.b64 > /tmp/finalize.patch.xz
+          echo 'f38ad5bb3f8bfa2192f3f7229d32a5f1f3da704ff6fccc34a3123af86278dc3d  /tmp/finalize.patch.xz' | sha256sum --check
+          xz --decompress --stdout /tmp/finalize.patch.xz > /tmp/finalize.patch
+          git fetch origin feat/practice-profiles-v2
+          test "$(git rev-parse origin/feat/practice-profiles-v2)" = a3448dc3a6cc4c070a70d2178a46a8a6c73e3e29
+          git checkout --detach a3448dc3a6cc4c070a70d2178a46a8a6c73e3e29
+          git apply --check /tmp/finalize.patch
+          git apply --index /tmp/finalize.patch
+      - name: Clean-install source verification
+        run: npm ci && npm run check
+      - name: Commit hardened candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Harden practice-profile recovery, concurrent edits and release tests'
+          git push origin HEAD:feat/practice-profiles-v2
