@@ -160,6 +160,7 @@ class MusicPracticeTests(unittest.TestCase):
         before=self.read("load('app/store.js').store.snapshot().dailyPlans[0].blocks.map(b=>b.title)")
         self.page.get_by_label('Double Stroke Roll duration in minutes',exact=True).fill('12')
         self.page.get_by_label('Double Stroke Roll duration in minutes',exact=True).press('Tab')
+        self.page.get_by_role('button',name='Block options for Double Stroke Roll',exact=True).click()
         self.page.get_by_role('button',name='Move Double Stroke Roll up',exact=True).click()
         after=self.read("load('app/store.js').store.snapshot().dailyPlans[0].blocks")
         self.assertEqual(after[1]['title'],before[2]);self.assertEqual(after[1]['targetSeconds'],720)
@@ -363,7 +364,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.onboard();self.page.evaluate('navigator.serviceWorker.ready.then(()=>true)')
         self.page.reload(wait_until='networkidle');self.context.set_offline(True)
         self.page.reload(wait_until='domcontentloaded')
-        expect(self.page.get_by_role('heading',name='Make this practice count.',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
         self.route('/library');expect(self.page.get_by_role('link',name='Double Stroke Roll',exact=True)).to_be_visible()
         self.route('/metronome');self.page.get_by_role('button',name='Start metronome',exact=True).click();expect(self.page.get_by_role('button',name='Pause metronome',exact=True)).to_be_visible()
         self.page.get_by_role('button',name='Pause metronome',exact=True).click()
@@ -550,6 +551,7 @@ class MusicPracticeTests(unittest.TestCase):
 
     def test_29_dialog_focus_does_not_steal_a_chosen_field(self):
         self.onboard();self.create_song()
+        expect(self.page.get_by_role('button',name='Add section',exact=True)).to_be_visible()
         # Choose the notes field during the same event task that opens the dialog.
         # A deferred autofocus callback must not move focus back to the name field.
         self.page.evaluate("""()=>{

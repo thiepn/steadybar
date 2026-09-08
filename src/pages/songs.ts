@@ -10,10 +10,10 @@ export function songsPage():Page{
   const data=store.snapshot(),search=el('input',{type:'search',placeholder:'Search songs or artists…','aria-label':'Search songs'}),status=el('select',{'aria-label':'Filter song status'},[['active','All active songs'],['learning','Learning'],['practicing','Practicing'],['performance-ready','Performance-ready'],['archived','Archived']].map(([v,l])=>el('option',{value:v},l))),list=el('div',{class:'song-grid'});
   const draw=()=>{
     const query=search.value.toLowerCase(),songs=data.songs.filter(s=>(status.value==='active'?s.status!=='archived':s.status===status.value)&&`${s.title} ${s.artist}`.toLowerCase().includes(query)).sort((a,b)=>a.title.localeCompare(b.title));list.replaceChildren();
-    if(!songs.length)list.append(empty('Make room for your repertoire.','Add a song you are learning or preparing. Keep sections, tempos, and arrangement notes together.',button('Add song',()=>editSong(),'primary','plus'),'song'));
+    if(!songs.length)list.append(empty('No songs found','Add a song you are learning or preparing. Keep sections, tempos, and arrangement notes together.',button('Add song',()=>editSong(),'primary','plus'),'song'));
     for(const s of songs)list.append(el('article',{class:'song-card'},el('div',{class:'split'},badge(titleCase(s.status),s.status==='performance-ready'?'accent':'neutral'),el('span',{class:'song-tempo'},`${s.bpm} `,el('small',{},'BPM'))),el('h2',{},link(s.title,`/songs/${s.id}`)),el('p',{class:'muted'},s.artist||'No artist specified'),el('div',{class:'split'},el('span',{class:'muted small'},`${s.meter.beats}/${s.meter.beatUnit}${s.key?` · Key ${s.key}`:''} · ${s.sections.length} sections`),iconButton(`Practice ${s.title}`,'play',()=>launchPractice([songBlock(s)])))));
   };search.addEventListener('input',draw);status.addEventListener('change',draw);draw();
-  return {node:el('div',{class:'page'},pageHeader('PLAY THE MUSIC','Song library','Prepare the sections. Connect the transitions. Know the arrangement.',[button('Add song',()=>editSong(),'primary','plus')]),el('div',{class:'library-toolbar'},search,status),list)};
+  return {node:el('div',{class:'page'},pageHeader('PLAY THE MUSIC','Song library','Your songs, sections, and arrangements.',[button('Add song',()=>editSong(),'primary','plus')]),el('div',{class:'library-toolbar'},search,status),list)};
 }
 export function songPage(id:string):Page{
   const data=store.snapshot(),song=data.songs.find(s=>s.id===id);if(!song)return {node:empty('Song not found.','Your historical practice remains available in History.',link('Songs','/songs','button primary'))};
@@ -30,8 +30,8 @@ export function songPage(id:string):Page{
   };
   const page=el('div',{class:'page'},link('Song library','/songs','back-link'),pageHeader(song.artist||'YOUR REPERTOIRE',song.title,`${song.bpm} BPM · ${song.meter.beats}/${song.meter.beatUnit}${song.key?` · Key ${song.key}`:''}`,[button('Edit song',()=>editSong(song),'secondary','edit'),button('Practice song',()=>launchPractice([songBlock(song)]),'primary','play')]));
   page.append(el('div',{class:'stats-strip'},stat('Preparation',titleCase(song.status)),stat('Sections',song.sections.length),stat('Practice time',duration(history.reduce((s,h)=>s+h.block.actualActiveSeconds,0))),stat('Last practiced',history[0]?formatDate(history[0].session.startedAt):'—')));
-  const sections=el('section',{class:'panel'},sectionHeader('The arrangement',undefined,[button('Practice transition',transition,'ghost','arrow'),button('Add section',()=>editSection(song),'secondary','plus')]));
-  if(!song.sections.length)sections.append(empty('Break down the song.','Add an intro, verse, chorus, bridge, or any section that needs focused practice.',button('Add first section',()=>editSection(song),'ghost','plus'),'song'));
+  const sections=el('section',{class:'panel'},sectionHeader('Song sections',undefined,[button('Practice transition',transition,'ghost','arrow'),button('Add section',()=>editSection(song),'secondary','plus')]));
+  if(!song.sections.length)sections.append(empty('No sections yet','Add an intro, verse, chorus, bridge, or any section that needs focused practice.',button('Add first section',()=>editSection(song),'ghost','plus'),'song'));
   let dragIndex=-1;
   song.sections.forEach((s,index)=>{
     const move=async(to:number)=>{await store.save('songs',{...song,sections:reorder(song.sections,index,to).map((s,order)=>({...s,order}))});};

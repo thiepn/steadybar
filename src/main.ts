@@ -1,3 +1,5 @@
+import { applyAppearance, trackSystemAppearance } from './app/appearance.js';
+import { openAppearance } from './ui/appearance.js';
 import { store } from './app/store.js';
 import { navigate, routePath, type Page } from './app/navigation.js';
 import { openSearch } from './app/search.js';
@@ -5,7 +7,7 @@ import { showOnboarding } from './app/onboarding.js';
 import { applyPwaUpdate, pwaState, registerPwa } from './app/pwa.js';
 import { el } from './ui/dom.js';
 import { brandMark, icon, type IconName } from './ui/icons.js';
-import { button, dialog, link, notify } from './ui/components.js';
+import { button, dialog, iconButton, link, notify } from './ui/components.js';
 import { todayPage } from './pages/today.js';
 import { libraryPage, exercisePage } from './pages/library.js';
 import { routinesPage, routinePage } from './pages/routines.js';
@@ -22,7 +24,6 @@ import { errorMessage } from './domain/utils.js';
 const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/progress','Progress','progress'],['/history','History','history'],['/settings','Settings','settings']];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
-function applyTheme():void{const theme=store.snapshot().settings.theme;document.documentElement.dataset.theme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#171d19':'#f5f5f0');}
 function route(path:string):Page{
   const parts=path.split('/').filter(Boolean),id=parts[1];
   if(path==='/')return todayPage();
@@ -37,16 +38,16 @@ function route(path:string):Page{
   if(path==='/progress')return progressPage();
   if(parts[0]==='history')return id?sessionPage(id):historyPage();
   if(path==='/settings')return settingsPage();
-  return {node:el('div',{class:'empty-state'},el('h1',{},'Page not found.'),el('p',{},'Your workspace is one step away.'),link('Open Today','/','button primary'))};
+  return {node:el('div',{class:'empty-state'},el('h1',{},'Page not found.'),el('p',{},'This page does not exist.'),link('Open Today','/','button primary'))};
 }
 const activeLink=(href:string,path:string)=>href==='/'?path==='/':path===href||path.startsWith(`${href}/`);
 function moreMenu():void{
-  const menu=el('div',{class:'more-nav'}),handle=dialog('Your workspace',[menu]);
+  const menu=el('div',{class:'more-nav'}),handle=dialog('Navigation',[menu]);
   for(const [path,label,symbol] of navigation)menu.append(button(label,()=>{handle.close();navigate(path);},'more-link',symbol));
 }
 function render():void{
   const path=routePath(),changed=path!==renderedPath;
-  current?.cleanup?.();applyTheme();
+  current?.cleanup?.();applyAppearance(store.snapshot().settings);
   const active=path==='/practice/active';document.body.classList.toggle('practice-route',active);
   try{current=route(path);}catch(error){current={node:el('div',{class:'empty-state'},el('h1',{},'This view could not open.'),el('p',{},errorMessage(error)),button('Reload workspace',()=>location.reload(),'primary','restart'))};}
   const main=el('main',{id:'main',tabindex:-1,class:active?'active-main':'main-content'},current.node);
@@ -55,18 +56,25 @@ function render():void{
     const title=navigation.find(([p])=>activeLink(p,path))?.[1]||'Workspace';
     const nav=el('nav',{'aria-label':'Main navigation',class:'sidebar-nav'});
     for(const [href,label,symbol] of navigation){
-      const a=el('a',{href:`#${href}`,class:`nav-link ${activeLink(href,path)?'active':''}`},icon(symbol),el('span',{},label));
+      const a=el('a',{href:`#${href}`,title:label,'aria-label':label,class:`nav-link ${activeLink(href,path)?'active':''}`},icon(symbol),el('span',{},label));
       if(activeLink(href,path))a.setAttribute('aria-current','page');
       if(href==='/library'||href==='/goals'||href==='/settings')nav.append(el('div',{class:'nav-divider'}));nav.append(a);
     }
-    const sidebar=el('aside',{class:'sidebar'},el('a',{href:'#/',class:'brand'},brandMark(),el('span',{},el('strong',{},'Steadybar'),el('small',{},'MUSIC PRACTICE WORKSPACE'))),nav,el('div',{class:'sidebar-footer'},el('span',{class:'local-dot'}),el('div',{},el('strong',{},'Practice with purpose.'),el('span',{},'Everything stays on this device.'))));
-    const search=button('Quick find',openSearch,'search-trigger','search');search.append(el('kbd',{},'Ctrl K'));
-    const header=el('header',{class:'topbar'},el('div',{class:'breadcrumb'},el('span',{},'WORKSPACE'),el('span',{},'/'),el('strong',{},title)),el('div',{class:'actions'},el('span',{class:'offline-status',id:'offline-status'},pwaState.ready?'Available offline':'Local workspace'),search));
+    const sidebar=el('aside',{class:'sidebar'},
+      el('a',{href:'#/',class:'brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),nav);
+    const search=button('Search',openSearch,'search-trigger','search');
+    search.setAttribute('aria-label','Search');
+    search.append(el('kbd',{'aria-hidden':'true'},'Ctrl K'));
+    const appearance=iconButton('Appearance','sun',openAppearance);
+    const header=el('header',{class:'topbar'},
+      el('a',{href:'#/',class:'mobile-brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
+      el('div',{class:'breadcrumb'},el('strong',{},title)),
+      el('div',{class:'actions'},search,appearance));
     const mobile=el('nav',{class:'mobile-nav','aria-label':'Mobile navigation'});
-    for(const [href,label,symbol] of [navigation[0]!,navigation[1]!,navigation[3]!,navigation[8]!]){
+    for(const [href,label,symbol] of [navigation[0]!,navigation[1]!,navigation[2]!,navigation[3]!]){
       const a=el('a',{href:`#${href}`,class:activeLink(href,path)?'active':''},icon(symbol,21),el('span',{},label));if(activeLink(href,path))a.setAttribute('aria-current','page');mobile.append(a);
     }
-    const more=button('More',moreMenu,'mobile-more','more');mobile.append(more);
+    const more=button('More',moreMenu,'mobile-more','more');more.setAttribute('aria-haspopup','dialog');if(!['/','/practice','/metronome','/library'].some(href=>activeLink(href,path)))more.classList.add('active');mobile.append(more);
     root.replaceChildren(el('div',{class:'app-shell'},sidebar,el('div',{class:'app-body'},header,el('div',{id:'update-banner'}),main),mobile));
     drawPwaState();
   }
@@ -80,9 +88,9 @@ function drawPwaState():void{
 }
 async function boot():Promise<void>{
   try{
-    await store.initialize();await practice.recover();render();
+    await store.initialize();trackSystemAppearance();await practice.recover();render();
     store.subscribe(()=>{
-      practice.observePersisted();applyTheme();
+      practice.observePersisted();applyAppearance(store.snapshot().settings);
       if(current?.isDirty?.())return;
       if(routePath()==='/metronome')return;
       if(routePath()==='/practice/active'&&!practice.external&&practice.session?.status==='active')return;

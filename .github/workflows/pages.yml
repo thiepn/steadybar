@@ -37,14 +37,15 @@ jobs:
         run: python tests/ci_render.py
       - name: Verify real IndexedDB, service worker, backup and audio capabilities
         run: python tests/ci_native.py
+      - name: Verify responsive layouts and appearance persistence
+        run: python tests/ui_polish.py
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: browser-qa
           path: |
-            .qa/e2e-results.json
-            .qa/ui-results.json
+            .qa/*results.json
             .qa/*.png
           include-hidden-files: true
           retention-days: 14

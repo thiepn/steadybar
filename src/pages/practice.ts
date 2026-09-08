@@ -12,16 +12,16 @@ import { routineDuration } from '../domain/analytics.js';
 import { sessionPage } from './history.js';
 export function practicePage():Page{
   const data=store.snapshot(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=data.sessions.find(s=>s.status==='active');
-  const page=el('div',{class:'page practice-launcher'},pageHeader('STEP UP TO THE INSTRUMENT','What are we practicing?','Start with a plan, one exercise, or a little space to explore.'));
+  const page=el('div',{class:'page practice-launcher'},pageHeader('STEP UP TO THE INSTRUMENT','Practice','Choose a plan, an exercise, or a timed free session.'));
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},'An unfinished session is saved.'),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
   const planned=el('section',{class:'panel launcher-plan'},sectionHeader('Today’s session',`${plan?.blocks.length||0} blocks · ${duration(routineDuration(plan?.blocks||[]))}`));
   if(plan?.blocks.length)planned.append(el('ol',{class:'launch-sequence'},plan.blocks.map(b=>el('li',{},el('span',{},b.title),el('span',{class:'muted'},`${duration(b.targetSeconds)} · ${b.bpm} BPM`)))),button('Start today’s plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary','play'));
   else planned.append(empty('No plan for today yet.','Choose a routine or start with a single exercise.',link('Plan today','/','button secondary','today')));
   const minutes=el('input',{type:'number',value:10,min:1,max:1440,step:1,'aria-label':'Free practice duration in minutes'}),bpm=el('input',{type:'number',value:data.settings.metronome.bpm,min:20,max:300,step:1,'aria-label':'Free practice BPM'});
-  const free=el('section',{class:'panel'},sectionHeader('Free practice'),el('p',{class:'muted'},'A timer, a metronome, and room to work. No exercise required.'),el('div',{class:'form-grid'},field('Minutes',minutes),field('BPM',bpm)),button('Start free practice',async()=>{if(minutes.reportValidity()&&bpm.reportValidity())await launchPractice([freeBlock(Number(minutes.value)*60,Number(bpm.value))]);},'primary','play'));
+  const free=el('section',{class:'panel'},sectionHeader('Free practice'),el('p',{class:'muted'},'Practice with a timer and metronome.'),el('div',{class:'form-grid'},field('Minutes',minutes),field('BPM',bpm)),button('Start free practice',async()=>{if(minutes.reportValidity()&&bpm.reportValidity())await launchPractice([freeBlock(Number(minutes.value)*60,Number(bpm.value))]);},'primary','play'));
   page.append(el('div',{class:'two-column'},planned,free),el('div',{class:'launcher-options'},link('Choose an exercise','/library','launcher-option','library'),button('Use a routine',()=>selectRoutineDialog(r=>launchPractice(r.blocks,{routineId:r.id})),'launcher-option','routine'),link('Practice a song','/songs','launcher-option','song'),link('Just the metronome','/metronome','launcher-option','pulse')));
   const recentExercises=data.exercises.filter(e=>!e.archived).filter(e=>['rudiment-1','rudiment-2','rudiment-3'].includes(e.id));
-  if(data.settings.instrument==='Drums')page.append(el('section',{class:'panel'},sectionHeader('A good place to begin'),el('div',{class:'quick-exercises'},recentExercises.map(e=>button(e.name,()=>launchPractice([exerciseBlock(e)]),'quick-exercise','play')))));
+  if(data.settings.instrument==='Drums')page.append(el('section',{class:'panel'},sectionHeader('Drum exercises'),el('div',{class:'quick-exercises'},recentExercises.map(e=>button(e.name,()=>launchPractice([exerciseBlock(e)]),'quick-exercise','play')))));
   return {node:page};
 }
 export function activePracticePage():Page{
@@ -54,7 +54,7 @@ export function activePracticePage():Page{
     beats,el('div',{class:'active-timer'},time,target),track,
     el('div',{class:'active-tempo-controls'},[-5,-1,1,5].map(step=>button(step>0?`+${step}`:`−${Math.abs(step)}`,()=>practice.setBpm(practice.session!.runtime.bpm+step),'tempo-step'))),
     el('div',{class:'practice-main-controls'},start,metro),
-    el('div',{class:'attempt-section'},el('div',{class:'label'},'HOW DID THAT ROUND FEEL?'),el('div',{class:'rating-buttons'},ratingButtons),attemptText),
+    el('div',{class:'attempt-section'},el('div',{class:'label'},'Log an attempt'),el('div',{class:'rating-buttons'},ratingButtons),attemptText),
     el('div',{class:'practice-tools'},button('Quick note',note,'ghost','note'),button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress')),
     progressText,notesText,error,
     el('div',{class:'block-transition-controls'},button('Restart block',async()=>{await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart'),button('Skip block',()=>practice.finishBlock(true),'ghost','skip'),button('Finish block',()=>practice.finishBlock(),'secondary','check')),next);
@@ -75,7 +75,7 @@ export function activePracticePage():Page{
     title.textContent=block.titleSnapshot;sticking.textContent=block.stickingSnapshot;sticking.hidden=!block.stickingSnapshot;
     blockNumber.textContent=`BLOCK ${session.activeBlockIndex+1} OF ${session.blocks.length}`;
     if(document.activeElement!==tempo)tempo.value=String(session.runtime.bpm);
-    status.textContent=phase==='running'?'PRACTICING':phase==='countin'?`COUNT-IN · BAR ${(practice.beat?.bar||0)+1}`:phase==='paused'?'PAUSED · PROGRESS SAVED':'READY WHEN YOU ARE';
+    status.textContent=phase==='running'?'Practicing':phase==='countin'?`Count-in · bar ${(practice.beat?.bar||0)+1}`:phase==='paused'?'Paused':'Ready';
     start.querySelector('span')!.textContent=phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start practice';
     start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
     metro.querySelector('span')!.textContent=session.runtime.metronomeOn?'Metronome on':'Metronome off';metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));
@@ -89,7 +89,7 @@ export function activePracticePage():Page{
       queue.replaceChildren(sectionHeader('Session sequence'),...session.blocks.map((b,i)=>el('div',{class:`queue-block ${i===session.activeBlockIndex?'current':''}`},el('span',{class:'queue-number'},b.completed?'✓':b.skipped?'—':String(i+1).padStart(2,'0')),el('div',{},el('strong',{},b.titleSnapshot),el('span',{class:'muted small'},`${duration(b.targetSeconds)} · ${b.initialBpm} BPM`)))));
     }
     Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',!!practice.beat&&practice.beat.beat===i&&(phase==='running'||phase==='countin')));
-    const upcoming=session.blocks[session.activeBlockIndex+1];next.replaceChildren(el('span',{class:'label'},upcoming?'UP NEXT':'LAST BLOCK'),el('strong',{},upcoming?`${upcoming.titleSnapshot} · ${duration(upcoming.targetSeconds)}`:'Finish the block to review your session.'));
+    const upcoming=session.blocks[session.activeBlockIndex+1];next.replaceChildren(el('span',{class:'label'},upcoming?'Up next':'Final block'),el('strong',{},upcoming?`${upcoming.titleSnapshot} · ${duration(upcoming.targetSeconds)}`:'Finish the block to review your session.'));
     tick();
   }
   const onKey=(event:KeyboardEvent)=>{

@@ -13,7 +13,7 @@ export function libraryPage():Page{
   const category=el('select',{'aria-label':'Filter category'},el('option',{value:''},'All categories'),CATEGORIES.map(c=>el('option',{value:c},titleCase(c))));
   const source=el('select',{'aria-label':'Filter source'},[['all','All exercises'],['builtin','Built-in'],['custom','My exercises'],['archived','Archived']].map(([v,l])=>el('option',{value:v},l)));
   const sort=el('select',{'aria-label':'Sort exercises'},[['name','Name A–Z'],['category','Category'],['clean','Best clean BPM']].map(([v,l])=>el('option',{value:v},l)));
-  const results=el('div',{class:'exercise-grid'}),count=el('span',{class:'muted small'});let mode='grid';
+  const results=el('div',{class:'exercise-grid'}),count=el('span',{class:'muted small'});let mode='list';
   const render=()=>{
     const query=search.value.toLowerCase().trim();
     const exercises=data.exercises.filter(e=>(source.value==='archived'?e.archived:!e.archived)&&(!category.value||e.category===category.value)&&(source.value!=='builtin'||e.builtin)&&(source.value!=='custom'||!e.builtin)&&`${e.name} ${e.tags.join(' ')} ${e.description}`.toLowerCase().includes(query));
@@ -21,15 +21,16 @@ export function libraryPage():Page{
     count.textContent=`${exercises.length} exercises`;results.className=mode==='grid'?'exercise-grid':'exercise-list';results.replaceChildren();
     if(!exercises.length){results.append(empty('No exercises match.','Try another filter, or create an exercise for what you are working on.',button('New exercise',()=>editExercise(),'primary','plus'),'library'));return;}
     for(const e of exercises){const best=calculateBestCleanBpm(exerciseAttempts(data.sessions,e.id));results.append(el('article',{class:'exercise-card'},
-      el('div',{class:'exercise-card-top'},badge(titleCase(e.category)),el('span',{class:'muted tiny'},e.builtin?'BUILT-IN':'CUSTOM')),
+      el('div',{class:'exercise-card-top'},badge(titleCase(e.category)),el('span',{class:'muted tiny'},e.builtin?'Built-in':'Custom')),
       el('h2',{},link(e.name,`/library/${e.id}`)),e.sticking?el('p',{class:'sticking small-sticking'},e.sticking):el('p',{class:'muted exercise-description'},e.description),
-      el('div',{class:'exercise-card-bottom'},el('div',{},el('span',{class:'muted tiny'},'BEST CLEAN'),el('strong',{},best?`${best} BPM`:'Not recorded')),
+      el('div',{class:'exercise-card-bottom'},el('div',{},best?el('span',{class:'muted tiny'},'Best clean'):null,best?el('strong',{},`${best} BPM`):null),
         iconButton(`Practice ${e.name}`,'play',()=>launchPractice([exerciseBlock(e)])))));}
   };
   for(const control of [search,category,source,sort])control.addEventListener(control===search?'input':'change',render);
-  const grid=button('Grid',()=>{mode='grid';render();grid.classList.add('selected');list.classList.remove('selected');},'segmented-button selected');
-  const list=button('List',()=>{mode='list';render();list.classList.add('selected');grid.classList.remove('selected');},'segmented-button');
-  render();return {node:el('div',{class:'page'},pageHeader('THE WORKBENCH','Exercise library','Build control before speed. Find the next thing worth practicing.',[button('New exercise',()=>editExercise(),'primary','plus')]),el('div',{class:'library-toolbar'},el('div',{class:'search-field'},search),category,source,sort),el('div',{class:'split result-meta'},count,el('div',{class:'segmented'},grid,list)),results)};
+  const grid=button('Grid',()=>{mode='grid';render();grid.classList.add('selected');list.classList.remove('selected');grid.setAttribute('aria-pressed','true');list.setAttribute('aria-pressed','false');},'segmented-button');
+  const list=button('List',()=>{mode='list';render();list.classList.add('selected');grid.classList.remove('selected');list.setAttribute('aria-pressed','true');grid.setAttribute('aria-pressed','false');},'segmented-button selected');
+  grid.setAttribute('aria-pressed','false');list.setAttribute('aria-pressed','true');
+  render();return {node:el('div',{class:'page'},pageHeader('THE WORKBENCH','Exercise library','Browse exercises or add your own.',[button('New exercise',()=>editExercise(),'primary','plus')]),el('div',{class:'library-toolbar'},el('div',{class:'search-field'},search),category,source,sort),el('div',{class:'split result-meta'},count,el('div',{class:'segmented'},grid,list)),results)};
 }
 export function exercisePage(id:string):Page{
   const data=store.snapshot(),exercise=data.exercises.find(e=>e.id===id);
@@ -45,7 +46,7 @@ export function exercisePage(id:string):Page{
   page.append(el('div',{class:'detail-actions'},button('Add to today',()=>addToday(exerciseBlock(exercise)),'secondary','plus'),button('Start tempo trainer',()=>trainerDialog(undefined,async config=>launchPractice([{...exerciseBlock(exercise),tempoTrainer:config,targetSeconds:config.mode==='endurance'?config.seconds:600}]),exercise.defaultBpm),'secondary','progress'),el('span',{class:'muted small'},history[0]?`Last practiced ${formatDate(history[0].session.startedAt)}`:'No practice recorded yet')));
   page.append(el('div',{class:'two-column wide-left'},el('section',{class:'panel'},sectionHeader('Clean tempo progression'),lineChart(buildTempoProgressionSeries(attempts))),el('section',{class:'panel'},sectionHeader('Practice cues'),el('p',{class:'pre-line'},exercise.instructions||'Set a comfortable tempo and prioritize a controlled, repeatable motion.'),exercise.accents?el('p',{class:'pre-line'},exercise.accents):null,latest?el('p',{class:'muted small'},`Latest successful attempt: ${latest} BPM. Includes acceptable, clean, and effortless.`):null,el('div',{class:'tag-row'},exercise.tags.map(t=>badge(t))))));
   const historySection=el('section',{class:'panel'},sectionHeader('Practice history',`${history.length} recorded blocks`));
-  if(!history.length)historySection.append(empty('Your baseline starts here.','Finish a practice session and record an attempt to see it here.',button('Practice this exercise',()=>launchPractice([exerciseBlock(exercise)]),'ghost','play'),'history'));
+  if(!history.length)historySection.append(empty('No practice history yet.','Finish a practice session and record an attempt to see it here.',button('Practice this exercise',()=>launchPractice([exerciseBlock(exercise)]),'ghost','play'),'history'));
   else historySection.append(...history.slice(0,50).map(({session,block})=>el('div',{class:'history-block-row'},link(formatDate(session.startedAt),`/history/${session.id}`),el('span',{},duration(block.actualActiveSeconds)),el('span',{},`${block.finalBpm} BPM`),el('div',{class:'attempt-tags'},block.tempoAttempts.slice(-4).map(a=>badge(`${a.bpm} · ${a.rating}`,a.rating==='clean'||a.rating==='effortless'?'accent':'neutral'))),block.notes?el('p',{class:'muted small pre-line'},block.notes):null)));
   page.append(historySection);
   if(exercise.notes)page.append(el('section',{class:'panel'},sectionHeader('Personal notes'),el('p',{class:'pre-line'},exercise.notes)));

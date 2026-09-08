@@ -6,8 +6,8 @@ import { editGoal } from '../ui/editors.js';
 import { goalProgress } from '../domain/analytics.js';
 import { formatDate, localDate, nowISO } from '../domain/utils.js';
 export function goalsPage():Page{
-  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('A DIRECTION, NOT A SCORE','Practice goals','Connect small sessions to a meaningful next step.',[button('New goal',()=>editGoal(),'primary','plus')]));
-  if(!data.goals.length){page.append(empty('What would better look like?','A relaxed clean tempo. A song ready for Sunday. Three good sessions a week. Choose one.',button('Create your first goal',()=>editGoal(),'primary','plus'),'goal'));return {node:page};}
+  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('A DIRECTION, NOT A SCORE','Practice goals','Track tempo targets, songs, and weekly practice.',[button('New goal',()=>editGoal(),'primary','plus')]));
+  if(!data.goals.length){page.append(empty('No goals yet','Set a clean-tempo target, prepare a song, or track weekly sessions.',button('Create your first goal',()=>editGoal(),'primary','plus'),'goal'));return {node:page};}
   const list=el('div',{class:'goal-grid'});
   for(const goal of [...data.goals].sort((a,b)=>Number(goalProgress(a,data).done)-Number(goalProgress(b,data).done))){
     const p=goalProgress(goal,data),exercise=data.exercises.find(e=>e.id===goal.exerciseId),song=data.songs.find(s=>s.id===goal.songId);

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — interface and appearance — 2026-09-08
+
+- Replace promotional headings and redundant dashboard cards with a plan-first Today view and list-first exercise library.
+- Add System / Light / Dark modes and six accent palettes, persisted without discarding edits or interrupting audio.
+- Refine desktop, tablet, and phone navigation; reflow controls, dialogs, forms, collections, and active sessions.
+- Consolidate block actions into an accessible options dialog; preserve drag-and-drop and serialized inline edits.
+- Preserve keyboard focus when opening and closing dialogs.
+- Add palette, theme persistence, legacy backup, prepaint, and viewport regression tests.
+- Keep generated builds out of source control; deployment still requires both rendered and native browser checks.
+
 ## 1.2.0 — Steadybar — 2026-09-08
 
 - Adopted **Steadybar** across application chrome, onboarding, page titles, installable-app metadata, error dialogs and exported backup filenames.

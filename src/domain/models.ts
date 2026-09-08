@@ -65,7 +65,7 @@ export interface Goal extends Entity {
 export interface Setlist extends Entity { name: string; date?: string; songIds: string[]; notes: string }
 export interface Preset extends Entity { name: string; config: MetronomeConfig }
 export interface Settings {
-  id: 'preferences'; theme: 'system' | 'light' | 'dark'; instrument: string; aim: string;
+  id: 'preferences'; theme: 'system' | 'light' | 'dark'; accent?: 'graphite' | 'blue' | 'forest' | 'plum' | 'amber' | 'rose'; instrument: string; aim: string;
   onboardingDone: boolean; metronome: MetronomeConfig; wakeLock: boolean; defaultFocus: boolean;
   pauseWhenHidden: boolean; seedVersion: number;
 }
@@ -76,4 +76,4 @@ export interface Data {
 }
 export interface Backup { format: 'music-practice-os'; version: 1; exportedAt: string; data: Data }
 export const DEFAULT_METRONOME: MetronomeConfig = { bpm: 80, meter: { beats: 4, beatUnit: 4 }, subdivision: 1, accents: [2,1,1,1], countIn: 0, volume: 0.65 };
-export const DEFAULT_SETTINGS: Settings = { id: 'preferences', theme: 'system', instrument: 'Drums', aim: 'Technique', onboardingDone: false, metronome: DEFAULT_METRONOME, wakeLock: true, defaultFocus: true, pauseWhenHidden: true, seedVersion: 1 };
+export const DEFAULT_SETTINGS: Settings = { id: 'preferences', theme: 'system', accent: 'graphite', instrument: 'Drums', aim: 'Technique', onboardingDone: false, metronome: DEFAULT_METRONOME, wakeLock: true, defaultFocus: true, pauseWhenHidden: true, seedVersion: 1 };

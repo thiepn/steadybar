@@ -29,9 +29,9 @@ function prepareRoutine(setlist:Setlist):void{
   },'Generate routine');
 }
 export function setlistsPage():Page{
-  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('BE READY TO PLAY','Setlists','Bring the songs together. Practice what the performance needs.',[button('New setlist',()=>editSetlist(),'primary','plus')]));
-  if(!data.setlists.length)page.append(empty('A set starts with a few songs.','Create a performance or worship setlist, then turn it into a practice routine.',button('Create setlist',()=>editSetlist(),'primary','plus'),'setlist'));
-  else page.append(el('div',{class:'routine-grid'},[...data.setlists].sort((a,b)=>(b.date||b.createdAt).localeCompare(a.date||a.createdAt)).map(s=>el('article',{class:'routine-card'},el('div',{class:'split'},badge(s.date?formatDate(s.date):'UNDATED'),el('span',{class:'muted small'},`${s.songIds.length} songs`)),el('h2',{},link(s.name,`/setlists/${s.id}`)),s.notes?el('p',{class:'muted line-clamp'},s.notes):null,el('ol',{class:'setlist-preview'},s.songIds.slice(0,5).map(id=>el('li',{},data.songs.find(song=>song.id===id)?.title||'Song unavailable'))),link('Open setlist',`/setlists/${s.id}`,'text-link','arrow')))));
+  const data=store.snapshot(),page=el('div',{class:'page'},pageHeader('BE READY TO PLAY','Setlists','Organize songs and prepare a rehearsal plan.',[button('New setlist',()=>editSetlist(),'primary','plus')]));
+  if(!data.setlists.length)page.append(empty('No setlists yet','Create a performance or worship setlist, then turn it into a practice routine.',button('Create setlist',()=>editSetlist(),'primary','plus'),'setlist'));
+  else page.append(el('div',{class:'routine-grid'},[...data.setlists].sort((a,b)=>(b.date||b.createdAt).localeCompare(a.date||a.createdAt)).map(s=>el('article',{class:'routine-card'},el('div',{class:'split'},badge(s.date?formatDate(s.date):'No date'),el('span',{class:'muted small'},`${s.songIds.length} songs`)),el('h2',{},link(s.name,`/setlists/${s.id}`)),s.notes?el('p',{class:'muted line-clamp'},s.notes):null,el('ol',{class:'setlist-preview'},s.songIds.slice(0,5).map(id=>el('li',{},data.songs.find(song=>song.id===id)?.title||'Song unavailable'))),link('Open setlist',`/setlists/${s.id}`,'text-link','arrow')))));
   return {node:page};
 }
 export function setlistPage(id:string):Page{

@@ -1,8 +1,8 @@
 {
   "name": "steadybar",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
-  "description": "Steadybar \u2014 practice with purpose. A local-first music practice workspace.",
+  "description": "Steadybar \u2014 a local-first music practice workspace.",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
