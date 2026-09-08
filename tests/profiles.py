@@ -164,10 +164,15 @@ class Profiles(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
         self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Stage guitar',exact=True))
         row.get_by_role('button',name='Use profile',exact=True).click()
-        self.assertEqual(self.profile()['id'],original['id'])
-        expect(self.page.get_by_role('alert').last).to_contain_text('Finish or end')
-        self.route('/practice/active');self.finish()
-        self.use_profile('Stage guitar');self.route('/history/'+session['id'])
+        self.assertEqual(self.profile()['id'],guitar['id'])
+        # Switching changes the workspace view, but the single unfinished Drum
+        # session stays globally pinned and cannot be relabeled or duplicated.
+        self.route('/');expect(self.page.get_by_text('Unfinished session',exact=True)).to_be_visible()
+        active=self.state()['sessions'][-1];self.assertEqual(active['status'],'active');self.assertEqual(active['profileId'],original['id'])
+        guitar_exercise=self.exercise('chord-changes');self.route('/library/'+guitar_exercise['id']);self.page.get_by_role('button',name='Start practice',exact=True).click()
+        expect(self.page.locator('.active-title')).to_contain_text(active['blocks'][active['activeBlockIndex']]['titleSnapshot'])
+        self.assertEqual(len([s for s in self.state()['sessions'] if s['status']=='active']),1)
+        self.finish();self.route('/history/'+session['id'])
         expect(self.page.get_by_text('Electric guitar',exact=True).first).to_be_visible()
 
     def test_66_song_parts_survive_profile_switches_and_drive_setlists(self):
@@ -315,6 +320,46 @@ class Profiles(e2e.MusicPracticeTests):
         saved=next(s for s in self.state()['songs'] if s['id']==song_id)
         self.assertEqual(saved['title'],'Concurrent song renamed');self.assertEqual(saved['notes'],'Base edit')
         self.assertEqual([s['name'] for s in saved['sections']],['Concurrent section']);self.assertEqual([p['name'] for p in saved['parts']],['Concurrent guitar part'])
+
+
+    def test_75_profile_editor_supports_multiple_focuses_and_live_dirty_settings(self):
+        self.onboard_type('guitar');self.add_profile('voice','Voice practice');self.use_profile('Guitar')
+        self.route('/settings');bpm=self.page.get_by_label('Default BPM',exact=True);bpm.fill('117')
+        row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Voice practice',exact=True));row.get_by_role('button',name='Use profile',exact=True).click()
+        self.assertEqual(bpm.input_value(),'117')
+        expect(self.page.locator('.profile-row').filter(has=self.page.get_by_text('Voice practice',exact=True))).to_contain_text('Selected')
+        row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Voice practice',exact=True));row.get_by_role('button',name='Edit',exact=True).click()
+        dialog=self.page.locator('dialog[open]');dialog.get_by_label('Breath',exact=True).check();dialog.get_by_label('Harmony',exact=True).check();self.save_dialog('Save profile')
+        self.assertEqual(set(self.profile()['focusAreas']),{'Pitch','Breath','Harmony'})
+        self.assertEqual(bpm.input_value(),'117')
+
+    def test_76_automatic_profile_names_are_unambiguous(self):
+        self.onboard_type('guitar');second=self.add_profile('guitar')
+        self.assertEqual(second['name'],'Guitar 2')
+        self.route('/settings');names=self.page.locator('.profile-row strong').all_text_contents();self.assertEqual(names.count('Guitar'),1);self.assertEqual(names.count('Guitar 2'),1)
+        self.page.get_by_role('button',name='Add profile',exact=True).click();self.page.locator('dialog[open]').get_by_label('Instrument',exact=True).select_option('guitar');self.save_dialog('Create profile')
+        self.assertEqual(self.profile()['name'],'Guitar 3')
+
+    def test_77_historical_bucket_is_read_only_and_cannot_be_selected(self):
+        self.onboard_type('drums');selected=self.profile()
+        self.read("load('app/store.js').store.workspace(d=>{d.profiles.push({id:'history-only',name:'Earlier practice',instrumentType:'custom',family:'general',level:'beginner',focusAreas:[],defaultSessionMinutes:30,archived:false,createdAt:'2026-09-01T10:00:00.000Z',updatedAt:'2026-09-01T10:00:00.000Z',attribution:'unresolved-history'});d.settings.activeProfileId='history-only';d.settings.primaryProfileId='history-only';return d})")
+        self.assertEqual(self.profile()['id'],selected['id'])
+        self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Earlier practice',exact=True));expect(row).to_contain_text('Historical only');expect(row.get_by_role('button')).to_have_count(0)
+        expect(self.page.get_by_role('button',name='Practice profile: '+selected['name'],exact=True)).to_have_count(0)
+
+    def test_78_history_scope_reviews_other_profiles_without_switching_workspace(self):
+        self.onboard_type('guitar');_,guitar_session=self.complete_example('guitar');voice=self.add_profile('voice','Voice practice');_,voice_session=self.complete_example('voice')
+        active_before=self.profile()['id'];self.route('/history');scope=self.page.get_by_label('History scope',exact=True)
+        expect(self.page.get_by_text(voice_session['profileNameSnapshot'],exact=True).first).to_be_visible();scope.select_option('all')
+        expect(self.page.get_by_text(guitar_session['profileNameSnapshot'],exact=True).first).to_be_visible();expect(self.page.get_by_text(voice_session['profileNameSnapshot'],exact=True).first).to_be_visible()
+        guitar_profile=next(p for p in self.state()['profiles'] if p['instrumentType']=='guitar');scope.select_option(guitar_profile['id']);expect(self.page.get_by_text(guitar_session['profileNameSnapshot'],exact=True).first).to_be_visible()
+        self.assertEqual(self.profile()['id'],active_before);self.assertEqual(active_before,voice['id'])
+
+    def test_79_profile_creation_and_switching_are_safe_during_unfinished_practice(self):
+        self.onboard_type('drums');drums=self.profile();self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click();expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
+        guitar=self.add_profile('guitar','Practice guitar');self.assertEqual(self.profile()['id'],guitar['id']);self.assertEqual(self.state()['sessions'][0]['profileId'],drums['id'])
+        self.use_profile('Drums');self.assertEqual(self.profile()['id'],drums['id']);self.use_profile('Practice guitar');self.assertEqual(self.profile()['id'],guitar['id'])
+        self.assertEqual(len([s for s in self.state()['sessions'] if s['status']=='active']),1);self.route('/practice/active');self.finish()
 
     def matrix(self,kind):
         self.onboard_type(kind);exercise,_=self.complete_example(kind)

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {seedData} from '../dist/app/db/seed.js';
 import {starterContent} from '../dist/app/db/profile-content.js';
 import {migratePracticeData} from '../dist/app/db/profile-migration.js';
-import {PROFILE_DEFINITIONS,FAMILIES,definition,supportedProtocols,profileView} from '../dist/app/domain/profiles.js';
+import {PROFILE_DEFINITIONS,FAMILIES,definition,isHistoricalProfile,repairProfileSelection,selectableProfiles,supportedProtocols,profileView} from '../dist/app/domain/profiles.js';
 import {defaultProtocol,exerciseProtocol,protocolPulse,frequency,noteName,parseNote,fretPrompt,patternFits,scaleOffsets} from '../dist/app/domain/protocols.js';
 import {validateProfile,validateProtocol,validateOutcome,assertProtocolCompatible,assertOutcomeMatches} from '../dist/app/domain/practice-validation.js';
 import {validateData,validateBackup,validateSession,validateGoal} from '../dist/app/domain/validation.js';
@@ -75,6 +75,17 @@ test('non-drum upgrades preserve drum history and provision the selected discipl
 test('unattributable legacy free practice is visible under Earlier practice, not guessed',()=>{
  const d=seedData(at);d.sessions=[finishBlock(createSession([{id:'free',type:'free',title:'Earlier solo work',targetSeconds:60,bpm:85,notes:'Original note',order:0}],d))];const m=validateData(migratePracticeData(d));assert.equal(m.sessions[0].profileId,'profile-earlier');assert.equal(m.profiles.find(p=>p.id==='profile-earlier').attribution,'unresolved-history');assert.equal(m.sessions[0].blocks[0].notes,'Original note');
 });
+test('historical attribution buckets are never selectable workspace profiles',()=>{
+ const d=seedData(at);d.sessions=[finishBlock(createSession([{id:'free',type:'free',title:'Earlier solo work',targetSeconds:60,bpm:85,notes:'',order:0}],d))];const m=migratePracticeData(d),earlier=m.profiles.find(p=>isHistoricalProfile(p));assert.ok(earlier);
+ assert.ok(!selectableProfiles(m).some(p=>p.id===earlier.id));m.settings.activeProfileId=earlier.id;m.settings.primaryProfileId=earlier.id;
+ const repaired=validateData(m);assert.notEqual(repaired.settings.activeProfileId,earlier.id);assert.notEqual(repaired.settings.primaryProfileId,earlier.id);assert.equal(repaired.sessions[0].profileId,earlier.id);assert.equal(repairProfileSelection(repaired).settings.activeProfileId,repaired.settings.activeProfileId);
+});
+test('migrated unfinished historical practice remains recoverable but is not selectable',()=>{
+ const d=seedData(at),s=createSession([{id:'free',type:'free',title:'Earlier solo work',targetSeconds:60,bpm:85,notes:'',order:0}],d);s.runtime.phase='paused';d.sessions=[s];const m=validateData(migratePracticeData(d)),earlier=m.profiles.find(p=>isHistoricalProfile(p));assert.equal(m.sessions[0].status,'active');assert.equal(m.sessions[0].profileId,earlier.id);assert.ok(!selectableProfiles(m).some(p=>p.id===earlier.id));
+});
+test('profile views fall back to a usable profile when an obsolete selection points at history',()=>{
+ const d=seedData(at);d.sessions=[finishBlock(createSession([{id:'free',type:'free',title:'Earlier solo work',targetSeconds:60,bpm:85,notes:'',order:0}],d))];const m=migratePracticeData(d),earlier=m.profiles.find(p=>isHistoricalProfile(p));m.settings.activeProfileId=earlier.id;const view=profileView(m);assert.ok(view.exercises.length);assert.ok(view.exercises.every(e=>e.profileId!==earlier.id));
+});
 test('an active legacy checkpoint stays recoverable and never adds unknown downtime',()=>{
  const d=seedData(at),s=createSession(d.routines[0].blocks,d);s.runtime.phase='running';s.runtime.runStartedAt=at;s.blocks[0].actualActiveSeconds=20;d.sessions=[s];const m=validateData(migratePracticeData(d)),recovered=recoverSession(m.sessions[0]);assert.equal(recovered.runtime.phase,'paused');assert.equal(recovered.blocks[0].actualActiveSeconds,20);assert.equal(recovered.runtime.runStartedAt,undefined);
 });
@@ -83,7 +94,8 @@ test('per-profile Today plans allow the same date but reject within-profile dupl
  d.dailyPlans=d.profiles.map((p,i)=>({id:'plan'+i,profileId:p.id,date:'2026-09-08',blocks:[],createdAt:at,updatedAt:at}));validateData(d);d.dailyPlans.push({...d.dailyPlans[0],id:'duplicate-date'});assert.throws(()=>validateData(d),/duplicate dates/);
 });
 test('v2 backup validates every relationship before replacing any data',()=>{
- for(const mutate of [d=>d.exercises[0].profileId='missing',d=>d.routines[0].profileId='missing',d=>d.settings.activeProfileId='missing',d=>d.profiles.push(structuredClone(d.profiles[0])),d=>delete d.exercises[0].protocol,d=>d.routines[0].blocks[0].exerciseId='missing']){const d=dataset('guitar');mutate(d);assert.throws(()=>validateData(d));}
+ for(const mutate of [d=>d.exercises[0].profileId='missing',d=>d.routines[0].profileId='missing',d=>d.profiles.push(structuredClone(d.profiles[0])),d=>delete d.exercises[0].protocol,d=>d.routines[0].blocks[0].exerciseId='missing']){const d=dataset('guitar');mutate(d);assert.throws(()=>validateData(d));}
+ const selection=dataset('guitar');selection.settings.activeProfileId='missing';assert.equal(validateData(selection).settings.activeProfileId,selection.profiles[0].id);
  const d=dataset('voice'),backup=createBackup(d);assert.throws(()=>validateBackup({...backup,version:99}),/unsupported/);assert.throws(()=>validateBackup({...backup,data:seedData(at)}),/version 2/);
 });
 test('unsupported instrument fields and dishonest outcomes are rejected',()=>{

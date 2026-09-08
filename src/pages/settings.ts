@@ -17,7 +17,7 @@ import type { Subdivision } from '../domain/models.js';
 import { validateSettings } from '../domain/validation.js';
 import { formatDate } from '../domain/utils.js';
 export function settingsPage():Page{
-  const data=store.snapshot(),settings=data.settings;
+  const data=store.snapshot(),settings=data.settings,profileManager=profileManagement();
   let dirty=false;
   const page=el('div',{class:'page settings-page'},pageHeader('','Settings','Appearance, practice defaults, and backups.'));
   const colors=appearanceControls();
@@ -79,6 +79,6 @@ export function settingsPage():Page{
     if(practice.session?.status==='active' && !practice.external)await practice.pause();audio.stop();
     await withWorkspaceIdle(async()=>{await exportBackup();await resetWorkspace();});location.reload();
   },'Back up & reset');
-  page.append(el('div',{class:'settings-grid'},el('div',{},profileManagement(),appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
-  return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{colors.cleanup();window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};
+  page.append(el('div',{class:'settings-grid'},el('div',{},profileManager.node,appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
+  return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{profileManager.cleanup();colors.cleanup();window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};
 }

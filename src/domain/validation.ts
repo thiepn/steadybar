@@ -2,6 +2,7 @@ import { patternFits, exerciseProtocol, protocolPulse } from './protocols.js';
 import { validateProfile, validateProtocol, validateOutcome, validateProtocolState, validateSongPart, assertProtocolCompatible, assertOutcomeMatches } from './practice-validation.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
+import { isHistoricalProfile, repairProfileSelection } from './profiles.js';
 import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
@@ -108,7 +109,8 @@ export const validateSettings: Validator<Settings> = obj({ activeProfileId:optio
 const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), profiles:optional(arr(validateProfile,100)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
-  const d=dataSchema(input,'Data');
+  let d=dataSchema(input,'Data');
+  if(d.schemaVersion===2)d=repairProfileSelection(d);
   for(const [key,value] of Object.entries(d))if(Array.isArray(value))uniqueIds(value,`Data.${key}`);
   if(new Set(d.dailyPlans.map(p=>`${p.profileId??''}/${p.date}`)).size!==d.dailyPlans.length)fail('Daily plans','contains duplicate dates');
   if(d.sessions.filter(s=>s.status==='active').length>1)fail('Sessions','data may contain only one active session');
@@ -116,10 +118,10 @@ export function validateData(input:unknown):Data {
     if(!d.profiles?.length)fail('Profiles','at least one profile is required');
     const profiles=new Map(d.profiles!.map(p=>[p.id,p]));
     const requireProfile=(id:string|undefined)=>{const p=id?profiles.get(id):undefined;if(!p)fail('Profile','missing or unknown profile ID');return p!;};
-    if(requireProfile(d.settings.activeProfileId).archived || requireProfile(d.settings.primaryProfileId).archived)fail('Settings','active and primary profiles must not be archived');
-    for(const e of d.exercises){const p=requireProfile(e.profileId);if(!e.protocol||!e.skillArea)fail('Exercise','v2 exercises require a protocol and skill area');assertProtocolCompatible(e.protocol!,p);}
+    if(requireProfile(d.settings.activeProfileId).archived || requireProfile(d.settings.primaryProfileId).archived || isHistoricalProfile(requireProfile(d.settings.activeProfileId)) || isHistoricalProfile(requireProfile(d.settings.primaryProfileId)))fail('Settings','active and primary selections must be usable practice profiles');
+    for(const e of d.exercises){const p=requireProfile(e.profileId);if(isHistoricalProfile(p))fail('Exercise','historical attribution profiles cannot own exercises');if(!e.protocol||!e.skillArea)fail('Exercise','v2 exercises require a protocol and skill area');assertProtocolCompatible(e.protocol!,p);}
     const exercises=new Map(d.exercises.map(e=>[e.id,e])),songs=new Map(d.songs.map(s=>[s.id,s]));
-    for(const r of [...d.routines,...d.dailyPlans]){requireProfile(r.profileId);for(const b of r.blocks){
+    for(const r of [...d.routines,...d.dailyPlans]){const owner=requireProfile(r.profileId);if(isHistoricalProfile(owner))fail('Profile','historical attribution profiles cannot own plans or routines');for(const b of r.blocks){
       if(b.protocol)assertProtocolCompatible(b.protocol,requireProfile(r.profileId));
       const effective=b.protocol??(b.exerciseId&&exercises.has(b.exerciseId)?exerciseProtocol(exercises.get(b.exerciseId)!):undefined);
       if(effective&&b.tempoTrainer&&effective.kind!=='tempo')fail('Block','tempo trainer is not valid for this task');
@@ -130,7 +132,7 @@ export function validateData(input:unknown):Data {
     }}
     for(const s of d.sessions){requireProfile(s.profileId);for(const b of s.blocks){const p=requireProfile(b.profileId);if(!b.protocolSnapshot)fail('Session','version 2 blocks require a protocol snapshot');assertProtocolCompatible(b.protocolSnapshot!,p);}}
     for(const g of d.goals){
-      if(g.profileId)requireProfile(g.profileId);
+      if(g.profileId){const owner=requireProfile(g.profileId);if(isHistoricalProfile(owner))fail('Goal','historical attribution profiles cannot own goals');}
       const exercise=g.exerciseId?exercises.get(g.exerciseId):undefined;
       if(g.exerciseId&&(!exercise||(g.profileId&&exercise.profileId!==g.profileId)))fail('Goal','exercise does not belong to the goal profile');
       if(g.type==='bpm'&&exercise&&exerciseProtocol(exercise).kind!=='tempo')fail('Goal','BPM goals require a tempo-practice exercise');
@@ -140,7 +142,7 @@ export function validateData(input:unknown):Data {
       if(g.songPartId){const part=song?.parts?.find(p=>p.id===g.songPartId);if(!part||part.profileId!==g.profileId)fail('Goal','song part must belong to the goal profile');}
     }
     for(const setlist of d.setlists)for(const id of setlist.songIds)if(!songs.has(id))fail('Setlist','song does not exist');
-    for(const s of d.songs)for(const part of s.parts??[]){const p=requireProfile(part.profileId);if(p.instrumentType!==part.instrumentType)fail('Song part','instrument identity must match its profile');}
+    for(const s of d.songs)for(const part of s.parts??[]){const p=requireProfile(part.profileId);if(isHistoricalProfile(p))fail('Song part','historical attribution profiles cannot own song parts');if(p.instrumentType!==part.instrumentType)fail('Song part','instrument identity must match its profile');}
   }
   return d;
 }

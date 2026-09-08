@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.1 — Profile-system hardening — 2026-09-09
+
+- Make profile switching a workspace-view choice instead of blocking it whenever an unfinished session exists; the global one-session guard still prevents parallel practice.
+- Treat `Earlier practice` as a read-only historical attribution bucket: it cannot be selected, edited, archived, restored into practice, or own new sessions, exercises, plans, goals, or song parts.
+- Repair invalid saved active/primary profile selections automatically at startup without reassigning any practice records.
+- Support multiple focus areas per profile and use them for deterministic suggestions rather than collapsing edits to one focus.
+- Keep available profile names unambiguous; automatic names become `Guitar 2`, `Guitar 3`, etc., and archived duplicates must be renamed before restoration.
+- Remove the unused Primary control from the UI while retaining the persisted field for backup compatibility.
+- Keep profile management live while Settings contains unsaved preference edits, and add cross-profile History review without switching the active workspace.
+
 ## 2.0.0 — Instrument-specific practice profiles — 2026-09-08
 
 - Add stable multiple practice profiles, instrument-specific skills/focus/capabilities, profile management and guarded switching.

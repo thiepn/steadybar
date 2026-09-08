@@ -107,6 +107,15 @@ test('failed migration commits neither partial profiles nor a misleading backup 
  await assert.rejects(db.initializeDatabase(),/No quota/);assert.deepEqual(await db.readData(),{...legacy,profiles:[]});assert.equal(await db.migrationBackup(),undefined);
  await db.initializeDatabase();assert.equal((await db.readData()).schemaVersion,2);
 });
+test('startup repairs obsolete historical profile selections without rewriting practice data',async()=>{
+ await db.initializeDatabase();const before=await db.readData(),history={...before.profiles[0],id:'history-only',name:'Earlier practice',instrumentType:'custom',family:'general',focusAreas:[],attribution:'unresolved-history'};
+ adapter.state.tables.get('profiles').set(history.id,structuredClone(history));adapter.state.tables.get('settings').set('preferences',{...before.settings,activeProfileId:history.id,primaryProfileId:history.id,instrument:'Custom',aim:'Timing'});
+ await db.initializeDatabase();const after=await db.readData();assert.equal(after.settings.activeProfileId,before.profiles[0].id);assert.equal(after.settings.primaryProfileId,before.profiles[0].id);assert.ok(after.profiles.some(p=>p.id===history.id));assert.deepEqual(after.exercises,before.exercises);assert.deepEqual(after.sessions,before.sessions);
+});
+test('new active sessions cannot be attributed to a read-only historical bucket',async()=>{
+ await db.initializeDatabase();const data=await db.readData(),history={...data.profiles[0],id:'history-only',name:'Earlier practice',instrumentType:'custom',family:'general',focusAreas:[],attribution:'unresolved-history'};await db.mutateWorkspace(d=>({...d,profiles:[...d.profiles,history]}));
+ const s=active();s.profileId=history.id;s.profileNameSnapshot=history.name;for(const b of s.blocks){b.profileId=history.id;b.profileNameSnapshot=history.name;}await assert.rejects(db.insertActiveSession(s),/available practice profile/);assert.equal((await db.all('sessions')).length,0);
+});
 test('concurrent settings patches merge against committed settings without stomping colors',async()=>{
  await db.initializeDatabase();await Promise.all([db.patchSettings({accent:'blue'}),db.patchSettings({surfaceTheme:'black'}),db.patchSettings({wakeLock:false})]);
  const d=await db.readData();assert.equal(d.settings.accent,'blue');assert.equal(d.settings.surfaceTheme,'black');assert.equal(d.settings.wakeLock,false);

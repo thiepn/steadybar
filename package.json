@@ -1,6 +1,6 @@
 {
   "name": "steadybar",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Steadybar \u2014 a local-first music practice workspace.",
   "type": "module",

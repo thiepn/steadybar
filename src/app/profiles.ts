@@ -1,5 +1,5 @@
 import { store } from './store.js';
-import { activeProfile, definition, profiles } from '../domain/profiles.js';
+import { activeProfile, definition, isHistoricalProfile, profiles, selectableProfiles } from '../domain/profiles.js';
 import type { Data, Routine } from '../domain/models.js';
 import type { Experience, InstrumentFamily, InstrumentType, PracticeProfile } from '../domain/practice-types.js';
 import { freshBlocks, localDate, metadata, nowISO } from '../domain/utils.js';
@@ -7,44 +7,74 @@ import { starterContent } from '../db/profile-content.js';
 import { validateProfile } from '../domain/practice-validation.js';
 
 export interface NewProfile { name:string; instrumentType:InstrumentType; family?:InstrumentFamily; level:Experience; focusAreas:string[]; defaultSessionMinutes:number }
+const profileNameKey=(value:string)=>value.trim().replace(/\s+/g,' ').toLocaleLowerCase();
+function profileNameTaken(data:Data,name:string,exceptId?:string):boolean{
+  const key=profileNameKey(name);return profiles(data).some(p=>p.id!==exceptId&&!p.archived&&!isHistoricalProfile(p)&&profileNameKey(p.name)===key);
+}
+function nextDefaultName(data:Data,base:string):string{
+  if(!profileNameTaken(data,base))return base;
+  let suffix=2;while(profileNameTaken(data,`${base} ${suffix}`))suffix++;return `${base} ${suffix}`;
+}
+function normalizeFocuses(values:string[],type:InstrumentType):string[]{
+  const allowed=new Set(definition(type).focuses),result=[...new Set(values.filter(v=>allowed.has(v)))];
+  return result.length?result:[definition(type).focuses[0]!];
+}
 export function makeProfile(values:NewProfile):PracticeProfile {
-  return validateProfile({...metadata(),...values,family:values.instrumentType==='custom'?values.family??'general':definition(values.instrumentType).family,archived:false,attribution:'selected'});
+  const name=values.name.trim().replace(/\s+/g,' '),focusAreas=normalizeFocuses(values.focusAreas,values.instrumentType);
+  return validateProfile({...metadata(),...values,name,focusAreas,family:values.instrumentType==='custom'?values.family??'general':definition(values.instrumentType).family,archived:false,attribution:'selected'});
 }
 export function provisionProfile(data:Data,profile:PracticeProfile):Data {
   const next=structuredClone(data),content=starterContent(profile);
   if(profiles(next).some(p=>p.id===profile.id))throw new Error('A profile with this ID already exists.');
   next.profiles=[...profiles(next),profile];next.exercises.push(...content.exercises);next.routines.push(...content.routines);return next;
 }
-function assertIdle(data:Data):void {if(data.sessions.some(s=>s.status==='active'))throw new Error('Finish or end the current session before switching profiles. Its instrument and history will not be changed.');}
 export async function createProfile(values:NewProfile,activate=true):Promise<PracticeProfile>{
-  const profile=makeProfile(values);
-  await store.workspace(data=>{if(activate)assertIdle(data);const next=provisionProfile(data,profile);if(activate)next.settings={...next.settings,activeProfileId:profile.id,instrument:definition(profile.instrumentType).label,aim:profile.focusAreas[0]??'Technique'};return next;});
-  return profile;
+  let created:PracticeProfile|undefined;
+  await store.workspace(data=>{
+    const fallback=definition(values.instrumentType).label,typed=values.name.trim().replace(/\s+/g,' ');
+    if(typed&&profileNameTaken(data,typed))throw new Error('Use a different profile name. Available profiles need distinct names.');
+    const profile=makeProfile({...values,name:typed||nextDefaultName(data,fallback)});created=profile;
+    const next=provisionProfile(data,profile);
+    if(activate)next.settings={...next.settings,activeProfileId:profile.id,instrument:definition(profile.instrumentType).label,aim:profile.focusAreas[0]??'Technique'};
+    return next;
+  });
+  return created!;
 }
 export async function switchProfile(id:string):Promise<void>{
-  await store.workspace(data=>{assertIdle(data);const p=profiles(data).find(p=>p.id===id&&!p.archived);if(!p)throw new Error('Choose an available profile.');return {...data,settings:{...data.settings,activeProfileId:p.id,instrument:definition(p.instrumentType).label,aim:p.focusAreas[0]??'Technique'}};});
+  await store.workspace(data=>{
+    const p=selectableProfiles(data).find(p=>p.id===id);if(!p)throw new Error('Choose an available practice profile.');
+    return {...data,settings:{...data.settings,activeProfileId:p.id,instrument:definition(p.instrumentType).label,aim:p.focusAreas[0]??'Technique'}};
+  });
 }
 export async function updateProfile(profile:PracticeProfile):Promise<void>{
   await store.workspace(data=>{
     const existing=profiles(data).find(p=>p.id===profile.id);if(!existing)throw new Error('This profile no longer exists.');
+    if(isHistoricalProfile(existing))throw new Error('Earlier practice is a read-only history bucket.');
     if(existing.instrumentType!==profile.instrumentType||existing.family!==profile.family)throw new Error('Create a new profile to use a different instrument. Existing history keeps its identity.');
-    const p=validateProfile({...profile,updatedAt:nowISO()});return {...data,profiles:profiles(data).map(item=>item.id===p.id?p:item)};
+    const name=profile.name.trim().replace(/\s+/g,' ');if(profileNameTaken(data,name,profile.id))throw new Error('Use a different profile name. Available profiles need distinct names.');
+    const p=validateProfile({...profile,name,focusAreas:normalizeFocuses(profile.focusAreas,profile.instrumentType),updatedAt:nowISO()});
+    const next={...data,profiles:profiles(data).map(item=>item.id===p.id?p:item),settings:{...data.settings}};
+    if(next.settings.activeProfileId===p.id){next.settings.instrument=definition(p.instrumentType).label;next.settings.aim=p.focusAreas[0]??'Technique';}
+    return next;
   });
 }
 export async function archiveProfile(id:string,archived:boolean):Promise<void>{
   await store.workspace(data=>{
     const p=profiles(data).find(p=>p.id===id);if(!p)throw new Error('Profile not found.');
+    if(isHistoricalProfile(p))throw new Error('Earlier practice is a read-only history bucket.');
     if(archived&&data.sessions.some(s=>s.status==='active'&&(s.profileId===id||s.blocks.some(b=>b.profileId===id))))throw new Error('End the unfinished session before archiving this profile.');
-    const remaining=profiles(data).filter(p=>p.id!==id&&!p.archived);
-    if(archived&&!remaining.length)throw new Error('Keep at least one profile available.');
-    const next={...data,profiles:profiles(data).map(p=>p.id===id?{...p,archived,updatedAt:nowISO()}:p),settings:{...data.settings}};
+    if(!archived&&profileNameTaken(data,p.name,p.id))throw new Error('Rename this profile before restoring it. Available profiles need distinct names.');
+    const remaining=selectableProfiles(data).filter(item=>item.id!==id);
+    if(archived&&!remaining.length)throw new Error('Keep at least one practice profile available.');
+    const next={...data,profiles:profiles(data).map(item=>item.id===id?{...item,archived,updatedAt:nowISO()}:item),settings:{...data.settings}};
     if(archived&&next.settings.activeProfileId===id){const fallback=remaining[0]!;next.settings.activeProfileId=fallback.id;next.settings.instrument=definition(fallback.instrumentType).label;next.settings.aim=fallback.focusAreas[0]??'Technique';}
     if(archived&&next.settings.primaryProfileId===id)next.settings.primaryProfileId=remaining[0]!.id;
     return next;
   });
 }
+/** Kept for backup compatibility; Primary is no longer a user-facing concept. */
 export async function setPrimaryProfile(id:string):Promise<void>{
-  await store.workspace(data=>{if(!profiles(data).some(p=>p.id===id&&!p.archived))throw new Error('Choose an available profile.');return {...data,settings:{...data.settings,primaryProfileId:id}};});
+  await store.workspace(data=>{if(!selectableProfiles(data).some(p=>p.id===id))throw new Error('Choose an available practice profile.');return {...data,settings:{...data.settings,primaryProfileId:id}};});
 }
 export function selectStarterRoutine(data:Data,profile:PracticeProfile,minutes=profile.defaultSessionMinutes):Routine|undefined {
   const list=data.routines.filter(r=>r.profileId===profile.id&&!r.archived&&r.builtin);

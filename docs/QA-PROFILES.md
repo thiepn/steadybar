@@ -61,3 +61,8 @@ No microphone pitch detection, recording storage, generated backing tracks, gap/
 Starter content is a set of original editable practice prompts, not a conservatory course or medically validated vocal regimen. Advanced students can build their own tasks; experience influences suggestions but does not certify difficulty. Long voice sessions include quiet listening/rest/review, not continuous singing. Comfortable ranges are user-defined; the app cannot assess health.
 
 Automated browser engines and viewport emulation do not establish physical iOS/Android behavior or a formal accessibility certification. Background audio and device/Bluetooth latency depend on the operating system. Native persistence and deployment must be reported separately as observed, not inferred from screenshots.
+
+
+## 2.0.1 profile-system regression audit
+
+The profile manager now distinguishes usable profiles from historical attribution buckets. CI verifies selection repair, multi-focus editing, safe switching while an unfinished session remains pinned, unique automatic naming, restore-name conflicts, live Settings profile controls, and cross-profile History review without mutating the selected workspace.

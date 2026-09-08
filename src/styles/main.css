@@ -434,6 +434,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .profile-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}
 .profile-row:last-child{border-bottom:0}.profile-row>div{min-width:0}.profile-row .actions{flex-wrap:wrap;justify-content:flex-end;max-width:55%}
 .profile-row strong{overflow-wrap:anywhere}.profiles-panel .button{min-height:44px}
+.profile-focuses{border:0;padding:0;margin:0}.profile-focuses legend{font-weight:600;margin-bottom:6px}.profile-focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.profile-focus-grid .checkbox{min-height:44px;align-items:center}.historical-profile{opacity:.88}.historical-profile .actions:empty{display:none}.history-toolbar .field{min-width:min(280px,100%)}
 .plan-builder{display:flex;gap:12px;align-items:flex-end;margin:0 0 20px;flex-wrap:wrap}
 .plan-builder .field{max-width:150px;margin:0}.plan-builder .field-hint{flex:1;min-width:160px;margin:0}
 .protocol-editor{display:flex;flex-direction:column;gap:12px;border-block:1px solid var(--border);padding:16px 0}
@@ -455,7 +456,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 @media(min-width:641px) and (max-width:1100px){.sidebar>.profile-trigger{padding:8px 4px;font-size:12px}.sidebar>.profile-trigger span{white-space:normal;overflow-wrap:anywhere}.profile-row{flex-direction:column}.profile-row .actions{max-width:100%;justify-content:flex-start}}
 @media(max-width:640px){
  .topbar .profile-trigger{max-width:120px;font-size:12px;padding:6px;overflow-wrap:anywhere}.topbar .actions{gap:4px}
- .profile-row{flex-direction:column;gap:10px}.profile-row .actions{max-width:100%;justify-content:flex-start}
+ .profile-row{flex-direction:column;gap:10px}.profile-row .actions{max-width:100%;justify-content:flex-start}.profile-focus-grid{grid-template-columns:1fr}
  .plan-builder{gap:8px}.plan-builder .field-hint{flex-basis:100%}
  .key-options{grid-template-columns:repeat(4,minmax(0,1fr))}
  .note-answers{grid-template-columns:repeat(4,minmax(44px,1fr))}

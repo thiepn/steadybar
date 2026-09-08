@@ -20,17 +20,35 @@ const familyCapabilities: Record<InstrumentFamily, readonly Capability[]> = {
 export function definition(type: InstrumentType): ProfileDefinition { return PROFILE_DEFINITIONS.find(p=>p.id===type)!; }
 export function capabilities(profile: PracticeProfile): readonly Capability[] { return familyCapabilities[profile.family]; }
 export function profiles(data: Data): PracticeProfile[] { return data.profiles ?? []; }
+export function isHistoricalProfile(profile: PracticeProfile): boolean { return profile.attribution==='unresolved-history'; }
+/** Profiles that may own new practice. Historical attribution buckets are intentionally excluded. */
+export function selectableProfiles(data: Data): PracticeProfile[] { return profiles(data).filter(p=>!p.archived&&!isHistoricalProfile(p)); }
 export function activeProfile(data: Data): PracticeProfile {
-  const result=profiles(data).find(p=>p.id===data.settings.activeProfileId && !p.archived) ?? profiles(data).find(p=>!p.archived);
-  if(!result)throw new Error('No active practice profile. Restore a valid workspace backup.');
+  const available=selectableProfiles(data);
+  const result=available.find(p=>p.id===data.settings.activeProfileId) ?? available[0];
+  if(!result)throw new Error('No usable practice profile. Restore a valid workspace backup.');
   return result;
+}
+/** Repair only selection metadata. No exercises, sessions, plans or history are reassigned. */
+export function repairProfileSelection(data: Data): Data {
+  if(!data.profiles?.length)return data;
+  const available=selectableProfiles(data);
+  if(!available.length)throw new Error('At least one usable practice profile is required. Historical practice cannot own new sessions.');
+  const active=available.find(p=>p.id===data.settings.activeProfileId)
+    ?? available.find(p=>p.id===data.settings.primaryProfileId)
+    ?? available[0]!;
+  const primary=available.find(p=>p.id===data.settings.primaryProfileId) ?? active;
+  const def=definition(active.instrumentType);
+  const aim=active.focusAreas.includes(data.settings.aim) ? data.settings.aim : active.focusAreas[0] ?? def.focuses[0] ?? 'Technique';
+  return {...data,settings:{...data.settings,activeProfileId:active.id,primaryProfileId:primary.id,instrument:def.label,aim}};
 }
 export function profileName(data: Data,id?:string): string { return profiles(data).find(p=>p.id===id)?.name ?? 'Earlier practice'; }
 export function profileView(data: Data,id=data.settings.activeProfileId): Data {
-  if(!data.profiles || !id)return data;
-  return {...data,exercises:data.exercises.filter(e=>e.profileId===id),routines:data.routines.filter(r=>r.profileId===id),
-    dailyPlans:data.dailyPlans.filter(p=>p.profileId===id),goals:data.goals.filter(g=>!g.profileId||g.profileId===id),
-    sessions:data.sessions.filter(s=>s.profileId===id)};
+  if(!data.profiles)return data;
+  const chosen=selectableProfiles(data).some(p=>p.id===id) ? id : activeProfile(data).id;
+  return {...data,exercises:data.exercises.filter(e=>e.profileId===chosen),routines:data.routines.filter(r=>r.profileId===chosen),
+    dailyPlans:data.dailyPlans.filter(p=>p.profileId===chosen),goals:data.goals.filter(g=>!g.profileId||g.profileId===chosen),
+    sessions:data.sessions.filter(s=>s.profileId===chosen)};
 }
 export function instrumentType(value:string):InstrumentType {
   return ({drums:'drums',guitar:'guitar',bass:'bass',piano:'piano',keyboard:'piano',voice:'voice',vocals:'voice'} as Record<string,InstrumentType>)[value.toLowerCase()] ?? 'custom';
