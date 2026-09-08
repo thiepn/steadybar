@@ -17,13 +17,19 @@ This patch release hardens the Steadybar 2.0 practice-profile model without chan
 - Profile management has its own `/profiles` route. Settings shows only a summary/link, preventing profile controls from becoming stale while preference edits are intentionally held dirty.
 - History can review another profile or all profiles without changing the selected practice workspace.
 
+## Firefox matrix synchronization audit
+
+The first full PR run exposed one Firefox-only test race in the voice responsive matrix. The matrix clicked the asynchronous library `Start practice` action and immediately measured active-practice controls without waiting for the active route to render. Firefox occasionally inspected the old library DOM before the awaited launch handler completed.
+
+The test now waits for `.active-title` to become visible before measuring the unchanged `Start practice` and `Finish block` controls. The 44px touch-target and viewport-bound assertions remain unchanged, with additional diagnostic context. A dedicated clean-install verifier reran the complete Firefox profile suite after this change and it passed before the change was committed to the PR branch.
+
 ## Release blockers
 
-Do not merge unless the exact PR head passes all existing mandatory release gates:
+Do not merge unless the exact final PR head passes all existing mandatory release gates:
 
 - clean npm install, strict TypeScript, production build and complete Node tests;
 - Chromium color/contrast, rendered UI, real IndexedDB/offline/backup/audio, responsive/workbench and profile-system suites;
 - Firefox native persistence/recovery/offline/backup/audio, workbench and profile-system suites;
 - WebKit native persistence/recovery/offline/backup/audio, workbench and profile-system suites.
 
-The patch has already been reconstructed independently from its exact release baseline and passed clean `npm ci`, strict TypeScript, production build and **277/277 Node tests**. Browser-engine certification remains mandatory before merge.
+The application patch has independently passed clean `npm ci`, strict TypeScript, production build and **277/277 Node tests**. The final user-authored PR head must still pass the complete three-engine workflow before merge.
