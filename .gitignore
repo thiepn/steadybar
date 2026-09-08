@@ -1,6 +1,0 @@
-node_modules/
-dist/
-.qa/
-__pycache__/
-*.log
-.DS_Store
