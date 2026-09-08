@@ -1,0 +1,86 @@
+name: Apply color-release layout fixes
+on:
+  push:
+    branches: [update/neutral-color-transfer]
+    paths: [.github/workflows/apply-layout-fixes.yml]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 0b909c715b806e2b5d8a5891910aa6ce240b3fa2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply exact source corrections
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          def replace(path,old,new):
+              p=Path(path);text=p.read_text()
+              if text.count(old)!=1:raise RuntimeError(f'Unexpected source in {path}')
+              p.write_text(text.replace(old,new))
+          replace('src/ui/charts.ts', '''  const observer = new ResizeObserver(entries => entries.forEach(entry => update(entry.target as HTMLElement, entry.contentRect.width)));
+            charts.forEach(node => observer.observe(node));
+            return () => observer.disconnect();''', '''  // Defer SVG writes until the next frame: changing observed layout during the
+            // observer callback can trigger ResizeObserver loops, particularly in WebKit.
+            const pending = new Map<HTMLElement, number>();
+            let frame: number | undefined;
+            let disposed = false;
+            const flush = () => {
+              frame = undefined;
+              if (disposed) return;
+              pending.forEach((size, node) => update(node, size));
+              pending.clear();
+            };
+            const observer = new ResizeObserver(entries => {
+              if (disposed) return;
+              for (const entry of entries) {
+                const node = entry.target as HTMLElement;
+                if (widths.get(node) !== Math.max(240, Math.round(entry.contentRect.width))) {
+                  pending.set(node, entry.contentRect.width);
+                }
+              }
+              if (pending.size && frame === undefined) frame = requestAnimationFrame(flush);
+            });
+            charts.forEach(node => observer.observe(node));
+            return () => {
+              disposed = true;
+              observer.disconnect();
+              if (frame !== undefined) cancelAnimationFrame(frame);
+              pending.clear();
+            };''')
+          p=Path('src/styles/appearance.css');p.write_text(p.read_text()+'''\n/* Keep mobile routine disclosure in document flow; negative offsets overlap the
+             duration in Firefox when text or coarse-pointer sizing changes row height. */
+          @media (max-width:640px) {
+            .routine-disclosure {margin-top:0;max-width:100%}
+          }
+          ''')
+          replace('tests/ui_polish.py',"{'mode':'dark','accent':'plum'})","{'mode':'dark','accent':'plum','palette':'neutral'})")
+          replace('tests/workbench.py','''        self.page.evaluate("""()=>{window.__churn=0;''','''        # Count-in and native AudioContext startup finish asynchronously. Begin
+                  # the observation window only after both audio and practice are running.
+                  self.page.bring_to_front()
+                  ready=False
+                  for _ in range(70):
+                      state=self.read("({audio:load('audio/engine.js').audio.running,phase:load('practice/controller.js').practice.session.runtime.phase,error:load('practice/controller.js').practice.error,hidden:document.hidden})")
+                      if state['audio'] and state['phase']=='running':
+                          ready=True;break
+                      self.page.wait_for_timeout(100)
+                  self.assertTrue(ready,repr(state))
+                  self.page.evaluate("""()=>{window.__churn=0;''')
+          PY
+      - name: Check source and tests
+        run: |
+          python3 -m py_compile tests/workbench.py tests/ui_polish.py tests/ci_native.py
+          npm ci && npm run check
+      - name: Commit non-workflow fixes to the pending redesign
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/ui/charts.ts src/styles/appearance.css tests/ui_polish.py tests/workbench.py
+          git commit -m 'Fix chart resize feedback and mobile routine overlap; synchronize layout assertions'
+          git push origin HEAD:design/practice-workbench
