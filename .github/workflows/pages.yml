@@ -9,7 +9,7 @@ permissions:
   contents: read
 concurrency:
   group: steadybar-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -36,8 +36,40 @@ jobs:
         run: |
           python -m pip install -r tests/requirements.txt
           python -m playwright install --with-deps chromium
-      - name: Verify real IndexedDB, backup, offline and user workflows
-        run: python tests/e2e.py
+      - name: Verify complete rendered UI workflows
+        run: python tests/e2e.py --render
+      - name: Verify real IndexedDB, service worker, audio and stable native workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests=(
+            test_01_rudiment_result_notes_progress
+            test_04_song_sections_and_transition
+            test_06_setlist_generates_editable_routine
+            test_07_goals_live_progress_and_manual_completion
+            test_08_metronome_presets_countin_and_controls
+            test_09_pause_and_trainer_modes
+            test_10_search_keyboard_and_unsaved_forms
+            test_11_backup_validation_ui
+            test_12_mobile_practice_critical_controls_visible
+            test_13_responsive_routes_and_accessible_controls
+            test_14_reload_recovery_real_indexeddb
+            test_15_offline_service_worker_real_origin
+            test_16_backup_download_restore_real_storage
+            test_17_real_webaudio_schedule_and_stop
+            test_18_countin_excluded_and_cancelled_safely
+            test_19_drag_reorder_and_keyboard_skip_link
+            test_21_completed_history_ignores_practice_shortcuts
+            test_23_cancelled_audio_resume_cannot_disrupt_new_start
+            test_24_saving_defaults_preserves_custom_accents
+            test_25_stale_session_command_rechecks_committed_history
+            test_27_browser_modified_shortcuts_do_not_change_tempo
+            test_28_chart_peak_uses_recorded_seconds_not_scale_minimum
+            test_29_dialog_focus_does_not_steal_a_chosen_field
+          )
+          for test_name in "${tests[@]}"; do
+            python tests/e2e.py --test "$test_name"
+          done
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -45,6 +77,7 @@ jobs:
           name: browser-qa
           path: |
             .qa/e2e-results.json
+            .qa/ui-results.json
             .qa/*.png
           include-hidden-files: true
           retention-days: 14
