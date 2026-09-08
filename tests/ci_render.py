@@ -15,6 +15,26 @@ from playwright.sync_api import expect
 
 
 class RenderedSuite(e2e.MusicPracticeTests):
+    def test_12_mobile_practice_critical_controls_visible(self):
+        self.onboard()
+        self.route('/library/rudiment-2')
+        self.page.get_by_role('button', name='Start practice', exact=True).click()
+        expect(self.page.locator('.active-title')).to_be_visible()
+        # Entering practice intentionally removes routine toasts. Do not retain
+        # auto-dismissed locators and wait for a button that has already gone.
+        self.page.get_by_role('button', name='Dismiss notification', exact=True).evaluate_all(
+            '(buttons)=>buttons.forEach(button=>button.click())')
+        for width, height in [(360,800),(390,844),(430,932),(768,1024),(1440,900),(1920,1080)]:
+            self.page.set_viewport_size({'width': width, 'height': height})
+            self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'), width)
+            if width < 500:
+                for control in (self.page.get_by_label('BPM', exact=True),
+                                self.page.get_by_role('button', name='Start practice', exact=True)):
+                    box = control.bounding_box()
+                    self.assertIsNotNone(box)
+                    self.assertLess(box['y'] + box['height'], height)
+            self.page.screenshot(path=str(e2e.ARTIFACTS / f'active-practice-{width}.png'), full_page=True)
+
     def test_29_dialog_focus_does_not_steal_a_chosen_field(self):
         self.onboard()
         self.create_song()

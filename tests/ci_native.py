@@ -61,14 +61,19 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         download.value.save_as(target)
         data = e2e.json.loads(target.read_text(encoding='utf-8'))
         self.assertEqual(data['format'], 'music-practice-os')
+        self.assertEqual([song['title'] for song in data['data']['songs']], ['Restore this song'])
         self.read("load('db/database.js').replaceData({...load('app/store.js').store.snapshot(),songs:[]})")
         self.page.reload(wait_until='networkidle')
+        self.wait_read("load('app/store.js').store.snapshot().songs.length", lambda value: value == 0)
         self.page.get_by_label('Choose backup file', exact=True).set_input_files(str(target))
         self.confirm('Back up & replace')
         self.wait_read(
             "load('app/store.js').store.snapshot().songs.length",
             lambda value: value == 1,
         )
+        self.page.reload(wait_until='networkidle')
+        self.wait_read("load('app/store.js').store.snapshot().songs.map(song=>song.title)",
+                       lambda value: value == ['Restore this song'])
 
     def test_19_drag_reorder_and_keyboard_skip_link(self):
         self.onboard(True)
