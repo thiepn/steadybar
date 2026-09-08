@@ -1,0 +1,48 @@
+name: Apply Steadybar 2.0.1 profile-system fix
+
+on:
+  push:
+    branches:
+      - transfer/profile-system-v201
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconstruct validated patch
+        shell: bash
+        run: |
+          cat transfer/profile-fix.part*.b64 | base64 -d | gzip -d > /tmp/profile-fix.patch
+          echo 'f2362f50d1cf8b7d58d8e3176b447e2506e9e6b86c34b5ac5c40b7770ec38d21  /tmp/profile-fix.patch' | sha256sum -c -
+      - name: Apply to exact release baseline
+        shell: bash
+        run: |
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "2eced72ccbe3d86e6107c77d783d30cde86c63c8"
+          git checkout -B fix/profile-system-v2.0.1 origin/main
+          git apply --index /tmp/profile-fix.patch
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 29
+          test "$(git diff --cached --name-only | grep -c '^\.github/' || true)" -eq 0
+      - name: Clean-install verification
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+      - name: Commit hardened profile system
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Fix profile workspace semantics and historical recovery'
+          git push origin HEAD:refs/heads/fix/profile-system-v2.0.1
