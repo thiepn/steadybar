@@ -208,6 +208,10 @@ class Profiles(e2e.MusicPracticeTests):
     def test_68_task_edit_retains_previous_work_as_an_immutable_segment(self):
         self.onboard_type('guitar');self.launch('chord-changes')
         self.page.get_by_role('button',name='+ Clean change',exact=True).click()
+        # Result logging is intentionally asynchronous and durable. Wait for the
+        # committed session to contain the result before taking the immutable
+        # pre-edit snapshot; otherwise a fast engine can capture an empty list.
+        self.wait_read("load('app/store.js').store.snapshot().sessions.find(s=>s.status==='active').blocks[0].outcomes.length",lambda value:value==1)
         before=self.read("JSON.stringify(load('practice/controller.js').practice.session.blocks[0].outcomes)")
         self.page.get_by_role('button',name='Task settings',exact=True).click()
         self.dialog_fill('Chord sequence','Am, F, C, G');self.save_dialog('Apply task settings')
