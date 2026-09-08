@@ -41,14 +41,14 @@ class Profiles(e2e.MusicPracticeTests):
         self.wait_read("load('practice/controller.js').practice.session.runtime.phase",lambda value:value=='running')
         return exercise
     def add_profile(self,kind,name=None,family=None):
-        self.route('/settings');self.page.get_by_role('button',name='Add profile',exact=True).click()
+        self.route('/profiles');self.page.get_by_role('button',name='Add profile',exact=True).click()
         self.page.locator('dialog[open]').get_by_label('Instrument',exact=True).select_option(kind)
         if name:self.dialog_fill('Profile name',name)
         if family:self.page.locator('dialog[open]').get_by_label('Instrument family',exact=True).select_option(family)
         self.save_dialog('Create profile')
         return self.profile()
     def use_profile(self,name):
-        self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text(name,exact=True))
+        self.route('/profiles');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text(name,exact=True))
         row.get_by_role('button',name='Use profile',exact=True).click()
         expect(self.page.locator('.profile-row').filter(has=self.page.get_by_text(name,exact=True))).to_contain_text('Selected')
 
@@ -155,19 +155,21 @@ class Profiles(e2e.MusicPracticeTests):
         self.route('/');self.page.get_by_role('button',name='Build a plan',exact=True).click()
         self.wait_read("load('app/store.js').store.view().dailyPlans.length",lambda value:value==1)
         _,session=self.complete_example('guitar')
-        self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Electric guitar',exact=True))
+        self.route('/profiles');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Electric guitar',exact=True))
         row.get_by_role('button',name='Edit',exact=True).click();self.dialog_fill('Profile name','Stage guitar');self.save_dialog('Save profile')
         self.assertEqual(self.state()['sessions'][0]['profileNameSnapshot'],'Electric guitar')
         self.use_profile('Drums');self.assertEqual(self.read("load('app/store.js').store.view().sessions.length"),0)
         self.assertEqual(self.read("load('app/store.js').store.view().dailyPlans[0].profileId"),original['id'])
         self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click()
         expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
-        self.route('/settings');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Stage guitar',exact=True))
-        row.get_by_role('button',name='Use profile',exact=True).click()
-        self.assertEqual(self.profile()['id'],original['id'])
-        expect(self.page.get_by_role('alert').last).to_contain_text('Finish or end')
-        self.route('/practice/active');self.finish()
-        self.use_profile('Stage guitar');self.route('/history/'+session['id'])
+        created_while_active=self.add_profile('bass','Session-time bass');self.assertEqual(created_while_active['instrumentType'],'bass')
+        active=next(s for s in self.state()['sessions'] if s['status']=='active');self.assertEqual(active['profileId'],original['id']);self.assertEqual(active['profileNameSnapshot'],'Drums')
+        self.use_profile('Stage guitar');self.assertEqual(self.profile()['id'],guitar['id'])
+        self.route('/');expect(self.page.get_by_text('Unfinished Drums session',exact=True)).to_be_visible()
+        guitar_exercise=self.exercise('chord-changes');self.route('/library/'+guitar_exercise['id']);self.page.get_by_role('button',name='Start practice',exact=True).click()
+        expect(self.page.locator('.active-title')).to_be_visible();self.assertEqual(len([s for s in self.state()['sessions'] if s['status']=='active']),1)
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.profileId"),original['id']);self.finish()
+        self.route('/history/'+session['id'])
         expect(self.page.get_by_text('Electric guitar',exact=True).first).to_be_visible()
 
     def test_66_song_parts_survive_profile_switches_and_drive_setlists(self):
@@ -206,6 +208,10 @@ class Profiles(e2e.MusicPracticeTests):
     def test_68_task_edit_retains_previous_work_as_an_immutable_segment(self):
         self.onboard_type('guitar');self.launch('chord-changes')
         self.page.get_by_role('button',name='+ Clean change',exact=True).click()
+        # Result logging is intentionally asynchronous and durable. Wait for the
+        # committed session to contain the result before taking the immutable
+        # pre-edit snapshot; otherwise a fast engine can capture an empty list.
+        self.wait_read("load('app/store.js').store.snapshot().sessions.find(s=>s.status==='active').blocks[0].outcomes.length",lambda value:value==1)
         before=self.read("JSON.stringify(load('practice/controller.js').practice.session.blocks[0].outcomes)")
         self.page.get_by_role('button',name='Task settings',exact=True).click()
         self.dialog_fill('Chord sequence','Am, F, C, G');self.save_dialog('Apply task settings')
@@ -294,8 +300,8 @@ class Profiles(e2e.MusicPracticeTests):
         self.use_profile(drums['name']);self.launch('tempo')
         self.page.get_by_role('button',name='Save & leave',exact=True).click();expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
         self.read("load('app/store.js').store.workspace(d=>{d.settings.activeProfileId="+json.dumps(guitar['id'])+";return d})")
-        self.route('/');expect(self.page.get_by_text('Unfinished session',exact=True)).to_be_visible();expect(self.page.get_by_role('link',name='Resume session',exact=True)).to_be_visible()
-        self.route('/practice');expect(self.page.get_by_text('An unfinished session is saved.',exact=True)).to_be_visible()
+        self.route('/');expect(self.page.get_by_text('Unfinished Drums session',exact=True)).to_be_visible();expect(self.page.get_by_role('link',name='Resume session',exact=True)).to_be_visible()
+        self.route('/practice');expect(self.page.get_by_text('Unfinished Drums session',exact=True)).to_be_visible()
         self.route('/practice/active');self.finish()
 
     def test_73_session_reflection_preserves_newer_block_data(self):
@@ -316,12 +322,36 @@ class Profiles(e2e.MusicPracticeTests):
         self.assertEqual(saved['title'],'Concurrent song renamed');self.assertEqual(saved['notes'],'Base edit')
         self.assertEqual([s['name'] for s in saved['sections']],['Concurrent section']);self.assertEqual([p['name'] for p in saved['parts']],['Concurrent guitar part'])
 
+    def test_76_profile_management_preserves_focuses_names_and_history_buckets(self):
+        self.onboard_type('guitar');first=self.profile();self.route('/profiles')
+        row=self.page.locator('.profile-row').filter(has=self.page.get_by_text(first['name'],exact=True));row.get_by_role('button',name='Edit',exact=True).click()
+        dialog=self.page.locator('dialog[open]');dialog.get_by_label('Fretboard',exact=True).check();self.save_dialog('Save profile')
+        saved=next(p for p in self.state()['profiles'] if p['id']==first['id']);self.assertEqual(saved['focusAreas'],['Chords & rhythm','Fretboard'])
+        self.route('/profiles');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text(first['name'],exact=True));row.get_by_role('button',name='Edit',exact=True).click()
+        dialog=self.page.locator('dialog[open]');self.assertTrue(dialog.get_by_label('Chords & rhythm',exact=True).is_checked());self.assertTrue(dialog.get_by_label('Fretboard',exact=True).is_checked());dialog.get_by_role('button',name='Cancel',exact=True).click()
+        self.page.get_by_role('button',name='Add profile',exact=True).click();self.page.locator('dialog[open]').get_by_label('Instrument',exact=True).select_option('guitar');self.save_dialog('Create profile')
+        second=self.profile();self.assertEqual(second['name'],'Guitar 2');self.assertNotEqual(second['id'],first['id'])
+        self.route('/profiles');self.page.get_by_role('button',name='Add profile',exact=True).click();self.page.locator('dialog[open]').get_by_label('Instrument',exact=True).select_option('guitar');self.dialog_fill('Profile name','Guitar');self.page.locator('dialog[open]').get_by_role('button',name='Create profile',exact=True).click()
+        expect(self.page.locator('dialog[open]').get_by_role('alert')).to_contain_text('distinct profile name');self.page.locator('dialog[open]').get_by_role('button',name='Cancel',exact=True).click();self.confirm('Discard changes')
+        self.assertEqual(self.page.get_by_role('button',name='Set primary',exact=True).count(),0)
+        self.page.get_by_role('button',name='Add profile',exact=True).click();custom=self.page.locator('dialog[open]');custom.get_by_label('Instrument',exact=True).select_option('custom');self.dialog_fill('Profile name','General custom');self.save_dialog('Create profile');self.assertEqual(self.profile()['family'],'general')
+        self.read("load('app/store.js').store.workspace(d=>{d.profiles.push({id:'profile-earlier-ui',name:'Earlier practice',instrumentType:'custom',family:'general',level:'beginner',focusAreas:[],defaultSessionMinutes:30,archived:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),attribution:'unresolved-history'});return d})")
+        self.route('/profiles');historical=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Earlier practice',exact=True));expect(historical).to_contain_text('History only');expect(historical.get_by_role('button',name='Use profile',exact=True)).to_have_count(0);expect(historical.get_by_role('button',name='Edit',exact=True)).to_have_count(0)
+
+    def test_77_history_can_review_other_profiles_without_switching_workspace(self):
+        self.onboard_type('guitar');guitar=self.profile();_,guitar_session=self.complete_example('guitar')
+        voice=self.add_profile('voice','History voice');_,voice_session=self.complete_example('voice');self.assertEqual(self.profile()['id'],voice['id'])
+        self.route('/history');self.assertEqual(self.page.locator('.history-card').count(),1);expect(self.page.locator('.history-card').first).to_contain_text('History voice')
+        self.page.get_by_label('History profile',exact=True).select_option('all');self.assertEqual(self.page.locator('.history-card').count(),2)
+        self.page.get_by_label('History profile',exact=True).select_option('profile:'+guitar['id']);self.assertEqual(self.page.locator('.history-card').count(),1);expect(self.page.locator('.history-card').first).to_contain_text('Guitar')
+        self.assertEqual(self.profile()['id'],voice['id']);self.assertIn(guitar_session['id'],[s['id'] for s in self.state()['sessions']]);self.assertIn(voice_session['id'],[s['id'] for s in self.state()['sessions']])
+
     def matrix(self,kind):
         self.onboard_type(kind);exercise,_=self.complete_example(kind)
         results=[]
         for width,height in SIZES:
             self.page.set_viewport_size({'width':width,'height':height})
-            for route,label in [('/','today'),('/library','library'),('/library/'+exercise['id'],'exercise'),('/routines','routines'),('/songs','songs'),('/goals','goals'),('/progress','progress'),('/settings','settings')]:
+            for route,label in [('/','today'),('/library','library'),('/library/'+exercise['id'],'exercise'),('/routines','routines'),('/songs','songs'),('/goals','goals'),('/progress','progress'),('/profiles','profiles'),('/settings','settings')]:
                 self.route(route)
                 overflow=self.page.evaluate('document.documentElement.scrollWidth > innerWidth')
                 self.assertFalse(overflow,f'{kind} {label} {width}x{height}')
@@ -330,12 +360,16 @@ class Profiles(e2e.MusicPracticeTests):
                     self.page.screenshot(path=str(e2e.ARTIFACTS/f'profiles-{kind}-{label}-{width}.png'),full_page=True)
                 results.append({'profile':kind,'route':label,'width':width,'height':height,'overflow':False})
         self.route('/library/'+exercise['id']);self.page.get_by_role('button',name='Start practice',exact=True).click()
+        # launchPractice is asynchronous. Wait for the active route to finish rendering
+        # before measuring its fixed transport; Firefox can otherwise inspect the old
+        # library DOM between the click handler's await and hash navigation.
+        expect(self.page.locator('.active-title')).to_be_visible()
         for width,height in SIZES:
             self.page.set_viewport_size({'width':width,'height':height})
             self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width,f'{kind} active {width}')
             if width<500:
                 for name in ('Start practice','Finish block'):
-                    control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)
+                    control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box,f'{kind} {name} {width}x{height}');self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)
             if width in (320,390,820,1440):self.page.screenshot(path=str(e2e.ARTIFACTS/f'profiles-{kind}-active-{width}.png'),full_page=True)
             results.append({'profile':kind,'route':'active','width':width,'height':height,'overflow':False})
         (e2e.ARTIFACTS/f'profiles-{kind}-layout-results.json').write_text(json.dumps(results,indent=2))

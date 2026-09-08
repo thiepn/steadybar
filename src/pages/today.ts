@@ -1,4 +1,4 @@
-import { activeProfile } from '../domain/profiles.js';
+import { activeProfile, profileName } from '../domain/profiles.js';
 import { prepareStarterPlan } from '../app/profiles.js';
 import { confirmAction, select } from '../ui/components.js';
 import { store } from '../app/store.js';
@@ -13,9 +13,9 @@ import { launchPractice, routineToday } from '../practice/launch.js';
 import type { RoutineBlock } from '../domain/models.js';
 
 export function todayPage(): Page {
-  const data = store.view(),profile=activeProfile(store.snapshot());
+  const snapshot=store.snapshot(),data=store.view(),profile=activeProfile(snapshot);
   const plan = data.dailyPlans.find(p => p.date === localDate());
-  const active = store.snapshot().sessions.find(s => s.status === 'active');
+  const active = snapshot.sessions.find(s => s.status === 'active');
   const date = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   const weekStart = isoWeekStart(), weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
@@ -26,7 +26,7 @@ export function todayPage(): Page {
   const prepare=button('Build a plan',async()=>{if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a profile-specific starter sequence for this time budget. Existing history is unchanged.','Build plan'))return;await prepareStarterPlan(Number(budget.querySelector('select')!.value));},'secondary');
   page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},profile.instrumentType==='voice'?'Voice routines include rest and listening.':'Uses this profile’s saved starter routine; you can edit every block.')));
   if (active) page.append(el('div', { class: 'recovery-banner' }, el('div', {},
-    el('strong', {}, 'Unfinished session'), el('span', {}, active.blocks[active.activeBlockIndex]?.titleSnapshot || 'Saved practice')),
+    el('strong', {}, `Unfinished ${profileName(snapshot,active.profileId)} session`), el('span', {}, active.blocks[active.activeBlockIndex]?.titleSnapshot || 'Saved practice')),
     link('Resume session', '/practice/active', 'button primary', 'play')));
 
   const start = button('Start full session', () => launchPractice(plan?.blocks || [], { planId: plan?.id }), 'primary', 'play');

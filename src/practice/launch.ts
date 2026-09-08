@@ -17,7 +17,7 @@ export async function launchPractice(blocks:RoutineBlock[],source:{routineId?:st
   const active=await store.activeSession();
   if(active){notify('Your unfinished session is ready to resume. End it before starting a new session.','info');if(practice.session?.id!==active.id || practice.session?.status!=='active')await practice.recover();navigate('/practice/active');return;}
   const requested=blocks[0]?.profileId;
-  if(requested&&requested!==store.snapshot().settings.activeProfileId)await switchProfile(requested);
+  if(requested&&requested!==activeProfile(store.snapshot()).id)await switchProfile(requested);
   const profile=activeProfile(store.snapshot());
   const attributed=blocks.map(b=>({...b,profileId:b.profileId??profile.id}));
   await practice.create(attributed,source);navigate('/practice/active');

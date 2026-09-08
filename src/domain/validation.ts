@@ -113,8 +113,10 @@ export function validateData(input:unknown):Data {
   if(new Set(d.dailyPlans.map(p=>`${p.profileId??''}/${p.date}`)).size!==d.dailyPlans.length)fail('Daily plans','contains duplicate dates');
   if(d.sessions.filter(s=>s.status==='active').length>1)fail('Sessions','data may contain only one active session');
   if(d.schemaVersion===2){
-    if(!d.profiles?.length)fail('Profiles','at least one profile is required');
-    const profiles=new Map(d.profiles!.map(p=>[p.id,p]));
+    const profileRows=d.profiles??[];
+    if(!profileRows.length)fail('Profiles','at least one profile is required');
+    if(!profileRows.some(p=>p.attribution!=='unresolved-history'))fail('Profiles','at least one real practice profile is required in addition to historical attribution buckets');
+    const profiles=new Map(profileRows.map(p=>[p.id,p]));
     const requireProfile=(id:string|undefined)=>{const p=id?profiles.get(id):undefined;if(!p)fail('Profile','missing or unknown profile ID');return p!;};
     if(requireProfile(d.settings.activeProfileId).archived || requireProfile(d.settings.primaryProfileId).archived)fail('Settings','active and primary profiles must not be archived');
     for(const e of d.exercises){const p=requireProfile(e.profileId);if(!e.protocol||!e.skillArea)fail('Exercise','v2 exercises require a protocol and skill area');assertProtocolCompatible(e.protocol!,p);}

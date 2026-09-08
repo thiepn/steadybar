@@ -10,7 +10,7 @@ Drums keep their existing four tempo trainers. Guitar has actual chord counters 
 
 ## Local results
 
-Strict TypeScript, production build, and **272 Node tests** passed after release hardening. This includes the original checks, profile/domain/content/backup/migration tests, repository transaction tests, concurrency regressions, recommendation matching, and a cancellable reference-audio test suite. Audio mocks verify scheduling/cancellation logic; they are not microphone or physical-device verification.
+Strict TypeScript, production build, and **277 Node tests** passed after release hardening. This includes the original checks, profile/domain/content/backup/migration tests, repository transaction tests, concurrency regressions, recommendation matching, and a cancellable reference-audio test suite. Audio mocks verify scheduling/cancellation logic; they are not microphone or physical-device verification.
 
 Local Chromium rendered suites passed the applicable profile regressions including the previously failing fretboard result, plan persistence and custom-profile cases, plus the new cross-profile recovery and concurrent-edit regressions. The workbench transport fix was rerun successfully. The in-document `--render` harness explicitly replaces storage with a validated memory adapter. Native-only tests are marked skipped, never counted as persistence verification. Local Chromium navigation to localhost is blocked by `ERR_BLOCKED_BY_ADMINISTRATOR`; GitHub-hosted native browser jobs remain mandatory for publishing.
 
@@ -19,9 +19,9 @@ Local Chromium rendered suites passed the applicable profile regressions includi
 - `ci_render.py`: the existing workflow cases, with native-only cases explicitly excluded from the memory harness.
 - `ci_native.py`: real-origin persistence/recovery/offline/backup/audio/count-in cases.
 - `ui_polish.py`: previous appearance and responsive regression cases.
-- `workbench.py`: workbench cases including 224 populated route/viewport combinations, 2,030-exercise fixture, readable control geometry and low active DOM churn.
+- `workbench.py`: workbench cases including 238 populated route/viewport combinations, 2,030-exercise fixture, readable control geometry and low active DOM churn.
 - `colors.py`: color-system cases, 256 resolved color combinations, 8,704 computed text/control contrast checks, 15 picker sizes and persistence.
-- `profiles.py`: principal instrument sessions, contextual results/goals, voice bounds/fatigue, fretboard answers, profile isolation, song parts, custom families, immutable segment edits, native v1 upgrade, v2 backup/offline, 1,000 additional exercises, cross-profile active-session recovery, concurrent session/song edits, and **630 profile/route/viewport combinations** across all requested sizes.
+- `profiles.py`: principal instrument sessions, contextual results/goals, voice bounds/fatigue, fretboard answers, profile isolation, song parts, custom families, immutable segment edits, native v1 upgrade, v2 backup/offline, 1,000 additional exercises, cross-profile active-session recovery, concurrent session/song edits, and **700 profile/route/viewport combinations** across all requested sizes.
 
 Chromium runs all applicable suites; Firefox/WebKit run native capabilities, workbench, colors and profile suites. CI retains per-suite exit status and JSON/screenshot evidence. Assertions are synchronized to observable commits/audio states rather than made optional. Native failures block deployment.
 
@@ -48,7 +48,13 @@ These are synchronization and data-integrity corrections, not disabled gates. A 
 
 ## WebKit saved-leave synchronization audit
 
-The next full PR run passed every pre-profile WebKit gate and 19 of 20 profile tests. The sole failure occurred because the test clicked `Save & leave` and immediately forced `/settings` before the production async pause/save handler completed. WebKit then correctly completed the handler and navigated to Today, leaving the locator on the wrong page. The release test now waits for the observable Today transition before routing to Settings. The production behavior and profile-switch protection assertion are unchanged. The exact corrected case passed a clean-install targeted browser run before the feature branch was updated.
+The next full PR run passed every pre-profile WebKit gate and 19 of 20 profile tests. The sole failure occurred because the test clicked `Save & leave` and immediately forced `/settings` before the production async pause/save handler completed. WebKit then correctly completed the handler and navigated to Today, leaving the locator on the wrong page. The release test now waits for the observable Today transition before routing to Settings. At the 2.0.0 release point production behavior was unchanged. Steadybar 2.0.1 later replaces the blanket profile-switching block with pinned-session workspace switching while retaining the global one-active-session guard. The exact corrected case passed a clean-install targeted browser run before the feature branch was updated.
+
+## Profile-system hardening in 2.0.1
+
+The follow-up audit treats profile selection as workspace scope, not session ownership. Local strict TypeScript and **277 Node tests** pass. Rendered Chromium regressions pass for switching and creating profiles while an unfinished session remains pinned, multi-focus edit round-trips, duplicate/default naming, Custom-family defaults, read-only historical buckets, cross-profile History filtering, and recovery ownership labels. Existing rendered UI/profile cases remain enabled; native IndexedDB/offline and full cross-engine matrices remain release gates in GitHub CI.
+
+The profile matrices now include the dedicated `/profiles` route, increasing coverage from 630 to **700 profile/route/viewport combinations**. The workbench matrix similarly includes `/profiles`, increasing from 224 to **238 populated route/viewport combinations**.
 
 ## Post-implementation corrections
 

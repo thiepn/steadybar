@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.1 — Profile system hardening — 2026-09-08
+
+- Move profile management out of the dirty Settings form into a dedicated `/profiles` workspace, with Settings and command-search links back to it.
+- Allow profile switching and profile creation while an unfinished session exists; the session remains pinned to its original profile and the global one-session guard still prevents parallel practice.
+- Preserve multiple ordered focus areas when editing profiles instead of silently collapsing them to one, and keep all selected focuses available to recommendations.
+- Give blank new profiles deterministic unique names such as `Guitar 2`, reject ambiguous explicit duplicates, and default Custom profiles to the neutral `general` family.
+- Treat `Earlier practice` as a read-only historical attribution bucket: it cannot be selected, edited, archived, searched as an actionable practice source, or own a new session.
+- Repair older v2 workspaces whose active/primary selection points at `Earlier practice`; if an older UI archived every real profile, restore one real profile without touching history.
+- Add History profile filtering so archived and historical sessions can be reviewed without switching the active practice workspace.
+- Label recovery banners with the unfinished session's owning profile and keep cross-profile recovery explicit.
+- Retain `primaryProfileId` only as an internal compatibility/fallback pointer rather than a user-facing second selection concept.
+- Expand regression coverage for selection repair, historical-session guards, active-session switching/creation, multi-focus editing, unique names, custom defaults, cross-profile History, and the new profile route.
+
 ## 2.0.0 — Instrument-specific practice profiles — 2026-09-08
 
 - Add stable multiple practice profiles, instrument-specific skills/focus/capabilities, profile management and guarded switching.

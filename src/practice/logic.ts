@@ -1,5 +1,5 @@
 import { exerciseProtocol, protocolPulse, pulse } from '../domain/protocols.js';
-import { profileName } from '../domain/profiles.js';
+import { activeProfile, isPracticeProfile, profileName } from '../domain/profiles.js';
 import type { PracticeProtocol } from '../domain/practice-types.js';
 import type { Data, PracticeBlock, PracticeSession, RoutineBlock } from '../domain/models.js';
 import { metadata, nowISO, uuid } from '../domain/utils.js';
@@ -15,17 +15,17 @@ export function snapshotBlock(block:RoutineBlock,data:Data):PracticeBlock {
   if(block.tempoTrainer&&protocol&&protocol.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');
   const timing=protocol?protocolPulse(protocol):undefined;
   const bpm=block.tempoTrainer ? trainerBpm(block.tempoTrainer,0,0) : protocol ? protocolPulse(protocol)?.bpm : block.bpm;
-  const profileId=exercise?.profileId??part?.profileId??block.profileId??data.settings.activeProfileId;
+  const profileId=exercise?.profileId??part?.profileId??block.profileId??(data.schemaVersion===2?activeProfile(data).id:data.settings.activeProfileId);
   if(block.songPartId&&!part)throw new Error('This song part is unavailable. Choose an existing part.');
   const profile=data.profiles?.find(p=>p.id===profileId);
-  if(profile?.archived)throw new Error('Restore the archived profile before starting practice.');
+  if(data.schemaVersion===2&&(!profile||!isPracticeProfile(profile)))throw new Error('Choose an available practice profile before starting practice. Historical attribution buckets cannot own new sessions.');
   const title=block.type==='free' ? block.title : exercise?.name || (song ? (block.title || `${song.title}${section ? ` · ${section.name}` : ''}`) : block.title);
   return {id:uuid(),...(protocol?{profileId,profileNameSnapshot:profileName(data,profileId),protocolSnapshot:protocol,instructionsSnapshot:exercise?.instructions??[part?.name,part?.key?`Key ${part.key}`:'',part?.tuning?`Tuning ${part.tuning}`:'',part?.capo!==undefined?`Capo ${part.capo}`:'',part?.range,part?.role,part?.notes,section?.notes,block.notes].filter(Boolean).join('\n'),outcomes:[],protocolState:{step:0,clean:0,total:0,...(protocol.kind==='vocal-pattern'?{rootMidi:protocol.startMidi}:{})}}:{}),sourceSongPartId:part?.id,type:block.type,sourceExerciseId:exercise?.id,sourceSongId:song?.id,sourceSongSectionId:section?.id,titleSnapshot:title,categorySnapshot:exercise?.skillArea||exercise?.category || (song ? 'song' : 'other'),stickingSnapshot:protocol?.kind==='tempo'?protocol.sticking??'':protocol?'':exercise?.sticking||'',meterSnapshot:structuredClone(timing?{beats:timing.beats,beatUnit:timing.beatUnit}:exercise?.meter || song?.meter || data.settings.metronome.meter),subdivisionSnapshot:timing?.subdivision??exercise?.subdivision??data.settings.metronome.subdivision,targetSeconds:block.tempoTrainer?.mode==='endurance'?block.tempoTrainer.seconds:block.targetSeconds,actualActiveSeconds:0,initialBpm:bpm,finalBpm:bpm,tempoAttempts:[],notes:[block.notes,section?.notes].filter(Boolean).join('\n'),completed:false,skipped:false,tempoTrainer:block.tempoTrainer ? structuredClone(block.tempoTrainer) : undefined};
 }
 export function createSession(blocks:RoutineBlock[],data:Data,source:{routineId?:string;planId?:string;profileId?:string}={}):PracticeSession {
   if(!blocks.length)throw new Error('Add at least one block before starting practice.');
   const snapshots=blocks.map(b=>snapshotBlock(b,data)),now=nowISO();
-  const profileId=source.profileId??snapshots[0]?.profileId??data.settings.activeProfileId;
+  const profileId=source.profileId??snapshots[0]?.profileId??(data.schemaVersion===2?activeProfile(data).id:data.settings.activeProfileId);
   if(data.schemaVersion===2 && snapshots.some(b=>b.profileId!==profileId))throw new Error('Practice one profile per session. Save the current session before switching instruments.');
   return {...metadata(),...(data.schemaVersion===2?{profileId,profileNameSnapshot:profileName(data,profileId)}:{}),status:'active',startedAt:now,activeBlockIndex:0,blocks:snapshots,sessionNotes:'',sourceRoutineId:source.routineId,sourceDailyPlanId:source.planId,runtime:{phase:'ready',bpm:snapshots[0]!.initialBpm??data.settings.metronome.bpm,trainerCleanRounds:0,trainerStartSeconds:0,checkpointAt:now,metronomeOn:snapshots[0]!.initialBpm!==undefined}};
 }

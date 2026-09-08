@@ -107,6 +107,12 @@ test('failed migration commits neither partial profiles nor a misleading backup 
  await assert.rejects(db.initializeDatabase(),/No quota/);assert.deepEqual(await db.readData(),{...legacy,profiles:[]});assert.equal(await db.migrationBackup(),undefined);
  await db.initializeDatabase();assert.equal((await db.readData()).schemaVersion,2);
 });
+test('initialization repairs a historical bucket accidentally saved as the active profile',async()=>{
+ const d=migratePracticeData(seedData()),real=d.profiles[0],historical={...real,id:'profile-earlier',name:'Earlier practice',instrumentType:'custom',family:'general',focusAreas:[],attribution:'unresolved-history'};
+ real.archived=true;d.profiles.push(historical);d.settings.activeProfileId=historical.id;d.settings.primaryProfileId=historical.id;await db.replaceData(d);
+ await db.initializeDatabase();const repaired=await db.readData();assert.equal(repaired.settings.activeProfileId,real.id);assert.equal(repaired.settings.primaryProfileId,real.id);assert.equal(repaired.profiles.find(p=>p.id===real.id).archived,false);assert.equal(repaired.profiles.find(p=>p.id===historical.id).attribution,'unresolved-history');
+ await assert.rejects(db.patchSettings({activeProfileId:historical.id}),/profile management|available practice profile/);
+});
 test('concurrent settings patches merge against committed settings without stomping colors',async()=>{
  await db.initializeDatabase();await Promise.all([db.patchSettings({accent:'blue'}),db.patchSettings({surfaceTheme:'black'}),db.patchSettings({wakeLock:false})]);
  const d=await db.readData();assert.equal(d.settings.accent,'blue');assert.equal(d.settings.surfaceTheme,'black');assert.equal(d.settings.wakeLock,false);

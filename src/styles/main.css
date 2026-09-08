@@ -434,6 +434,10 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .profile-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}
 .profile-row:last-child{border-bottom:0}.profile-row>div{min-width:0}.profile-row .actions{flex-wrap:wrap;justify-content:flex-end;max-width:55%}
 .profile-row strong{overflow-wrap:anywhere}.profiles-panel .button{min-height:44px}
+.profile-picker-item{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;padding-bottom:6px;border-bottom:1px solid var(--border)}.profile-picker-item:last-of-type{border-bottom:0}
+.compact-profile-note,.profile-session-pin{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:12px}.profile-session-pin{margin-top:14px}
+.profile-focus-group{border:0;padding:0;margin:0}.profile-focus-group legend{font-weight:600;margin-bottom:4px}.profile-focus-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;margin-top:10px}.profile-focus-option{min-height:40px}
+.profile-row-main{flex:1}.profile-row-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.profile-focus-tags{margin-top:8px}.historical-profile{border-left:2px solid var(--border-strong);padding-left:14px}.profiles-page .profiles-panel{margin-top:24px}.profile-stats .stat{min-width:0}.profile-history-note{margin-top:24px}.settings-profile-summary .actions{margin-top:12px}.history-toolbar .field{margin:0;min-width:180px}.history-toolbar .field select{width:100%;max-width:260px}
 .plan-builder{display:flex;gap:12px;align-items:flex-end;margin:0 0 20px;flex-wrap:wrap}
 .plan-builder .field{max-width:150px;margin:0}.plan-builder .field-hint{flex:1;min-width:160px;margin:0}
 .protocol-editor{display:flex;flex-direction:column;gap:12px;border-block:1px solid var(--border);padding:16px 0}
@@ -456,6 +460,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 @media(max-width:640px){
  .topbar .profile-trigger{max-width:120px;font-size:12px;padding:6px;overflow-wrap:anywhere}.topbar .actions{gap:4px}
  .profile-row{flex-direction:column;gap:10px}.profile-row .actions{max-width:100%;justify-content:flex-start}
+ .profile-focus-options{grid-template-columns:minmax(0,1fr)}.profile-picker-item{padding-bottom:8px}.history-toolbar .field{flex:1 1 100%;min-width:0}.history-toolbar .field select{max-width:none}
  .plan-builder{gap:8px}.plan-builder .field-hint{flex-basis:100%}
  .key-options{grid-template-columns:repeat(4,minmax(0,1fr))}
  .note-answers{grid-template-columns:repeat(4,minmax(44px,1fr))}

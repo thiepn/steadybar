@@ -335,7 +335,7 @@ class MusicPracticeTests(unittest.TestCase):
     def test_13_responsive_routes_and_accessible_controls(self):
         self.onboard(True)
         for close in self.page.get_by_role('button',name='Dismiss notification',exact=True).all():close.click()
-        routes=['/','/practice','/metronome','/library','/library/rudiment-2','/routines','/routines/routine-1','/songs','/setlists','/goals','/progress','/history','/settings']
+        routes=['/','/practice','/metronome','/library','/library/rudiment-2','/routines','/routines/routine-1','/songs','/setlists','/goals','/progress','/history','/profiles','/settings']
         sizes=[(360,800),(390,844),(430,932),(768,1024),(1440,900),(1920,1080)] if OPTIONS.visual else [(390,844),(1440,900)]
         for width,height in sizes:
             self.page.set_viewport_size({'width':width,'height':height})

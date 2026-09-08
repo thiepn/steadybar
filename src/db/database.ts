@@ -1,6 +1,7 @@
 import { assertProtocolCompatible } from '../domain/practice-validation.js';
+import { isPracticeProfile } from '../domain/profiles.js';
 import type { PracticeProfile } from '../domain/practice-types.js';
-import { migratePracticeData } from './profile-migration.js';
+import { migratePracticeData, normalizeProfileSelection } from './profile-migration.js';
 import type { Data, DailyPlan, Exercise, Goal, PracticeSession, Preset, Routine, Setlist, Settings, Song } from '../domain/models.js';
 import { DEFAULT_SETTINGS } from '../domain/models.js';
 import { validateProfile, validateData, validateExercise, validateGoal, validatePlan, validatePreset, validateRoutine, validateSession, validateSetlist, validateSettings, validateSong, type Validator } from '../domain/validation.js';
@@ -130,7 +131,7 @@ export async function patchSettings(change:Partial<Settings>):Promise<void>{
     const current=await request(tx.objectStore('settings').get('preferences')) as Settings|undefined;
     if(!current)throw new Error('The workspace is not ready yet.');
     const next=validateSettings({...current,...change}),profiles=await request(tx.objectStore('profiles').getAll()) as PracticeProfile[];
-    if(profiles.length&&(!profiles.some(p=>p.id===next.activeProfileId&&!p.archived)||!profiles.some(p=>p.id===next.primaryProfileId&&!p.archived)))throw new Error('Choose an available practice profile.');
+    if(profiles.length&&(!profiles.some(p=>p.id===next.activeProfileId&&isPracticeProfile(p))||!profiles.some(p=>p.id===next.primaryProfileId&&isPracticeProfile(p))))throw new Error('Choose an available practice profile.');
     // Profile identity is changed through the guarded workspace command only.
     if(next.activeProfileId!==current.activeProfileId||next.primaryProfileId!==current.primaryProfileId)throw new Error('Use profile management to change the active or primary profile.');
     tx.objectStore('settings').put(next);
@@ -164,7 +165,7 @@ export async function insertActiveSession(session:PracticeSession):Promise<void>
   if(validated.status!=='active')throw new Error('A new practice session must be active.');
   await write(['sessions','profiles'],async tx=>{
     const profiles=await request(tx.objectStore('profiles').getAll()) as PracticeProfile[];
-    if(profiles.length){if(!profiles.some(p=>p.id===validated.profileId&&!p.archived))throw new Error('An active session needs an available profile.');for(const b of validated.blocks){const profile=profiles.find(p=>p.id===b.profileId&&!p.archived);if(!profile||!b.protocolSnapshot)throw new Error('A practice block needs a profile and protocol snapshot.');assertProtocolCompatible(b.protocolSnapshot,profile);}}
+    if(profiles.length){if(!profiles.some(p=>p.id===validated.profileId&&isPracticeProfile(p)))throw new Error('An active session needs an available practice profile.');for(const b of validated.blocks){const profile=profiles.find(p=>p.id===b.profileId&&isPracticeProfile(p));if(!profile||!b.protocolSnapshot)throw new Error('A practice block needs a profile and protocol snapshot.');assertProtocolCompatible(b.protocolSnapshot,profile);}}
     const active=await request(tx.objectStore('sessions').index('status').count('active'));
     if(active>0)throw new Error('There is already an unfinished session. Resume or end it before starting another.');
     tx.objectStore('sessions').add(validated);
@@ -217,8 +218,15 @@ export async function migrationBackup():Promise<Data|undefined>{
 export async function initializeDatabase():Promise<void> {
   await write([...STORES,'migrationBackups'],async tx=>{
     const rows=await Promise.all(STORES.map(name=>request(tx.objectStore(name).getAll())));
-    const prefs=rows[STORES.indexOf('settings')]?.[0] as Settings|undefined;
-    if(prefs && rows[STORES.indexOf('profiles')]?.length)return;
+    const prefs=rows[STORES.indexOf('settings')]?.[0] as Settings|undefined,profileRows=rows[STORES.indexOf('profiles')] as PracticeProfile[]|undefined;
+    if(prefs && profileRows?.length){
+      const current=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?prefs:rows[i]])) as unknown as Data;current.schemaVersion=2;
+      const repaired=validateData(normalizeProfileSelection(current));
+      if(JSON.stringify(repaired.settings)!==JSON.stringify(prefs))tx.objectStore('settings').put(repaired.settings);
+      const previousProfiles=new Map(profileRows.map(profile=>[profile.id,profile]));
+      for(const profile of repaired.profiles??[])if(JSON.stringify(previousProfiles.get(profile.id))!==JSON.stringify(profile))tx.objectStore('profiles').put(profile);
+      return;
+    }
     const previous=prefs ? Object.fromEntries(STORES.filter(n=>n!=='profiles').map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
     const seed=validateData(migratePracticeData(validateData(previous)));
     if(prefs)tx.objectStore('migrationBackups').put({id:'before-practice-profiles-v2',data:previous});

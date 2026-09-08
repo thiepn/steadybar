@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {seedData} from '../dist/app/db/seed.js';
 import {starterContent} from '../dist/app/db/profile-content.js';
 import {migratePracticeData} from '../dist/app/db/profile-migration.js';
-import {PROFILE_DEFINITIONS,FAMILIES,definition,supportedProtocols,profileView} from '../dist/app/domain/profiles.js';
+import {PROFILE_DEFINITIONS,FAMILIES,activeProfile,definition,practiceProfiles,supportedProtocols,profileView} from '../dist/app/domain/profiles.js';
 import {defaultProtocol,exerciseProtocol,protocolPulse,frequency,noteName,parseNote,fretPrompt,patternFits,scaleOffsets} from '../dist/app/domain/protocols.js';
 import {validateProfile,validateProtocol,validateOutcome,assertProtocolCompatible,assertOutcomeMatches} from '../dist/app/domain/practice-validation.js';
 import {validateData,validateBackup,validateSession,validateGoal} from '../dist/app/domain/validation.js';
@@ -68,6 +68,25 @@ test('mixed-profile new sessions are rejected rather than relabeled',()=>{
 });
 test('existing v1 data migrates deterministically and idempotently without time loss',()=>{
  const d=seedData(at),s=createSession(d.routines[0].blocks,d);s.blocks[0].actualActiveSeconds=37.5;s.blocks[0].tempoAttempts=[{id:'a',bpm:93,rating:'clean',timestamp:at,note:'Original'}];d.sessions=[finishBlock(s)];const before=structuredClone(d),m=migratePracticeData(d);validateData(m);assert.deepEqual(d,before);assert.deepEqual(m,migratePracticeData(d));assert.deepEqual(m,migratePracticeData(m));assert.equal(m.sessions[0].blocks[0].actualActiveSeconds,37.5);assert.deepEqual(m.sessions[0].blocks[0].tempoAttempts,d.sessions[0].blocks[0].tempoAttempts);assert.equal(m.sessions[0].profileId,'profile-drums');
+});
+test('historical attribution buckets cannot become the selected practice workspace',()=>{
+ const d=dataset('guitar'),historical={id:'profile-earlier',name:'Earlier practice',instrumentType:'custom',family:'general',level:'beginner',focusAreas:[],defaultSessionMinutes:30,archived:false,createdAt:at,updatedAt:at,attribution:'unresolved-history'};
+ d.profiles.push(historical);d.settings.activeProfileId=historical.id;d.settings.primaryProfileId=historical.id;
+ const repaired=migratePracticeData(d);assert.equal(repaired.settings.activeProfileId,d.profiles[0].id);assert.equal(repaired.settings.primaryProfileId,d.profiles[0].id);
+ assert.equal(activeProfile(repaired).id,d.profiles[0].id);assert.equal(practiceProfiles(repaired).length,1);assert.equal(profileView(repaired).exercises.length,30);
+ assert.equal(repaired.profiles.find(p=>p.id===historical.id).attribution,'unresolved-history');
+ assert.deepEqual(repaired,migratePracticeData(repaired));
+});
+test('selection repair restores one real profile if older UI archived every selectable profile',()=>{
+ const d=dataset('drums'),historical={...d.profiles[0],id:'profile-earlier-only',name:'Earlier practice',instrumentType:'custom',family:'general',focusAreas:[],attribution:'unresolved-history'};d.profiles[0].archived=true;d.profiles.push(historical);d.settings.activeProfileId=historical.id;d.settings.primaryProfileId=historical.id;
+ const repaired=migratePracticeData(d);assert.equal(repaired.profiles[0].archived,false);assert.equal(activeProfile(repaired).id,d.profiles[0].id);
+});
+test('historical attribution buckets cannot own newly created sessions',()=>{
+ const d=dataset('guitar'),historical={...d.profiles[0],id:'profile-earlier-new-session',name:'Earlier practice',instrumentType:'custom',family:'general',focusAreas:[],attribution:'unresolved-history'};d.profiles.push(historical);
+ assert.throws(()=>createSession([{id:'history-free',profileId:historical.id,type:'free',title:'New historical practice',targetSeconds:60,notes:'',order:0}],d,{profileId:historical.id}),/Historical attribution buckets cannot own new sessions/);
+});
+test('practice profiles preserve multiple ordered focus areas',()=>{
+ const p=profile('guitar');p.focusAreas=['Fretboard','Chords & rhythm','Reading'];assert.deepEqual(validateProfile(p).focusAreas,p.focusAreas);
 });
 test('non-drum upgrades preserve drum history and provision the selected discipline',()=>{
  const d=seedData(at);d.settings.instrument='Vocals';d.sessions=[finishBlock(createSession(d.routines[0].blocks,d))];const m=validateData(migratePracticeData(d));assert.equal(m.settings.activeProfileId,'profile-voice');assert.equal(m.sessions[0].profileId,'profile-drums');assert.equal(profileView(m).exercises.length,25);assert.equal(profileView(m).sessions.length,0);

@@ -60,7 +60,19 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       button('Stop reference',()=>reference.stop(),'secondary'),button('Previous pitch',()=>practice.moveTask(-1).finally(()=>setTimeout(()=>{stamp='';update(block);},0)),'secondary'),button('Next pitch',()=>practice.moveTask(1).finally(()=>setTimeout(()=>{stamp='';update(block);},0)),'secondary'),
       button('Review voice',()=>{ensureStarted();const step=state().step,root=state().rootMidi??p.startMidi;formDialog('Voice review',[
         el('p',{class:'field-hint'},'Self-assessment only. Ease runs from 1 (difficult) to 5 (easy); fatigue from 0 (none) to 5 (high).'),score('pitch','Pitch match'),score('ease','Ease'),score('breath','Breath coordination'),select('fatigue','Fatigue',['0','1','2','3','4','5'],'0'),textarea('note','Observation','',2),
-      ],async form=>{const fatigue=formNumber(form,'fatigue');await log({...base(),kind:'voice',rootMidi:root,pitch:formNumber(form,'pitch'),ease:formNumber(form,'ease'),breath:formNumber(form,'breath'),fatigue,note:formText(form,'note')},step);if(fatigue>=4){await practice.pause();notify('Session paused. Rest your voice rather than pushing through fatigue.','info');}},'Save review');},'secondary'));
+      ],async form=>{
+        const fatigue=formNumber(form,'fatigue');
+        await log({...base(),kind:'voice',rootMidi:root,pitch:formNumber(form,'pitch'),ease:formNumber(form,'ease'),breath:formNumber(form,'breath'),fatigue,note:formText(form,'note')},step);
+        if(fatigue>=4){
+          // The review is already durable. Stop playback/timers immediately, but
+          // do not keep the modal open while the pause checkpoint completes.
+          // pause() performs its safety-critical stop work before its first await.
+          feedback.textContent='Review saved. Pausing for vocal rest…';
+          void practice.pause()
+            .then(()=>notify('Session paused. Rest your voice rather than pushing through fatigue.','info'))
+            .catch(error=>notify(error instanceof Error?error.message:'Practice could not be paused.','error'));
+        }
+      },'Save review');},'secondary'));
     node.append(el('p',{class:'voice-safety'},'Keep the complete pattern inside a comfortable range. Do not sing when hoarse, tired or uncomfortable. No microphone analysis is performed.'));
   }else if(p.kind==='pitch-match'){
     actions.append(button('Play reference',()=>listen([p.rootMidi,p.rootMidi+p.interval]),'primary'),button('Stop reference',()=>reference.stop(),'secondary'),

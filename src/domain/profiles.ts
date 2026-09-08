@@ -20,13 +20,17 @@ const familyCapabilities: Record<InstrumentFamily, readonly Capability[]> = {
 export function definition(type: InstrumentType): ProfileDefinition { return PROFILE_DEFINITIONS.find(p=>p.id===type)!; }
 export function capabilities(profile: PracticeProfile): readonly Capability[] { return familyCapabilities[profile.family]; }
 export function profiles(data: Data): PracticeProfile[] { return data.profiles ?? []; }
+/** Historical attribution buckets are not selectable practice workspaces. */
+export function isPracticeProfile(profile:PracticeProfile):boolean { return !profile.archived && profile.attribution!=='unresolved-history'; }
+export function practiceProfiles(data:Data):PracticeProfile[] { return profiles(data).filter(isPracticeProfile); }
 export function activeProfile(data: Data): PracticeProfile {
-  const result=profiles(data).find(p=>p.id===data.settings.activeProfileId && !p.archived) ?? profiles(data).find(p=>!p.archived);
-  if(!result)throw new Error('No active practice profile. Restore a valid workspace backup.');
+  const available=practiceProfiles(data);
+  const result=available.find(p=>p.id===data.settings.activeProfileId) ?? available.find(p=>p.id===data.settings.primaryProfileId) ?? available[0];
+  if(!result)throw new Error('No active practice profile. Restore a valid workspace backup or create a practice profile.');
   return result;
 }
 export function profileName(data: Data,id?:string): string { return profiles(data).find(p=>p.id===id)?.name ?? 'Earlier practice'; }
-export function profileView(data: Data,id=data.settings.activeProfileId): Data {
+export function profileView(data: Data,id=activeProfile(data).id): Data {
   if(!data.profiles || !id)return data;
   return {...data,exercises:data.exercises.filter(e=>e.profileId===id),routines:data.routines.filter(r=>r.profileId===id),
     dailyPlans:data.dailyPlans.filter(p=>p.profileId===id),goals:data.goals.filter(g=>!g.profileId||g.profileId===id),
