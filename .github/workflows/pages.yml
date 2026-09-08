@@ -7,9 +7,6 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: steadybar-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
