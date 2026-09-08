@@ -1,0 +1,55 @@
+name: Release inspection snapshot
+on:
+  push:
+    branches: [design/practice-workbench]
+    paths: [.github/workflows/release-inspect.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci && npm run check
+      - name: Capture failed browser diagnostics
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .qa
+          gh api repos/thiepn/steadybar/actions/runs/34204603100/jobs > .qa/pr-jobs.json
+          for job in 101991055830 101991056117 101991056139; do
+            gh api repos/thiepn/steadybar/actions/jobs/$job/logs > .qa/job-$job.log || true
+          done
+          python3 - <<'PY'
+          import pathlib
+          for path in pathlib.Path('.qa').glob('job-*.log'):
+              text = path.read_text(errors='replace')
+              lines = text.splitlines()
+              parts = []
+              for i, line in enumerate(lines):
+                  if 'Traceback' in line or 'FAIL:' in line or 'ERROR:' in line or 'AssertionError' in line or 'TimeoutError' in line:
+                      parts.append('\n'.join(lines[max(0,i-2):min(len(lines),i+34)]))
+              pathlib.Path(str(path)+'.summary.txt').write_text('\n\n'.join(parts))
+          PY
+      - name: Package source and diagnostics
+        run: |
+          git archive --format=zip --prefix=steadybar/ HEAD -o steadybar-source.zip
+          python3 - <<'PY'
+          import pathlib,zipfile
+          with zipfile.ZipFile('steadybar-source.zip','a',zipfile.ZIP_DEFLATED) as z:
+              for folder in ['dist','.qa']:
+                  for path in pathlib.Path(folder).rglob('*'):
+                      if path.is_file():z.write(path,'steadybar/'+str(path))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: steadybar-release-inspect
+          path: steadybar-source.zip
+          retention-days: 2
