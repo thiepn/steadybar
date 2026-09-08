@@ -17,11 +17,13 @@ This patch release hardens the Steadybar 2.0 practice-profile model without chan
 - Profile management has its own `/profiles` route. Settings shows only a summary/link, preventing profile controls from becoming stale while preference edits are intentionally held dirty.
 - History can review another profile or all profiles without changing the selected practice workspace.
 
-## Firefox matrix synchronization audit
+## Browser synchronization audit
 
 The first full PR run exposed one Firefox-only test race in the voice responsive matrix. The matrix clicked the asynchronous library `Start practice` action and immediately measured active-practice controls without waiting for the active route to render. Firefox occasionally inspected the old library DOM before the awaited launch handler completed.
 
 The test now waits for `.active-title` to become visible before measuring the unchanged `Start practice` and `Finish block` controls. The 44px touch-target and viewport-bound assertions remain unchanged, with additional diagnostic context. A dedicated clean-install verifier reran the complete Firefox profile suite after this change and it passed before the change was committed to the PR branch.
+
+A superseded Chromium run also exposed a timing-sensitive immutable-history test: immediately after `+ Clean change`, the test could capture the controller outcome list before the asynchronous durable session save completed, even though the later persisted segment correctly contained that result. The gate now waits until the active session in the store contains the committed outcome before taking the pre-edit snapshot. The actual immutable-segment assertions remain unchanged: editing task settings must create a new segment, preserve the prior segment's outcomes exactly, and start the new segment with no outcomes. A dedicated verifier reran the complete Chromium profile suite with this synchronization and passed before committing it to the PR branch.
 
 ## Release blockers
 
@@ -32,4 +34,4 @@ Do not merge unless the exact final PR head passes all existing mandatory releas
 - Firefox native persistence/recovery/offline/backup/audio, workbench and profile-system suites;
 - WebKit native persistence/recovery/offline/backup/audio, workbench and profile-system suites.
 
-The application patch has independently passed clean `npm ci`, strict TypeScript, production build and **277/277 Node tests**. The final user-authored PR head must still pass the complete three-engine workflow before merge.
+The application patch has independently passed clean `npm ci`, strict TypeScript, production build and **277/277 Node tests**. Both synchronization changes have separately passed their complete affected browser profile suite. The final user-authored PR head must still pass the complete three-engine workflow before merge.
