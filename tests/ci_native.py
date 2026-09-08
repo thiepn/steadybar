@@ -7,12 +7,23 @@ assuming they complete in the same event loop turn as a click.
 """
 from __future__ import annotations
 
+import time
 import unittest
 
 import e2e
 
 
 class NativeOriginSmoke(e2e.MusicPracticeTests):
+    def wait_read(self, expression, predicate, timeout_ms=7000):
+        deadline = time.monotonic() + timeout_ms / 1000
+        last = None
+        while time.monotonic() < deadline:
+            last = self.read(expression)
+            if predicate(last):
+                return last
+            self.page.wait_for_timeout(40)
+        self.fail(f'Timed out waiting for browser state. Last value: {last!r}')
+
     def test_14_reload_recovery_real_indexeddb(self):
         self.onboard()
         self.route('/practice')
