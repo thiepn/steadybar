@@ -37,7 +37,7 @@ There are **140 starter exercises** across the five principal instruments and pr
 
 Shared infrastructure includes daily plans, reusable routines, metronome, sessions, pause/resume, recovery, notes, history, goals, command search and safe offline updates. Songs can have separate instrument parts, section lists, arrangement notes and readiness; setlists remain shared. Profile switching never rewrites an active or historical session. Archive profiles rather than deleting their history.
 
-Settings → Practice profiles creates, renames, switches and archives profiles and sets a primary profile. The selector appears when several usable profiles exist. Library, Today, routines, goals and progress follow the selected profile; song compositions and backups are workspace-wide. The standalone metronome is available to every instrument.
+Use the profile selector or Settings → Manage profiles to open the dedicated Practice profiles workspace. Create, rename, switch, archive and restore profiles there. The selected profile controls Library, Today, routines, goals and progress; song compositions and backups remain workspace-wide. Switching profiles never changes the identity of an unfinished session, which stays pinned until it is finished or ended. The standalone metronome is available to every instrument.
 
 Appearance retains System/Light/Dark, eight background themes and sixteen independent accents. Neutral dark mode is charcoal/black. No new fonts, remote color assets, dashboard redesign or account system is introduced.
 

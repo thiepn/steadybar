@@ -1,11 +1,10 @@
-import { profileManagement } from '../ui/profiles.js';
 import { migrationBackup } from '../db/database.js';
 import { downloadText, createBackup } from '../db/backup.js';
 import { appearanceControls } from '../ui/appearance.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, checkbox, confirmAction, field, formDialog, formText, input, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
+import { badge, button, checkbox, confirmAction, field, formDialog, formText, input, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 import { exportBackup, parseBackup, restoreBackup } from '../db/backup.js';
 import { resetWorkspace } from '../db/database.js';
 import { practice } from '../practice/controller.js';
@@ -16,10 +15,16 @@ import { defaultAccents } from '../audio/scheduler.js';
 import type { Subdivision } from '../domain/models.js';
 import { validateSettings } from '../domain/validation.js';
 import { formatDate } from '../domain/utils.js';
+import { activeProfile, practiceProfiles } from '../domain/profiles.js';
 export function settingsPage():Page{
   const data=store.snapshot(),settings=data.settings;
   let dirty=false;
   const page=el('div',{class:'page settings-page'},pageHeader('','Settings','Appearance, practice defaults, and backups.'));
+  const selectedProfile=activeProfile(data);
+  const profilePanel=el('section',{class:'panel settings-profile-summary'},sectionHeader('Practice profiles',`${practiceProfiles(data).length} available`),
+    el('p',{},el('strong',{},selectedProfile.name),' is the selected practice workspace.'),
+    el('p',{class:'muted small'},`${selectedProfile.focusAreas.join(' · ') || 'General practice'} · usual session ${selectedProfile.defaultSessionMinutes} min. Profiles keep separate libraries, plans, routines, goals and results.`),
+    el('div',{class:'actions'},link('Manage profiles','/profiles','button secondary')));
   const colors=appearanceControls();
   const appearance=el('section',{class:'panel appearance-panel'},sectionHeader('Appearance'),colors.node);
   const prefs=el('form',{class:'panel settings-form'},sectionHeader('Practice defaults'));
@@ -79,6 +84,6 @@ export function settingsPage():Page{
     if(practice.session?.status==='active' && !practice.external)await practice.pause();audio.stop();
     await withWorkspaceIdle(async()=>{await exportBackup();await resetWorkspace();});location.reload();
   },'Back up & reset');
-  page.append(el('div',{class:'settings-grid'},el('div',{},profileManagement(),appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
+  page.append(el('div',{class:'settings-grid'},el('div',{},profilePanel,appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
   return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{colors.cleanup();window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};
 }

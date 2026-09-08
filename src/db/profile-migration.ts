@@ -1,12 +1,31 @@
 import type { Data, Exercise, PracticeBlock, RoutineBlock } from '../domain/models.js';
 import type { PracticeProfile, PracticeProtocol } from '../domain/practice-types.js';
-import { definition, instrumentType } from '../domain/profiles.js';
+import { definition, instrumentType, isPracticeProfile } from '../domain/profiles.js';
 import { exerciseProtocol, pulse } from '../domain/protocols.js';
 import { starterContent } from './profile-content.js';
 
+
+/**
+ * Repair only the selectable-profile pointers of an existing v2 workspace.
+ * Historical attribution buckets remain intact and all practice records are untouched.
+ */
+export function normalizeProfileSelection(input:Data):Data {
+  const d=structuredClone(input);if(d.schemaVersion!==2)return d;
+  let available=(d.profiles??[]).filter(isPracticeProfile);
+  if(!available.length){
+    const recoverable=(d.profiles??[]).find(p=>p.attribution!=='unresolved-history');
+    if(!recoverable)return d;
+    recoverable.archived=false;available=[recoverable];
+  }
+  const active=available.find(p=>p.id===d.settings.activeProfileId)??available.find(p=>p.id===d.settings.primaryProfileId)??available[0]!;
+  const primary=available.find(p=>p.id===d.settings.primaryProfileId)??active;
+  d.settings={...d.settings,activeProfileId:active.id,primaryProfileId:primary.id,instrument:definition(active.instrumentType).label,aim:active.focusAreas[0]??'Technique'};
+  return d;
+}
+
 /** Pure, deterministic v1→v2 transform. The repository retains the pre-upgrade snapshot. */
 export function migratePracticeData(input:Data):Data {
-  if(input.schemaVersion===2)return structuredClone(input);
+  if(input.schemaVersion===2)return normalizeProfileSelection(input);
   const d=structuredClone(input);
   const dates=[...d.exercises,...d.routines,...d.sessions,...d.songs].map(e=>e.createdAt).sort();
   const timestamp=dates[0]??'1970-01-01T00:00:00.000Z';
@@ -99,5 +118,5 @@ export function migratePracticeData(input:Data):Data {
     d.exercises.push(...content.exercises.filter(e=>!exIds.has(e.id)));
     d.routines.push(...content.routines.filter(r=>!rIds.has(r.id)));
   }
-  return d;
+  return normalizeProfileSelection(d);
 }

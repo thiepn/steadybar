@@ -6,9 +6,9 @@ Retain TypeScript, native DOM, IndexedDB, the existing route system, timing cont
 
 ### Entities
 
-PracticeProfile owns a stable identity, instrument/family, focus areas, level, session preference and archived flag. Settings holds activeProfileId and primaryProfileId. Capabilities are derived from validated definitions, not trusted arbitrary imported booleans. Instrument type is immutable after creation; rename is safe.
+PracticeProfile owns a stable identity, instrument/family, ordered focus areas, level, session preference and archived flag. Settings holds `activeProfileId`; `primaryProfileId` is retained only as an internal compatibility/fallback pointer and is not a second user-facing selection. Capabilities are derived from validated definitions, not trusted arbitrary imported booleans. Instrument type is immutable after creation; rename is safe.
 
-Exercise owns a profile and discriminated ProtocolConfig. Legacy flat drum fields are optional import compatibility fields; new pitched/count-based exercises do not require or write artificial BPM/sticking. Skill areas are defined by the profile. Routine and DailyPlan belong to profiles; the latter is unique by profile/date. Practice blocks snapshot profile identity, protocol parameters, instructions and results; sessions remain pinned while the UI browses another profile.
+Exercise owns a profile and discriminated ProtocolConfig. Legacy flat drum fields are optional import compatibility fields; new pitched/count-based exercises do not require or write artificial BPM/sticking. Skill areas are defined by the profile. Routine and DailyPlan belong to profiles; the latter is unique by profile/date. Practice blocks snapshot profile identity, protocol parameters, instructions and results. Profile switching changes the workspace view only: an unfinished session remains pinned to the profile/configuration it started with, and the global one-active-session guard prevents parallel practice.
 
 Song stays a shared composition. Optional SongParts belong to profiles and hold independent arrangement notes, readiness and sections. Existing shared sections remain valid. Global setlists resolve the active part when generating practice. Source records may be archived without deleting history. Historical missing sources remain understandable from snapshots.
 
@@ -17,6 +17,14 @@ Song stays a shared composition. Optional SongParts belong to profiles and hold 
 Use closed TypeScript unions, a registry for allowed capabilities and display labels, pure validators, shared editor controls and task-specific active views. Outcomes are append-only typed events with timestamps and configuration context. Counters are manual; fretboard answers are objectively checked; vocal ease/intonation are explicitly self-assessed. Blank feedback is not converted to a perfect score. Tempo summaries only use actual tempo-based evidence. Coverage means practiced, not mastered.
 
 The transport retains an internal BPM when needed by the universal optional metronome. That transport default is not an exercise result or a progress measurement when the task has no tempo.
+
+### Profile workspace semantics
+
+Profile management lives on `/profiles`, outside the Settings preferences form. A profile can be created or selected while another profile owns an unfinished session because selection does not mutate session ownership; attempting to start new practice still resumes the unfinished session instead of creating a second one.
+
+`focusAreas` is genuinely multi-valued in the editor. Existing order is preserved so the first focus remains the legacy/default aim while every selected focus can influence recommendations. New blank names are made unique deterministically; explicit duplicate names are rejected to keep the picker and historical attribution unambiguous.
+
+Migration-only `unresolved-history` profiles such as **Earlier practice** are historical buckets, not practice workspaces. They are excluded from the picker, new-session ownership and actionable search results, remain visible in the profile manager as read-only, and can be reviewed through History's profile filter. Startup normalization repairs older v2 settings that accidentally selected a historical bucket, without rewriting practice records.
 
 ### Persistence and migration
 

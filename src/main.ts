@@ -20,6 +20,7 @@ import { goalsPage } from './pages/goals.js';
 import { historyPage, sessionPage } from './pages/history.js';
 import { progressPage } from './pages/progress.js';
 import { settingsPage } from './pages/settings.js';
+import { profilesPage } from './pages/profiles.js';
 import { practicePage, activePracticePage } from './pages/practice.js';
 import { metronomePage } from './pages/metronome.js';
 import { practice } from './practice/controller.js';
@@ -40,6 +41,7 @@ function route(path:string):Page{
   if(path==='/goals')return goalsPage();
   if(path==='/progress')return progressPage();
   if(parts[0]==='history')return id?sessionPage(id):historyPage();
+  if(path==='/profiles')return profilesPage();
   if(path==='/settings')return settingsPage();
   return {node:el('div',{class:'empty-state'},el('h1',{},'Page not found.'),el('p',{},'This page does not exist.'),link('Open Today','/','button primary'))};
 }
@@ -93,7 +95,7 @@ function render():void{
   }
   const disconnectCharts=path==='/progress'?()=>{}:observeCharts(main),cleanup=current.cleanup;
   current.cleanup=()=>{disconnectCharts();cleanup?.();};
-  document.title=`${path==='/practice/active'?'Practice':navigation.find(([p])=>activeLink(p,path))?.[1]||'Steadybar'} · Steadybar`;
+  document.title=`${path==='/practice/active'?'Practice':path==='/profiles'?'Profiles':navigation.find(([p])=>activeLink(p,path))?.[1]||'Steadybar'} · Steadybar`;
   renderedPath=path;
   if(changed){window.scrollTo(0,0);main.focus({preventScroll:true});}
   else if(focusLabel&&!document.querySelector('dialog[open]')){

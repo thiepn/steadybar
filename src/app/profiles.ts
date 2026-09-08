@@ -1,5 +1,5 @@
 import { store } from './store.js';
-import { activeProfile, definition, profiles } from '../domain/profiles.js';
+import { activeProfile, definition, isPracticeProfile, practiceProfiles, profiles } from '../domain/profiles.js';
 import type { Data, Routine } from '../domain/models.js';
 import type { Experience, InstrumentFamily, InstrumentType, PracticeProfile } from '../domain/practice-types.js';
 import { freshBlocks, localDate, metadata, nowISO } from '../domain/utils.js';
@@ -7,44 +7,70 @@ import { starterContent } from '../db/profile-content.js';
 import { validateProfile } from '../domain/practice-validation.js';
 
 export interface NewProfile { name:string; instrumentType:InstrumentType; family?:InstrumentFamily; level:Experience; focusAreas:string[]; defaultSessionMinutes:number }
+const normalizedName=(value:string)=>value.trim().replace(/\s+/g,' ');
+const sameName=(a:string,b:string)=>normalizedName(a).localeCompare(normalizedName(b),undefined,{sensitivity:'accent'})===0;
+function generatedName(data:Data,base:string):string{
+  const used=profiles(data).map(p=>p.name);if(!used.some(name=>sameName(name,base)))return base;
+  let i=2;while(used.some(name=>sameName(name,`${base} ${i}`)))i++;return `${base} ${i}`;
+}
+function assertUniqueName(data:Data,name:string,exceptId?:string):void{
+  if(profiles(data).some(p=>p.id!==exceptId&&sameName(p.name,name)))throw new Error('Use a distinct profile name so profile switching and history stay unambiguous.');
+}
 export function makeProfile(values:NewProfile):PracticeProfile {
-  return validateProfile({...metadata(),...values,family:values.instrumentType==='custom'?values.family??'general':definition(values.instrumentType).family,archived:false,attribution:'selected'});
+  const name=normalizedName(values.name)||definition(values.instrumentType).label;
+  return validateProfile({...metadata(),...values,name,family:values.instrumentType==='custom'?values.family??'general':definition(values.instrumentType).family,archived:false,attribution:'selected'});
 }
 export function provisionProfile(data:Data,profile:PracticeProfile):Data {
   const next=structuredClone(data),content=starterContent(profile);
   if(profiles(next).some(p=>p.id===profile.id))throw new Error('A profile with this ID already exists.');
   next.profiles=[...profiles(next),profile];next.exercises.push(...content.exercises);next.routines.push(...content.routines);return next;
 }
-function assertIdle(data:Data):void {if(data.sessions.some(s=>s.status==='active'))throw new Error('Finish or end the current session before switching profiles. Its instrument and history will not be changed.');}
+/**
+ * Create a profile atomically. An unfinished session is allowed: it remains pinned
+ * to the profile/configuration snapshot it started with while the workspace browser
+ * switches to the newly created profile.
+ */
 export async function createProfile(values:NewProfile,activate=true):Promise<PracticeProfile>{
-  const profile=makeProfile(values);
-  await store.workspace(data=>{if(activate)assertIdle(data);const next=provisionProfile(data,profile);if(activate)next.settings={...next.settings,activeProfileId:profile.id,instrument:definition(profile.instrumentType).label,aim:profile.focusAreas[0]??'Technique'};return next;});
-  return profile;
+  let created!:PracticeProfile;
+  await store.workspace(data=>{
+    const requested=normalizedName(values.name),base=requested||definition(values.instrumentType).label;
+    const name=requested?base:generatedName(data,base);if(requested)assertUniqueName(data,name);
+    created=makeProfile({...values,name});const next=provisionProfile(data,created);
+    if(activate)next.settings={...next.settings,activeProfileId:created.id,instrument:definition(created.instrumentType).label,aim:created.focusAreas[0]??'Technique'};
+    if(!next.settings.primaryProfileId||!practiceProfiles(next).some(p=>p.id===next.settings.primaryProfileId))next.settings.primaryProfileId=created.id;
+    return next;
+  });
+  return created;
 }
+/** Switching the workspace does not mutate or re-attribute an unfinished session. */
 export async function switchProfile(id:string):Promise<void>{
-  await store.workspace(data=>{assertIdle(data);const p=profiles(data).find(p=>p.id===id&&!p.archived);if(!p)throw new Error('Choose an available profile.');return {...data,settings:{...data.settings,activeProfileId:p.id,instrument:definition(p.instrumentType).label,aim:p.focusAreas[0]??'Technique'}};});
+  await store.workspace(data=>{const p=profiles(data).find(p=>p.id===id&&isPracticeProfile(p));if(!p)throw new Error('Choose an available practice profile.');return {...data,settings:{...data.settings,activeProfileId:p.id,instrument:definition(p.instrumentType).label,aim:p.focusAreas[0]??'Technique'}};});
 }
 export async function updateProfile(profile:PracticeProfile):Promise<void>{
   await store.workspace(data=>{
     const existing=profiles(data).find(p=>p.id===profile.id);if(!existing)throw new Error('This profile no longer exists.');
+    if(existing.attribution==='unresolved-history')throw new Error('Earlier practice is a read-only historical bucket, not an editable practice profile.');
     if(existing.instrumentType!==profile.instrumentType||existing.family!==profile.family)throw new Error('Create a new profile to use a different instrument. Existing history keeps its identity.');
-    const p=validateProfile({...profile,updatedAt:nowISO()});return {...data,profiles:profiles(data).map(item=>item.id===p.id?p:item)};
+    const name=normalizedName(profile.name);assertUniqueName(data,name,profile.id);
+    const p=validateProfile({...profile,name,updatedAt:nowISO()});
+    const settings=data.settings.activeProfileId===p.id?{...data.settings,instrument:definition(p.instrumentType).label,aim:p.focusAreas[0]??'Technique'}:data.settings;
+    return {...data,settings,profiles:profiles(data).map(item=>item.id===p.id?p:item)};
   });
 }
 export async function archiveProfile(id:string,archived:boolean):Promise<void>{
   await store.workspace(data=>{
     const p=profiles(data).find(p=>p.id===id);if(!p)throw new Error('Profile not found.');
-    if(archived&&data.sessions.some(s=>s.status==='active'&&(s.profileId===id||s.blocks.some(b=>b.profileId===id))))throw new Error('End the unfinished session before archiving this profile.');
-    const remaining=profiles(data).filter(p=>p.id!==id&&!p.archived);
-    if(archived&&!remaining.length)throw new Error('Keep at least one profile available.');
-    const next={...data,profiles:profiles(data).map(p=>p.id===id?{...p,archived,updatedAt:nowISO()}:p),settings:{...data.settings}};
-    if(archived&&next.settings.activeProfileId===id){const fallback=remaining[0]!;next.settings.activeProfileId=fallback.id;next.settings.instrument=definition(fallback.instrumentType).label;next.settings.aim=fallback.focusAreas[0]??'Technique';}
-    if(archived&&next.settings.primaryProfileId===id)next.settings.primaryProfileId=remaining[0]!.id;
+    if(p.attribution==='unresolved-history')throw new Error('Earlier practice is a protected historical bucket.');
+    if(!archived&&profiles(data).some(item=>item.id!==id&&isPracticeProfile(item)&&sameName(item.name,p.name)))throw new Error('Rename this archived profile before restoring it so the profile picker stays unambiguous.');
+    if(archived&&data.sessions.some(s=>s.status==='active'&&(s.profileId===id||s.blocks.some(b=>b.profileId===id))))throw new Error('End the unfinished session before archiving the profile that owns it.');
+    const remaining=profiles(data).filter(item=>item.id!==id&&isPracticeProfile(item));
+    if(archived&&!remaining.length)throw new Error('Keep at least one practice profile available.');
+    const next={...data,profiles:profiles(data).map(item=>item.id===id?{...item,archived,updatedAt:nowISO()}:item),settings:{...data.settings}};
+    const preferred=remaining.find(item=>item.id===data.settings.primaryProfileId)??remaining[0];
+    if(archived&&next.settings.activeProfileId===id){next.settings.activeProfileId=preferred!.id;next.settings.instrument=definition(preferred!.instrumentType).label;next.settings.aim=preferred!.focusAreas[0]??'Technique';}
+    if(archived&&next.settings.primaryProfileId===id)next.settings.primaryProfileId=preferred!.id;
     return next;
   });
-}
-export async function setPrimaryProfile(id:string):Promise<void>{
-  await store.workspace(data=>{if(!profiles(data).some(p=>p.id===id&&!p.archived))throw new Error('Choose an available profile.');return {...data,settings:{...data.settings,primaryProfileId:id}};});
 }
 export function selectStarterRoutine(data:Data,profile:PracticeProfile,minutes=profile.defaultSessionMinutes):Routine|undefined {
   const list=data.routines.filter(r=>r.profileId===profile.id&&!r.archived&&r.builtin);

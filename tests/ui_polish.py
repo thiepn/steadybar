@@ -12,7 +12,7 @@ from playwright.sync_api import expect
 
 ACCENTS = ('graphite', 'blue', 'forest', 'plum', 'amber', 'rose')
 WIDTHS = (320, 360, 390, 600, 768, 820, 1024, 1180, 1280, 1440, 1920)
-ROUTES = ('/', '/practice', '/metronome', '/library', '/routines', '/songs', '/setlists', '/goals', '/progress', '/history', '/settings')
+ROUTES = ('/', '/practice', '/metronome', '/library', '/routines', '/songs', '/setlists', '/goals', '/progress', '/history', '/profiles', '/settings')
 
 class UIPolish(e2e.MusicPracticeTests):
     def mode(self, name):

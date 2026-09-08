@@ -1,6 +1,6 @@
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { protocolSummary } from '../domain/protocols.js';
-import { activeProfile } from '../domain/profiles.js';
+import { activeProfile, profiles } from '../domain/profiles.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -22,16 +22,23 @@ export function editSessionReview(session:PracticeSession):void{
   },'Save review');
 }
 export function historyPage():Page{
-  const sessions=finishedSessions(store.view().sessions).sort((a,b)=>b.startedAt.localeCompare(a.startedAt));
-  const page=el('div',{class:'page'},pageHeader('','History',`${activeProfile(store.snapshot()).name} · sessions, task results, and notes.`));
-  if(!sessions.length){page.append(empty('No practice history yet.','Finish your first session and your practice record will begin here.',link('Start practice','/practice','button primary','play'),'history'));return {node:page};}
-  const search=el('input',{type:'search',placeholder:'Find a session by exercise, song, or note…','aria-label':'Search practice history'}),list=el('div',{class:'history-list'});let visible=30;
+  const data=store.snapshot(),selected=activeProfile(data),sessions=finishedSessions(data.sessions).sort((a,b)=>b.startedAt.localeCompare(a.startedAt));
+  const page=el('div',{class:'page'},pageHeader('','History','Review saved sessions without changing the profile you are currently practicing.'));
+  const search=el('input',{type:'search',placeholder:'Find a session by exercise, song, or note…','aria-label':'Search practice history'});
+  const profileFilter=select('historyProfile','History profile',[
+    ['selected',`Selected · ${selected.name}`],['all','All profiles'],
+    ...profiles(data).filter(p=>p.id!==selected.id).map(p=>[`profile:${p.id}`,`${p.name}${p.attribution==='unresolved-history'?' · history only':p.archived?' · archived':''}`] as [string,string]),
+  ],'selected');
+  const filter=profileFilter.querySelector('select')!,list=el('div',{class:'history-list'});let visible=30;
   const more=button('Show more sessions',()=>{visible+=30;draw();},'secondary');
+  const scoped=()=>filter.value==='all'?sessions:filter.value==='selected'?sessions.filter(s=>s.profileId===selected.id):sessions.filter(s=>s.profileId===filter.value.slice('profile:'.length));
   const draw=()=>{
-    const query=search.value.toLowerCase(),filtered=sessions.filter(s=>`${s.sessionNotes} ${s.blocks.map(b=>`${b.titleSnapshot} ${b.notes}`).join(' ')}`.toLowerCase().includes(query));list.replaceChildren();
+    const query=search.value.toLowerCase(),filtered=scoped().filter(s=>`${s.profileNameSnapshot??''} ${s.sessionNotes} ${s.blocks.map(b=>`${b.titleSnapshot} ${b.notes}`).join(' ')}`.toLowerCase().includes(query));list.replaceChildren();
     for(const s of filtered.slice(0,visible))list.append(el('article',{class:'history-card'},el('div',{class:'history-date'},el('strong',{},formatDate(s.startedAt)),el('span',{class:'muted small'},new Date(s.startedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))),el('div',{class:'history-main'},el('h2',{},link(s.blocks[0]?.titleSnapshot||'Practice session',`/history/${s.id}`)),el('p',{class:'muted small'},s.profileNameSnapshot??'Earlier practice'),el('p',{class:'muted small'},s.blocks.slice(1,4).map(b=>b.titleSnapshot).join(' · ')||'Single-block session'),el('div',{class:'tag-row'},badge(s.status==='completed'?'Completed':'Ended early',s.status==='completed'?'accent':'neutral'),badge(`${s.blocks.length} blocks`),s.sessionRating?badge(`Reflection ${s.sessionRating}/5`):null),s.sessionNotes?el('p',{class:'muted small line-clamp'},s.sessionNotes):null),el('div',{class:'history-duration'},el('strong',{},duration(sessionTime(s))),link('Review',`/history/${s.id}`,'text-link','arrow'))));
-    more.hidden=visible>=filtered.length;if(!filtered.length)list.append(empty('No matching sessions.','Try another exercise name or a phrase from your notes.'));
-  };search.addEventListener('input',()=>{visible=30;draw();});draw();page.append(el('div',{class:'library-toolbar'},search),list,el('div',{class:'page-footer'},more));return {node:page};
+    more.hidden=visible>=filtered.length;if(!filtered.length)list.append(empty(filter.value==='selected'?'No history for the selected profile.':'No matching sessions.',filter.value==='selected'?'Choose All profiles or another historical profile to review other sessions.':'Try another profile, exercise name, or phrase from your notes.',filter.value==='selected'?link('Start practice','/practice','button primary','play'):undefined));
+  };
+  search.addEventListener('input',()=>{visible=30;draw();});filter.addEventListener('change',()=>{visible=30;draw();});draw();
+  page.append(el('div',{class:'library-toolbar history-toolbar'},search,profileFilter),list,el('div',{class:'page-footer'},more));return {node:page};
 }
 export function sessionPage(id:string,review=false):Page{
   const data=store.snapshot(),session=data.sessions.find(s=>s.id===id);if(!session)return {node:empty('Session not found.','This session may have been removed by a data restore.',link('History','/history','button primary'))};

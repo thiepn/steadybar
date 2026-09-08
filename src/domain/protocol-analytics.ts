@@ -2,6 +2,7 @@ import type { Data, PracticeSession } from './models.js';
 import type { ProtocolOutcome } from './practice-types.js';
 const finishedSessions=(sessions:PracticeSession[])=>sessions.filter(s=>s.status!=='active');
 import { NOTE_NAMES } from './protocols.js';
+import { activeProfile } from './profiles.js';
 export function protocolResults(sessions:PracticeSession[],exerciseId?:string):ProtocolOutcome[]{
   return finishedSessions(sessions).flatMap(s=>s.blocks.filter(b=>!exerciseId||b.sourceExerciseId===exerciseId).flatMap(b=>b.outcomes??[]));
 }
@@ -43,7 +44,8 @@ const matchedFocus=(skill:string|undefined,focusAreas:string[]):string|undefined
   return focusAreas.find(focus=>{const focusSet=focusTokens(focus);return [...skillSet].every(token=>focusSet.has(token))||[...focusSet].every(token=>skillSet.has(token));});
 };
 export function suggestedExercises(data:Data):{id:string;reason:string}[]{
-  const p=data.profiles?.find(p=>p.id===data.settings.activeProfileId);if(!p)return [];
+  if(data.schemaVersion!==2)return [];
+  const p=activeProfile(data);
   const last=new Map<string,string>();for(const s of finishedSessions(data.sessions))for(const b of s.blocks)if(b.sourceExerciseId&&(!last.has(b.sourceExerciseId)||last.get(b.sourceExerciseId)!<s.startedAt))last.set(b.sourceExerciseId,s.startedAt);
   const selected=data.exercises.filter(e=>e.profileId===p.id&&!e.archived),matches=new Map(selected.map(e=>[e.id,matchedFocus(e.skillArea,p.focusAreas)]));
   const score=(e:Data['exercises'][number])=>data.goals.some(g=>g.exerciseId===e.id&&!g.completed)?2:matches.get(e.id)?1:0;
