@@ -67,6 +67,7 @@ class MusicPracticeTests(unittest.TestCase):
             html=re.sub(r'<script\b[^>]*>.*?</script>','',html,flags=re.S)
             self.page.set_content(html)
             self.page.add_style_tag(content=(ROOT/'src/styles/main.css').read_text(encoding='utf-8'))
+            self.page.add_style_tag(content=(ROOT/'dist/appearance.css').read_text(encoding='utf-8'))
             self.page.add_script_tag(content=(ROOT/'.qa/render-bundle.js').read_text(encoding='utf-8'))
         else:
             self.page.goto(URL,wait_until='networkidle')

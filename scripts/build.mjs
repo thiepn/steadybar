@@ -1,3 +1,4 @@
+import { generateAppearance } from './appearance.mjs';
 import { execFileSync } from 'node:child_process';
 import { readdir, mkdir, rm, copyFile, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -7,6 +8,9 @@ await mkdir('dist', { recursive: true });
 execFileSync(process.execPath, ['node_modules/typescript/bin/tsc'], { stdio: 'inherit' });
 for (const name of await readdir('public')) await copyFile(join('public', name), join('dist', name));
 await copyFile('src/styles/main.css', 'dist/styles.css');
+const appearance = await generateAppearance();
+await writeFile('dist/appearance.css', appearance.stylesheet);
+await writeFile('dist/theme.js', appearance.prepaint);
 async function walk(dir) {
   const out = [];
   for (const item of await readdir(dir, { withFileTypes: true })) {

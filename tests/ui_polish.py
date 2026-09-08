@@ -49,7 +49,7 @@ class UIPolish(e2e.MusicPracticeTests):
             expect(self.page.locator('html')).to_have_attribute('data-theme', scheme)
         self.mode('light'); self.page.emulate_media(color_scheme='dark')
         expect(self.page.locator('html')).to_have_attribute('data-theme', 'light')
-        self.assertEqual(self.page.locator('meta[name="theme-color"]').get_attribute('content'), '#f5f4ef')
+        self.assertEqual(self.page.locator('meta[name="theme-color"]').get_attribute('content'), '#f5f5f5')
         (e2e.ARTIFACTS/'palette-results.json').write_text(json.dumps(evidence,indent=2))
 
     def test_31_appearance_preserves_unsaved_preferences(self):

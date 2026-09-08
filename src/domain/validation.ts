@@ -1,3 +1,4 @@
+import { ACCENTS, SURFACE_THEMES } from './appearance.js';
 import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan } from './models.js';
 
 /** Small typed runtime validators, used at every persistence boundary. No coercion. */
@@ -130,7 +131,7 @@ export const validateGoal: Validator<Goal> = (v,p='Goal') => {
 };
 export const validateSetlist: Validator<Setlist> = obj({ ...entity, name, date:optional(dateOnly), songIds:arr(id,200), notes:text() });
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
-export const validateSettings: Validator<Settings> = obj({ id:one('preferences'), theme:one('system','light','dark'), accent:optional(one('graphite','blue','forest','plum','amber','rose')), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
+export const validateSettings: Validator<Settings> = obj({ id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
 const dataSchema: Validator<Data> = obj({ exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
