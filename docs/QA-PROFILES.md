@@ -46,6 +46,10 @@ Release-test corrections keep the original functional requirements intact:
 
 These are synchronization and data-integrity corrections, not disabled gates. A clean GitHub `npm ci && npm run check` passed before the hardened candidate was pushed. Final Chromium, Firefox and WebKit profile/migration checks remain mandatory before merge and deployment.
 
+## WebKit saved-leave synchronization audit
+
+The next full PR run passed every pre-profile WebKit gate and 19 of 20 profile tests. The sole failure occurred because the test clicked `Save & leave` and immediately forced `/settings` before the production async pause/save handler completed. WebKit then correctly completed the handler and navigated to Today, leaving the locator on the wrong page. The release test now waits for the observable Today transition before routing to Settings. The production behavior and profile-switch protection assertion are unchanged. The exact corrected case passed a clean-install targeted browser run before the feature branch was updated.
+
 ## Post-implementation corrections
 
 The broader audit corrected: global-meter leakage into song and groove snapshots; stale BPM/trainers in future plans after a protocol edit; tempo controls remaining mounted for untimed tasks; incomplete part context in historical cues; false tempo progress for non-tempo outcomes; scale context conflation; migration split-ID/source-routine collisions; ambiguous historical attribution; pitch-goal scope; routine part/section selection; delayed reference audio after stop/navigation; broad history rewrites during profile renaming; undersized desktop transport controls; stale reflection/song writes; cross-profile active-session visibility; and compound-focus recommendation matching. Unit or browser regressions cover these behaviors where practical.
