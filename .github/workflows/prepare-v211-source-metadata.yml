@@ -20,10 +20,12 @@ jobs:
           cache: npm
       - name: Apply audited source metadata fixes
         run: python3 tools/apply_v211_source_metadata.py
+      - name: Apply source-edit concurrency hardening
+        run: python3 tools/apply_v211_source_concurrency.py
       - name: Apply existing-session put guard
         run: python3 tools/apply_v211_session_put_guard.py
       - name: Remove one-shot patchers
-        run: git rm tools/apply_v211_source_metadata.py tools/apply_v211_session_put_guard.py
+        run: git rm tools/apply_v211_source_metadata.py tools/apply_v211_source_concurrency.py tools/apply_v211_session_put_guard.py
       - name: Verify exact candidate
         run: |
           git diff --check
