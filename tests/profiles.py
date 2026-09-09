@@ -173,9 +173,10 @@ class Profiles(e2e.MusicPracticeTests):
         self.assertEqual(self.read("load('app/store.js').store.view().dailyPlans.length"),0)
         self.route('/');self.page.get_by_role('button',name='Build a plan',exact=True).click()
         self.wait_read("load('app/store.js').store.view().dailyPlans.length",lambda value:value==1)
-        original_plan=self.state()['dailyPlans'][0];self.page.wait_for_timeout(2)
+        original_plan=next(p for p in self.state()['dailyPlans'] if p['profileId']==guitar['id']);self.page.wait_for_timeout(2)
         self.page.get_by_role('button',name='Build a plan',exact=True).click();self.confirm('Build plan')
-        rebuilt=self.state()['dailyPlans'][0];self.assertEqual(rebuilt['id'],original_plan['id']);self.assertEqual(rebuilt['createdAt'],original_plan['createdAt']);self.assertGreater(rebuilt['updatedAt'],original_plan['updatedAt'])
+        rebuilt=self.wait_read("load('app/store.js').store.snapshot().dailyPlans.find(p=>p.id==="+json.dumps(original_plan['id'])+")",lambda plan:bool(plan) and plan['updatedAt']>original_plan['updatedAt'])
+        self.assertEqual(rebuilt['id'],original_plan['id']);self.assertEqual(rebuilt['createdAt'],original_plan['createdAt']);self.assertGreater(rebuilt['updatedAt'],original_plan['updatedAt'])
         _,session=self.complete_example('guitar')
         self.route('/profiles');row=self.page.locator('.profile-row').filter(has=self.page.get_by_text('Electric guitar',exact=True))
         row.get_by_role('button',name='Edit',exact=True).click();self.dialog_fill('Profile name','Stage guitar');self.save_dialog('Save profile')
@@ -362,7 +363,8 @@ class Profiles(e2e.MusicPracticeTests):
         self.page.get_by_role('button',name='Edit song',exact=True).click();self.dialog_fill('Title','Reference source renamed');self.save_dialog('Save song')
         data=self.state();plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['title'],'Reference source renamed · Middle 8');self.assertGreater(plan['updatedAt'],stamp);stamp=plan['updatedAt']
         self.page.get_by_role('button',name='Remove Middle 8',exact=True).click();self.confirm('Remove section')
-        data=self.state();plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['type'],'song');self.assertNotIn('songSectionId',block);self.assertEqual(block['title'],'Reference source renamed');self.assertGreater(plan['updatedAt'],stamp)
+        data=self.wait_read("load('app/store.js').store.snapshot()",lambda d:any(b.get('songId')==song_id and b.get('type')=='song' and not b.get('songSectionId') for p in d['dailyPlans'] for b in p['blocks']))
+        plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['type'],'song');self.assertNotIn('songSectionId',block);self.assertEqual(block['title'],'Reference source renamed');self.assertGreater(plan['updatedAt'],stamp)
 
     def test_76_profile_management_preserves_focuses_names_and_history_buckets(self):
         self.onboard_type('guitar');first=self.profile();self.route('/profiles')
