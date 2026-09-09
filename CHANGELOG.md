@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.0 — Guided instrument courses — 2026-09-09
+
+- Add Learn: 16 original courses, 94 lessons and 188 runnable tasks, with distinct Foundations, Skill development and Ensemble application pathways for the five principal instruments.
+- Add actual teaching, worked patterns/diagrams, isolation/application, easier/harder variants, repair advice, performance criteria, knowledge questions, review history and lesson notes. Custom instruments receive an honestly scoped practice-method course.
+- Integrate lesson launch, non-destructive Today planning, profile-aware search/progress and return-to-lesson session history. Keep lesson ownership as immutable session/block provenance.
+- Add explicit self-check assessments and flexible review suggestions; do not award skill completion for reading, elapsed time, placement or confidence. Separate actual app evidence from explicitly reported off-app practice.
+- Require personally chosen vocal ranges, bound complete intervals/patterns and include rest in short vocal lesson budgets. Do not mislabel displayed reading examples as unseen first reads.
+- Add IndexedDB courseProgress store in physical schema 4 without renaming the database or rewriting old practice history. Export whole-workspace backup v3; retain v1/v2 import support.
+- Add curriculum contract, state, transaction rollback/concurrency, guided UI, migration, backup/offline and responsive tests; retain every previous release gate.
+- Document primary educational/research sources and the limits of self-directed, self-reported learning.
+
 ## 2.0.1 — Profile system hardening — 2026-09-08
 
 - Move profile management out of the dirty Settings form into a dedicated `/profiles` workspace, with Settings and command-search links back to it.

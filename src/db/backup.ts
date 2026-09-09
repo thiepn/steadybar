@@ -5,7 +5,7 @@ import type { Backup, Data } from '../domain/models.js';
 import { localDate, nowISO } from '../domain/utils.js';
 import { recoverSession } from '../practice/logic.js';
 import { readData, replaceData } from './database.js';
-export function createBackup(data:Data,timestamp=nowISO()):Backup {return validateBackup({format:'music-practice-os',version:data.schemaVersion===2?2:1,exportedAt:timestamp,data});}
+export function createBackup(data:Data,timestamp=nowISO()):Backup {return validateBackup({format:'music-practice-os',version:data.schemaVersion===2?3:1,exportedAt:timestamp,data:data.schemaVersion===2?{...data,courseProgress:data.courseProgress??[]}:data});}
 export function parseBackup(text:string):Backup {
   if(text.length > 100*1024*1024) throw new Error('This backup is larger than 100 MB. No data was changed.');
   let parsed:unknown;

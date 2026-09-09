@@ -92,7 +92,7 @@ class MusicPracticeTests(unittest.TestCase):
         if OPTIONS.render:
             return self.page.evaluate("async (expr)=>{const load=__qa.load;return await (new Function('load','return ('+expr+')'))(load)}",expression)
         # Expressions have synchronous load references; load only the known module set first.
-        return self.page.evaluate("async (expr)=>{const names=['app/store.js','practice/controller.js','db/database.js','db/backup.js','domain/analytics.js','audio/engine.js','domain/models.js','practice/logic.js','db/seed.js','app/profiles.js','audio/reference.js','domain/protocols.js'];const entries=await Promise.all(names.map(async id=>[id,await import('./app/'+id)]));const modules=Object.fromEntries(entries);return await (new Function('load','return ('+expr+')'))(id=>modules[id]);}",expression)
+        return self.page.evaluate("async (expr)=>{const names=['app/store.js','practice/controller.js','db/database.js','db/backup.js','domain/analytics.js','audio/engine.js','domain/models.js','practice/logic.js','db/seed.js','app/profiles.js','audio/reference.js','domain/protocols.js','domain/utils.js','learning/catalog.js','learning/engine.js','ui/editors.js'];const entries=await Promise.all(names.map(async id=>[id,await import('./app/'+id)]));const modules=Object.fromEntries(entries);return await (new Function('load','return ('+expr+')'))(id=>modules[id]);}",expression)
 
     def dialog_fill(self,name,value):
         self.page.locator('dialog[open]').last.get_by_label(name,exact=True).fill(str(value))

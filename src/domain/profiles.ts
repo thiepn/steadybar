@@ -32,7 +32,7 @@ export function activeProfile(data: Data): PracticeProfile {
 export function profileName(data: Data,id?:string): string { return profiles(data).find(p=>p.id===id)?.name ?? 'Earlier practice'; }
 export function profileView(data: Data,id=activeProfile(data).id): Data {
   if(!data.profiles || !id)return data;
-  return {...data,exercises:data.exercises.filter(e=>e.profileId===id),routines:data.routines.filter(r=>r.profileId===id),
+  return {...data,courseProgress:data.courseProgress?.filter(p=>p.profileId===id),exercises:data.exercises.filter(e=>e.profileId===id),routines:data.routines.filter(r=>r.profileId===id),
     dailyPlans:data.dailyPlans.filter(p=>p.profileId===id),goals:data.goals.filter(g=>!g.profileId||g.profileId===id),
     sessions:data.sessions.filter(s=>s.profileId===id)};
 }

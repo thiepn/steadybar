@@ -1,4 +1,5 @@
 import type { PracticeProfile, PracticeProtocol, ProtocolOutcome, ProtocolState, SongPart, Experience } from './practice-types.js';
+import type { CourseProgress, LessonSource } from '../learning/types.js';
 import type { AccentColor, SurfaceTheme } from './appearance.js';
 export type Category = 'rudiment' | 'technique' | 'groove' | 'coordination' | 'warmup' | 'timing' | 'other';
 export const CATEGORIES: Category[] = ['rudiment', 'technique', 'groove', 'coordination', 'warmup', 'timing', 'other'];
@@ -31,6 +32,7 @@ export interface Song extends Entity {
   difficulty: 1 | 2 | 3 | 4 | 5; status: SongStatus; notes: string; sections: SongSection[]; parts?: SongPart[];
 }
 export interface RoutineBlock {
+  lessonSource?: LessonSource;
   id: string; type: 'exercise' | 'song' | 'song-section' | 'free';
   exerciseId?: string; songId?: string; songSectionId?: string; songPartId?: string; profileId?: string; protocol?: PracticeProtocol;
   title: string; targetSeconds: number; bpm?: number; notes: string;
@@ -44,6 +46,7 @@ export interface Routine extends Entity {
 export interface DailyPlan extends Entity { profileId?: string; date: string; sourceRoutineId?: string; blocks: RoutineBlock[] }
 export interface TempoAttempt { id: string; bpm: number; rating: Rating; timestamp: string; durationSeconds?: number; note: string }
 export interface PracticeBlock {
+  lessonSource?: LessonSource;
   profileId?: string; profileNameSnapshot?: string; protocolSnapshot?: PracticeProtocol; instructionsSnapshot?: string; outcomes?: ProtocolOutcome[]; protocolState?: ProtocolState; sourceSongPartId?: string;
   id: string; type: RoutineBlock['type']; sourceExerciseId?: string; sourceSongId?: string; sourceSongSectionId?: string;
   titleSnapshot: string; categorySnapshot: string; stickingSnapshot: string;
@@ -78,11 +81,11 @@ export interface Settings {
   pauseWhenHidden: boolean; seedVersion: number;
 }
 export interface Data {
-  schemaVersion?: 2; profiles?: PracticeProfile[];
+  schemaVersion?: 2; profiles?: PracticeProfile[]; courseProgress?: CourseProgress[];
   exercises: Exercise[]; songs: Song[]; routines: Routine[]; dailyPlans: DailyPlan[];
   sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; metronomePresets: Preset[];
   settings: Settings;
 }
-export interface Backup { format: 'music-practice-os'; version: 1 | 2; exportedAt: string; data: Data }
+export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3; exportedAt: string; data: Data }
 export const DEFAULT_METRONOME: MetronomeConfig = { bpm: 80, meter: { beats: 4, beatUnit: 4 }, subdivision: 1, accents: [2,1,1,1], countIn: 0, volume: 0.65 };
 export const DEFAULT_SETTINGS: Settings = { id: 'preferences', theme: 'system', accent: 'graphite', surfaceTheme: 'neutral', instrument: 'Drums', aim: 'Technique', onboardingDone: false, metronome: DEFAULT_METRONOME, wakeLock: true, defaultFocus: true, pauseWhenHidden: true, seedVersion: 1 };

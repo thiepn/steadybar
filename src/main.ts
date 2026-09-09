@@ -11,6 +11,7 @@ import { applyPwaUpdate, pwaState, registerPwa } from './app/pwa.js';
 import { el } from './ui/dom.js';
 import { brandMark, icon, type IconName } from './ui/icons.js';
 import { button, dialog, iconButton, link, notify } from './ui/components.js';
+import { coursesPage } from './pages/courses.js';
 import { todayPage } from './pages/today.js';
 import { libraryPage, exercisePage } from './pages/library.js';
 import { routinesPage, routinePage } from './pages/routines.js';
@@ -25,7 +26,7 @@ import { practicePage, activePracticePage } from './pages/practice.js';
 import { metronomePage } from './pages/metronome.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/progress','Progress','progress'],['/history','History','history'],['/settings','Settings','settings']];
+const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/progress','Progress','progress'],['/history','History','history'],['/settings','Settings','settings']];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
@@ -34,6 +35,7 @@ function route(path:string):Page{
   if(path==='/practice/active')return activePracticePage();
   if(path==='/practice')return practicePage();
   if(path==='/metronome')return metronomePage();
+  if(parts[0]==='courses')return coursesPage(id,parts[2],parts[3]);
   if(parts[0]==='library')return id?exercisePage(id):libraryPage();
   if(parts[0]==='routines')return id?routinePage(id):routinesPage();
   if(parts[0]==='songs')return id?songPage(id,parts[2]==='parts'?parts[3]:undefined):songsPage();

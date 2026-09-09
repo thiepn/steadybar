@@ -1,6 +1,6 @@
 # Steadybar
 
-A local-first practice workspace for **Drums, Guitar, Bass, Piano, Voice and custom instruments**. Each profile has its own exercises, practice protocols, plans, results and progress.
+A local-first practice workspace for **Drums, Guitar, Bass, Piano, Voice and custom instruments**. Each profile has its own exercises, practice protocols, plans, results, progress and guided learning record.
 
 Plan a session, use task-specific counters, cues or reference tones, and review what you actually practiced. No account, required backend, telemetry, remote fonts, or runtime npm dependencies.
 
@@ -21,6 +21,28 @@ npm run preview
 ```
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
+
+## Guided courses — 2.1.0
+
+Open **Learn** to follow an actual teaching sequence: **16 original courses, 94 lessons and 188 runnable lesson tasks**. Drums, Guitar, Bass, Piano and Voice each have Foundations (8 lessons), Skill development (6) and Ensemble application (4). The Custom profile has a four-lesson practice-method course, not fictitious instrument-specific tuition.
+
+| Instrument | Course progression |
+|---|---|
+| Drums | Rebound and subdivision → backbeats, coordination, fills → dynamics, form and ensemble cues. |
+| Guitar | Tuning, string contact, readable chord-fret diagrams → rhythmic changes, triads, fingerpicking and note patterns → capo, texture and arrangement. |
+| Bass | Touch and two-hand muting → note length, roots/fifths/thirds, chord tones and anticipations → coordination with drums and supportive lines. |
+| Piano | Keyboard geography and hand coordination → scales, triads, inversions, articulation and prepared reading → comping, transposition and ensemble form. |
+| Voice | Comfort and stopping rules → pitch patterns, short phrases, breath coordination and harmony → unison, entrances, microphone awareness and vocal pacing. |
+
+Every lesson contains teaching, an original worked example, isolation and application tasks, easier/harder variants, a common mistake and repair, observable performance criteria, a knowledge question and a lesson note. Chord tables, rhythm grids and selected local pitch references are provided where relevant. Teaching and examples remain available offline.
+
+**Practice this lesson** creates a normal two-block session. **Add lesson to Today** appends those tasks without replacing your existing plan. Session history links back to the exact owning profile and lesson. An unfinished session cannot be silently reassigned to another lesson.
+
+Finishing a timer does **not** pass a lesson. A self-check needs both practice tasks, every performance criterion and the correct knowledge answer. Actual completed guided sessions can support the check; explicitly reported off-app practice is kept separate from app session time. Reading a lesson, placement checklists and confidence ratings do not award proficiency. Failed checks remain useful observations without penalties. Later reviews use a flexible organizational heuristic, not a scientifically validated mastery prediction. No lessons are locked.
+
+Voice setup requires a personally chosen comfortable root/range and a new comfort confirmation; complete patterns **and interval endpoints** must fit. Its 5–10-minute lesson budget includes rest, listening and reflection, not continuous singing. Stop for discomfort or hoarseness; the app cannot assess vocal health. Displayed reading examples are prepared reading, not unseen first reads. Pitch references use equal-duration sine tones and do not reproduce written rhythm or listen to your playing.
+
+See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architecture and QA](docs/COURSES-2.1-ARCHITECTURE.md), and [2.1 upgrade/backup guide](docs/MIGRATION-COURSES-2.1.md). This is a bounded self-directed course library, not teacher certification, accredited grades, full staff-notation tuition, a professional instrumental program or automatic performance analysis.
 
 ## Included workflows
 
@@ -59,7 +81,9 @@ Use `python` in place of `python3` on Windows when appropriate. `npm test` build
 
 `npm run test:workbench` exercises the 14 requested viewport sizes, populated routes, 2,030-exercise search fixture, keyboard states and theme contrast. CI runs native capability and workbench suites in Chromium, Firefox and WebKit. These are browser engines, not a claim of physical iOS/Android testing. Native failures block deployment. `PLAYWRIGHT_ENGINE=firefox` or `webkit` selects an installed engine.
 
-`npm run test:profiles` runs all instrument-specific workflows, native upgrade/restore/offline cases and 630 populated profile/route/viewport combinations. `python3 tests/profiles.py --render` excludes the two native-only tests explicitly. Run browser suites only after a completed build, not while `dist/` is being rebuilt.
+`npm run test:profiles` runs all instrument-specific workflows, native upgrade/restore/offline cases and the populated profile/route/viewport matrix. `python3 tests/profiles.py --render` excludes the two native-only tests explicitly. Run browser suites only after a completed build, not while `dist/` is being rebuilt.
+
+`npm run test:courses` runs guided lesson, evidence, quiz, profile isolation, native database 3→4 migration, v3 backup/offline and six-instrument responsive checks. CI runs it in all three browser engines; `python3 tests/courses.py --render` explicitly skips the two native-only cases.
 
 ## Architecture
 
@@ -71,7 +95,7 @@ Strict TypeScript, native DOM components, IndexedDB, Web Audio, local SVG charts
 
 Data belongs to the browser profile and origin. Another device, browser, port or domain does not share it. Export backups regularly and before moving domains. Restore supports validated transactional **replacement**, not merge. Reset and replacement require confirmation and initiate a safety-backup download; verify that your browser saved it.
 
-Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 2** and the same `music-practice-os` format identifier. Version-1 backups remain importable through explicit conversion. The physical IndexedDB version is 3; a pre-upgrade original copy is downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; the old app cannot consume a v2 backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
+Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 3** and the same `music-practice-os` format identifier. Version-1 and version-2 backups remain importable. The physical IndexedDB version is 4; course progress has its own store. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
 
 Active sessions checkpoint every five seconds. Recovery excludes unknown crash downtime; up to the last checkpoint interval may be missing. Backgrounding pauses practice. Keep the app foregrounded for reliable audio; OS suspension and hardware/Bluetooth latency are outside its timing guarantees.
 

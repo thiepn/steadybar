@@ -33,7 +33,7 @@ for(const type of Object.keys(baseCounts)){
  test(`${type}: every starter task can enter a session, finish, export and restore`,()=>{
   const d=dataset(type);
   for(const e of d.exercises){const s=createSession([block(e)],d);assert.equal(s.profileId,e.profileId);assert.deepEqual(s.blocks[0].protocolSnapshot,e.protocol);d.sessions.push(finishBlock(s));}
-  const b=createBackup(d);assert.equal(b.version,2);assert.deepEqual(parseBackup(JSON.stringify(b)).data,validateData(d));
+  const b=createBackup(d);assert.equal(b.version,3);assert.deepEqual(parseBackup(JSON.stringify(b)).data,validateData({...d,courseProgress:[]}));
  });
  test(`${type}: unique profile installations do not collide`,()=>{
   const p=profile(type),a=starterContent(p),b=starterContent({...p,id:p.id+'-second'});assert.equal(a.exercises.filter(e=>b.exercises.some(o=>o.id===e.id)).length,0);

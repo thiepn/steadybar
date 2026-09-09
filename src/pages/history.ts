@@ -1,3 +1,4 @@
+import { courseById, lessonLink } from '../learning/engine.js';
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { protocolSummary } from '../domain/protocols.js';
 import { activeProfile, profiles } from '../domain/profiles.js';
@@ -46,6 +47,13 @@ export function sessionPage(id:string,review=false):Page{
   const page=el('div',{class:'page session-review'},link(review?'Back to today':'Practice history',review?'/':'/history','back-link'),pageHeader(review?'':formatDate(session.startedAt,true),review?'Session complete.':'Session details',review?'Review your time, attempts, and notes.':`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
   page.append(el('div',{class:'stats-strip'},stat('Active practice',duration(sessionTime(session))),stat('Blocks completed',`${session.blocks.filter(b=>b.completed).length} / ${session.blocks.length}`),stat(clean.length?'Clean tempo attempts':'Task results',clean.length||session.blocks.reduce((n,b)=>n+(b.outcomes?.length??0),0)),stat('Session reflection',session.sessionRating?`${session.sessionRating} / 5`:'Not rated')));
   page.append(el('p',{class:'session-profile muted'},session.profileNameSnapshot??'Earlier practice'));
+  const lessonKeys=new Set<string>();
+  for(const block of session.blocks){
+    const source=block.lessonSource;if(!source||!session.profileId)continue;
+    const key=`${source.courseId}/${source.lessonId}`;if(lessonKeys.has(key))continue;lessonKeys.add(key);
+    const course=courseById(source.courseId),lesson=course?.lessons.find(l=>l.id===source.lessonId);
+    if(course&&lesson)page.append(el('section',{class:'learning-summary'},el('div',{},el('h2',{},'Review your learning'),el('p',{class:'muted small'},'Practice time does not automatically pass a lesson. Check the performance and understanding separately.')),link('Return to lesson: '+lesson.title,lessonLink(course,lesson,session.profileId),'button secondary')));
+  }
   if(session.sessionNotes)page.append(el('section',{class:'panel'},sectionHeader('Reflection'),el('p',{class:'pre-line'},session.sessionNotes)));
   const records=el('section',{class:'panel'},sectionHeader('Practice blocks','Snapshots are kept even when source exercises or songs change.'));
   for(const [i,block] of session.blocks.entries()){

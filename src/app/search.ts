@@ -1,3 +1,4 @@
+import { coursesFor, lessonLink } from '../learning/engine.js';
 import { activeProfile, practiceProfiles, profileName } from '../domain/profiles.js';
 import { switchProfile } from './profiles.js';
 import { store } from './store.js';
@@ -10,11 +11,16 @@ import { icon, type IconName } from '../ui/icons.js';
 interface SearchItem{label:string;type:string;icon:IconName;action:()=>void|Promise<unknown>}
 export function openSearch():void{
   if(document.querySelector('dialog[open]'))return;
-  const data=store.snapshot(),selectedProfileId=activeProfile(data).id,availableProfileIds=new Set(practiceProfiles(data).map(p=>p.id)),query=el('input',{type:'search',placeholder:'Find an exercise, song, routine, or action…','aria-label':'Search everything',autocomplete:'off',class:'command-input'}),results=el('div',{class:'command-results',role:'list','aria-label':'Search results'});
+  const data=store.snapshot(),selectedProfileId=activeProfile(data).id,availableProfileIds=new Set(practiceProfiles(data).map(p=>p.id)),query=el('input',{type:'search',placeholder:'Find a lesson, exercise, song, routine, or action…','aria-label':'Search everything',autocomplete:'off',class:'command-input'}),results=el('div',{class:'command-results',role:'list','aria-label':'Search results'});
   const items:SearchItem[]=[
     {label:'Start practice',type:'Command',icon:'play',action:()=>navigate('/practice')},{label:'Open metronome',type:'Command',icon:'pulse',action:()=>navigate('/metronome')},
     {label:'New exercise',type:'Command',icon:'plus',action:()=>editExercise()},{label:'New routine',type:'Command',icon:'plus',action:()=>editRoutine()},{label:'New song',type:'Command',icon:'plus',action:()=>editSong()},{label:'New setlist',type:'Command',icon:'plus',action:()=>editSetlist()},{label:'New goal',type:'Command',icon:'plus',action:()=>editGoal()},
     {label:'Open progress',type:'Command',icon:'progress',action:()=>navigate('/progress')},{label:'Manage profiles',type:'Command',icon:'settings',action:()=>navigate('/profiles')},{label:'Open settings',type:'Command',icon:'settings',action:()=>navigate('/settings')},{label:'Export backup',type:'Command',icon:'download',action:exportBackup},
+    {label:'Open guided courses',type:'Command',icon:'library',action:()=>navigate('/courses')},
+    ...coursesFor(activeProfile(data)).flatMap(course=>[
+      {label:course.title,type:'Course',icon:'library' as const,action:()=>navigate(`/courses/${course.id}`)},
+      ...course.lessons.map(lesson=>({label:lesson.title,type:`Lesson · ${course.title}`,icon:'library' as const,action:()=>navigate(lessonLink(course,lesson,selectedProfileId))})),
+    ]),
     ...data.exercises.filter(e=>!e.archived&&(!e.profileId||availableProfileIds.has(e.profileId))).map(e=>({label:e.name,type:`Exercise · ${profileName(data,e.profileId)}`,icon:'library' as const,action:()=>navigate(`/library/${e.id}`)})),
     ...data.songs.flatMap(s=>(s.parts??[]).filter(p=>availableProfileIds.has(p.profileId)).map(p=>({label:`${s.title} · ${p.name}`,type:`Song part · ${profileName(data,p.profileId)}`,icon:'song' as const,action:async()=>{if(p.profileId!==selectedProfileId)await switchProfile(p.profileId);navigate(`/songs/${s.id}/parts/${p.id}`);}}))),
     ...data.songs.filter(s=>s.status!=='archived').map(s=>({label:s.title,type:'Song',icon:'song' as const,action:()=>navigate(`/songs/${s.id}`)})),
