@@ -108,11 +108,11 @@ export async function all<K extends StoreName>(name:K):Promise<StoreTypes[K][]> 
 export async function get<K extends StoreName>(name:K,id:string):Promise<StoreTypes[K]|undefined> {
   return await readTable(name,table=>table.get(id)) as StoreTypes[K]|undefined;
 }
-const REFERENCE_STORES=STORES.filter(name=>name!=='sessions');
+const REFERENCE_STORES=STORES;
 async function referenceSnapshot(tx:IDBTransaction):Promise<Data>{
   const rows=await Promise.all(REFERENCE_STORES.map(name=>request(tx.objectStore(name).getAll())));
   const data=Object.fromEntries(REFERENCE_STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]])) as unknown as Data;
-  data.sessions=[];if(data.profiles?.length)data.schemaVersion=2;return data;
+  if(data.profiles?.length)data.schemaVersion=2;return data;
 }
 export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promise<void> {
   const validated=validators[name](value);
@@ -162,6 +162,7 @@ export async function updateSession(id:string,fn:(session:PracticeSession)=>Prac
   return await write('sessions',async tx=>{
     const current=await request(tx.objectStore('sessions').get(id)) as PracticeSession|undefined;
     if(!current)throw new Error('This practice session no longer exists.');
+    if(current.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');
     const next=validateSession(fn(structuredClone(current)));
     if(next.id!==current.id||next.profileId!==current.profileId)throw new Error('A session update cannot change its identity.');
     for(const old of current.blocks){const block=next.blocks.find(b=>b.id===old.id);if(block&&block.profileId!==old.profileId)throw new Error('A practice block cannot change its profile.');}
