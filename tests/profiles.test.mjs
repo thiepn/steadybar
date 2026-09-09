@@ -9,7 +9,7 @@ import {defaultProtocol,exerciseProtocol,protocolPulse,frequency,noteName,parseN
 import {validateProfile,validateProtocol,validateOutcome,assertProtocolCompatible,assertOutcomeMatches} from '../dist/app/domain/practice-validation.js';
 import {validateData,validateBackup,validateSession,validateGoal} from '../dist/app/domain/validation.js';
 import {createBackup,parseBackup} from '../dist/app/db/backup.js';
-import {createSession,finishBlock,restartBlock,recoverSession} from '../dist/app/practice/logic.js';
+import {createSession,finishBlock,preserveReadingIdentity,restartBlock,recoverSession} from '../dist/app/practice/logic.js';
 import {calculateBestCleanBpm,exerciseAttempts,goalProgress} from '../dist/app/domain/analytics.js';
 import {protocolResults,summarizeResults,suggestedExercises} from '../dist/app/domain/protocol-analytics.js';
 const at='2026-09-08T10:00:00.000Z';
@@ -122,6 +122,12 @@ test('fretboard tuning uses low-to-high strings and string 1 is highest',()=>{
 });
 test('pitch conversions and reference scale spelling use real equal-tempered pitches',()=>{
  assert.equal(frequency(69),440);assert.equal(frequency(57),220);assert.equal(noteName(60),'C4');assert.equal(parseNote('E2'),40);assert.equal(parseNote('B♭3'),58);assert.equal(parseNote('F#4'),66);assert.deepEqual(scaleOffsets('major'),[0,2,4,5,7,9,11,12]);
+});
+test('sight-reading settings cannot reclaim first-read status for the same material',()=>{
+ const original={kind:'sight-reading',material:'Eight-bar page',key:'C',hands:'together',firstRead:true};
+ assert.equal(preserveReadingIdentity(original,{...original,firstRead:true},true).firstRead,false);
+ assert.equal(preserveReadingIdentity({...original,firstRead:false},{...original,firstRead:true},false).firstRead,false);
+ assert.equal(preserveReadingIdentity(original,{...original,material:'Different page',firstRead:true},true).firstRead,true);
 });
 test('first read is not awarded again when the same material is restarted or revisited',()=>{
  const d=dataset('piano'),e=d.exercises.find(e=>e.protocol.kind==='sight-reading');let s=createSession([block(e)],d);s.blocks[0].startedAt=at;s.blocks[0].actualActiveSeconds=1;s=restartBlock(s);assert.equal(s.blocks[s.activeBlockIndex].protocolSnapshot.firstRead,false);

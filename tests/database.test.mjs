@@ -62,6 +62,24 @@ test('two concurrent session launches cannot insert two active sessions',async()
   assert.match(results.find(r=>r.status==='rejected').reason.message,/unfinished session/);
   assert.equal((await db.all('sessions')).length,1);
 });
+test('generic session writes cannot bypass the one-active-session invariant',async()=>{
+  await db.initializeDatabase();const first=active(),second=active();await db.put('sessions',first);
+  await assert.rejects(db.put('sessions',second),/one active session/);assert.deepEqual((await db.all('sessions')).map(s=>s.id),[first.id]);
+});
+test('generic session put cannot rewrite an existing ended history row',async()=>{
+ await db.initializeDatabase();let s=finishBlock(active());await db.put('sessions',s);const before=structuredClone(await db.get('sessions',s.id));
+ await assert.rejects(db.put('sessions',{...s,sessionNotes:'rewritten through generic put'}),/guarded session commands/);assert.deepEqual(await db.get('sessions',s.id),before);
+});
+test('generic entity saves still validate after a session-backed lesson review exists',async()=>{
+ await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES.find(c=>c.id==='drums-foundation'),l=c.lessons[0],p=d.profiles.find(p=>p.id===pid);
+ let s=createSession(learning.lessonBlocks(c,l,p,{minutes:5}),d);for(let i=0;i<l.tasks.length;i++){s.blocks[i].startedAt='2026-09-09T12:00:00.000Z';s.blocks[i].actualActiveSeconds=20;s=finishBlock(s,false,Date.parse('2026-09-09T12:01:00.000Z')+i*20000);}d.sessions=[s];
+ learning.reviewLesson(d,pid,c.id,l.id,{id:'save-after-review',checks:l.checks.map(()=>true),answers:l.questions.map(q=>q.answer),confidence:3,notes:'Keep evidence linked',evidence:{kind:'session',sessionId:s.id}},'2026-09-09T12:05:00.000Z');await db.replaceData(d);
+ const setlist={...metadata(),name:'After guided review',songIds:[],notes:''};await db.put('setlists',setlist);assert.equal((await db.get('setlists',setlist.id)).name,setlist.name);
+});
+test('live-session update API cannot rewrite ended practice history',async()=>{
+ await db.initializeDatabase();let s=active();s=finishBlock(s);await db.put('sessions',s);
+ await assert.rejects(db.updateSession(s.id,row=>({...row,sessionNotes:'rewrite'})),/Ended practice history is immutable/);assert.equal((await db.get('sessions',s.id)).sessionNotes,'');
+});
 test('session updates serialize against the newest committed record',async()=>{
   await db.initializeDatabase();const s=active();await db.insertActiveSession(s);
   await Promise.all([db.updateSession(s.id,row=>{row.runtime.bpm+=1;return row;}),db.updateSession(s.id,row=>{row.runtime.bpm+=1;return row;})]);
@@ -154,6 +172,12 @@ test('failed lesson review commit rolls back without losing earlier notes or pra
  await db.mutateWorkspace(data=>learning.saveLessonNote(data,pid,c.id,l.id,'Keep this note'));
  const before=await db.readData();adapter.state.failCommit=new DOMException('Learning quota failure','QuotaExceededError');
  await assert.rejects(db.mutateWorkspace(data=>learning.reviewLesson(data,pid,c.id,l.id,courseReview('failed-commit'))),/Learning quota failure/);assert.deepEqual(await db.readData(),before);
+});
+test('generic session deletion cannot orphan current guided-learning evidence',async()=>{
+ await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES.find(c=>c.id==='drums-foundation'),l=c.lessons[0],p=d.profiles.find(p=>p.id===pid);
+ let s=createSession(learning.lessonBlocks(c,l,p,{minutes:5}),d);for(let i=0;i<l.tasks.length;i++){s.blocks[i].startedAt='2026-09-09T12:00:00.000Z';s.blocks[i].actualActiveSeconds=20;s=finishBlock(s,false,Date.parse('2026-09-09T12:01:00.000Z')+i*20000);}d.sessions=[s];
+ learning.reviewLesson(d,pid,c.id,l.id,{id:'linked-session-review',checks:l.checks.map(()=>true),answers:l.questions.map(q=>q.answer),confidence:3,notes:'Keep this evidence',evidence:{kind:'session',sessionId:s.id}},'2026-09-09T12:05:00.000Z');await db.replaceData(d);
+ await assert.rejects(db.remove('sessions',s.id),/supporting guided session/);assert.ok(await db.get('sessions',s.id));
 });
 test('backup round trip retains learning history and reset clears it only when requested',async()=>{
  await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES[0],l=c.lessons[0];

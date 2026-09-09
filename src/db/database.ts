@@ -108,19 +108,22 @@ export async function all<K extends StoreName>(name:K):Promise<StoreTypes[K][]> 
 export async function get<K extends StoreName>(name:K,id:string):Promise<StoreTypes[K]|undefined> {
   return await readTable(name,table=>table.get(id)) as StoreTypes[K]|undefined;
 }
-const REFERENCE_STORES=STORES.filter(name=>name!=='sessions');
+const REFERENCE_STORES=STORES;
 async function referenceSnapshot(tx:IDBTransaction):Promise<Data>{
   const rows=await Promise.all(REFERENCE_STORES.map(name=>request(tx.objectStore(name).getAll())));
   const data=Object.fromEntries(REFERENCE_STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]])) as unknown as Data;
-  data.sessions=[];if(data.profiles?.length)data.schemaVersion=2;return data;
+  if(data.profiles?.length)data.schemaVersion=2;return data;
 }
 export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promise<void> {
   const validated=validators[name](value);
   await write([...new Set([...REFERENCE_STORES,name])],async tx=>{
     const data=await referenceSnapshot(tx);
     if(name==='settings')data.settings=validateSettings(validated);
-    else if(name==='sessions')data.sessions=[validateSession(validated)];
-    else {
+    else if(name==='sessions'){
+      const current=await request(tx.objectStore('sessions').getAll()) as PracticeSession[],session=validateSession(validated as PracticeSession);
+      if(current.some(row=>row.id===session.id))throw new Error('Use the guarded session commands to update an existing practice session.');
+      data.sessions=[...current,session];
+    }else {
       const rows=data[name as Exclude<StoreName,'settings'|'sessions'>]??[];
       // A discriminated store-name selects the already runtime-validated row.
       Object.assign(data,{[name]:[...rows.filter(row=>row.id!==validated.id),validated]});
@@ -143,7 +146,12 @@ export async function patchSettings(change:Partial<Settings>):Promise<void>{
 export async function remove(name:StoreName,id:string):Promise<void> {
   if(name==='profiles')throw new Error('Archive a profile instead of deleting its history.');
   if(name==='settings')throw new Error('Use the explicit workspace reset action.');
-  if(name==='sessions'){await write('sessions',tx=>{tx.objectStore(name).delete(id);});return;}
+  if(name==='sessions'){
+    await write([...STORES],async tx=>{
+      const data=await referenceSnapshot(tx),sessions=await request(tx.objectStore('sessions').getAll()) as PracticeSession[];
+      data.sessions=sessions.filter(session=>session.id!==id);if(data.schemaVersion===2)validateData(data);tx.objectStore(name).delete(id);
+    });return;
+  }
   await write([...REFERENCE_STORES],async tx=>{
     const data=await referenceSnapshot(tx);
     Object.assign(data,{[name]:(data[name]??[]).filter(row=>row.id!==id)});
@@ -155,6 +163,7 @@ export async function updateSession(id:string,fn:(session:PracticeSession)=>Prac
   return await write('sessions',async tx=>{
     const current=await request(tx.objectStore('sessions').get(id)) as PracticeSession|undefined;
     if(!current)throw new Error('This practice session no longer exists.');
+    if(current.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');
     const next=validateSession(fn(structuredClone(current)));
     if(next.id!==current.id||next.profileId!==current.profileId)throw new Error('A session update cannot change its identity.');
     for(const old of current.blocks){const block=next.blocks.find(b=>b.id===old.id);if(block&&block.profileId!==old.profileId)throw new Error('A practice block cannot change its profile.');}

@@ -59,6 +59,11 @@ export function finishBlock(session:PracticeSession,skip=false,now=Date.now()):P
   }else {next.status='completed';next.endedAt=new Date(now).toISOString();}
   return next;
 }
+export function preserveReadingIdentity(previous:PracticeProtocol|undefined,next:PracticeProtocol,started:boolean):PracticeProtocol {
+  const configured=structuredClone(next);
+  if(previous?.kind==='sight-reading'&&configured.kind==='sight-reading'&&previous.material===configured.material&&(started||!previous.firstRead))configured.firstRead=false;
+  return configured;
+}
 export function restartBlock(session:PracticeSession,now=Date.now()):PracticeSession {
   const next=pauseSession(session,now),old=next.blocks[next.activeBlockIndex]!;
   old.endedAt=new Date(now).toISOString();

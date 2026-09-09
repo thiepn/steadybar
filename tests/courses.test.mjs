@@ -149,6 +149,37 @@ test('duplicate course records, multiple active courses and profile-incompatible
  for(const change of [d=>d.courseProgress.push({...d.courseProgress[0],id:'duplicate'}),d=>d.courseProgress.push({...d.courseProgress[0],id:'second',courseId:'drums-development'}),d=>d.courseProgress[0].courseId='voice-foundation',d=>d.courseProgress[0].profileId='missing']){const copy=structuredClone(data);change(copy);assert.throws(()=>validateData(copy));}
 });
 
+test('learning target advances completed stages but never skips a due repair',()=>{
+ const data=dataset('drums'),p=data.profiles[0],courses=learn.coursesFor(p),foundation=courses[0],development=courses[1];
+ foundation.lessons.forEach((lesson,i)=>learn.reviewLesson(data,p.id,foundation.id,lesson.id,{...review(lesson),id:`stage-pass-${i}`},'2026-09-09T12:00:00.000Z'));
+ let target=learn.learningTarget(data,p,new Date('2026-09-09T12:00:01.000Z'));
+ assert.equal(target.course.id,development.id);assert.equal(target.nextStage,true);assert.equal(target.lesson.id,development.lessons[0].id);
+ const repair=foundation.lessons.at(-1);learn.reviewLesson(data,p.id,foundation.id,repair.id,{...review(repair),id:'stage-repair',checks:repair.checks.map(()=>false),evidence:{kind:'reflection'}},'2026-09-09T12:00:02.000Z');
+ target=learn.learningTarget(data,p,new Date('2026-09-09T12:00:03.000Z'));
+ assert.equal(target.course.id,foundation.id);assert.equal(target.lesson.id,repair.id);assert.equal(target.nextStage,false);
+});
+test('learning target reports completion after the final stage when nothing needs attention',()=>{
+ const data=dataset('bass'),p=data.profiles[0],courses=learn.coursesFor(p);let n=0;
+ for(const course of courses){learn.enroll(data,p.id,course.id,'2026-09-09T12:00:00.000Z');for(const lesson of course.lessons)learn.reviewLesson(data,p.id,course.id,lesson.id,{...review(lesson),id:`all-stage-${n++}`},'2026-09-09T12:00:00.000Z');}
+ const target=learn.learningTarget(data,p,new Date('2026-09-09T12:00:01.000Z'));assert.equal(target.course.id,courses.at(-1).id);assert.equal(target.allStagesComplete,true);assert.equal(target.nextStage,false);
+});
+
+test('current-revision session evidence must match the actual supporting session',()=>{
+ const {data,p,course,lesson}=setup('guitar'),s=completed(data,p,course,lesson);data.sessions.push(s);
+ learn.reviewLesson(data,p.id,course.id,lesson.id,review(lesson,{evidence:{kind:'session',sessionId:s.id}}),at);assert.doesNotThrow(()=>validateData(data));
+ const orphan=structuredClone(data);orphan.sessions=[];assert.throws(()=>validateData(orphan),/supporting guided session/);
+ const changed=structuredClone(data);changed.courseProgress[0].lessons[0].attempts[0].evidence.seconds+=1;assert.throws(()=>validateData(changed),/supporting guided session/);
+ const historical=structuredClone(data);historical.courseProgress[0].lessons[0].attempts[0].revision=999;historical.sessions=[];assert.doesNotThrow(()=>validateData(historical));
+});
+test('imported off-app evidence obeys the same 0.5–120 minute bounds as live reviews',()=>{
+ const {data,p,course,lesson}=setup('drums');learn.reviewLesson(data,p.id,course.id,lesson.id,review(lesson),at);const backup=createBackup(data);
+ for(const seconds of [29,7201]){const corrupt=structuredClone(backup);corrupt.data.courseProgress[0].lessons[0].attempts[0].evidence.seconds=seconds;assert.throws(()=>parseBackup(JSON.stringify(corrupt)),/0.5–120/);}
+});
+test('remembered launch setup records the lesson that supplied its tempo',()=>{
+ const {data,p,course,lesson}=setup('drums');learn.rememberSetup(data,p.id,course.id,lesson.id,{minutes:10,tempo:299});const progress=learn.progressFor(data,p.id,course.id);
+ assert.equal(progress.launchLessonId,lesson.id);assert.equal(progress.launchOptions.tempo,299);validateData(data);
+});
+
 test('displayed course reading examples never claim to be unseen first reads',()=>{
  const tasks=COURSES.flatMap(c=>c.lessons.flatMap(l=>l.tasks)).filter(t=>t.protocol.kind==='sight-reading');assert.ok(tasks.length>0);for(const t of tasks)assert.equal(t.protocol.firstRead,false);
 });

@@ -8,7 +8,7 @@ import { noteName } from '../domain/protocols.js';
 import { duration, formatDate, uuid } from '../domain/utils.js';
 import type { Course, CourseProgress, Lesson } from '../learning/types.js';
 import { LEARNING_SOURCES as SOURCES } from '../learning/sources.js';
-import { checkedCount, courseById, courseComplete, coursesFor, dueAt, eligibleSessions, enroll, lessonLink, lessonStatus, nextLesson, progressFor, recordFor, reviewLesson, saveLessonNote, savePlacement, stageName } from '../learning/engine.js';
+import { checkedCount, courseById, courseComplete, coursesFor, dueAt, eligibleSessions, enroll, evidenceSeconds, lessonLink, lessonStatus, nextLesson, progressFor, recordFor, reviewLesson, saveLessonNote, savePlacement, stageName } from '../learning/engine.js';
 import { el } from '../ui/dom.js';
 import { button, checkbox, empty, field, formDialog, formNumber, formText, input, link, pageHeader, progressBar, sectionHeader, select, textarea } from '../ui/components.js';
 import { learningSummary, openLessonSetup } from '../ui/learning.js';
@@ -43,7 +43,7 @@ function placement(course:Course,profileId:string):void{
 function review(course:Course,lesson:Lesson,profileId:string):void{
   const sessions=eligibleSessions(store.snapshot(),profileId,course,lesson),attemptId=uuid();
   const evidence=select('evidence','Practice evidence',[
-    ['reflection','Reflection only — not a passing check'],...sessions.map(s=>[`session:${s.id}`,`${formatDate(s.endedAt??s.updatedAt)} · ${duration(s.blocks.reduce((n,b)=>n+b.actualActiveSeconds,0))} guided session`] as [string,string]),['off-app','I practiced both tasks outside this guided session']
+    ['reflection','Reflection only — not a passing check'],...sessions.map(s=>[`session:${s.id}`,`${formatDate(s.endedAt??s.updatedAt)} · ${duration(evidenceSeconds(s,profileId,course,lesson))} lesson evidence`] as [string,string]),['off-app','I practiced both tasks outside this guided session']
   ],sessions.length?`session:${sessions[0]!.id}`:'reflection');
   const outside=el('div',{class:'off-app-evidence'},input('minutes','Actual off-app minutes',5,'number',{min:.5,max:120,step:.5}),checkbox('performed','I actually practiced both lesson tasks; these are not invented or duplicated app minutes.',false));
   const show=()=>{outside.hidden=evidence.querySelector('select')!.value!=='off-app';};evidence.addEventListener('change',show);show();

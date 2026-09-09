@@ -1,4 +1,4 @@
-import { changeSongSections } from '../app/song-parts.js';
+import { changeSongSections, syncSongTitleReferences } from '../app/song-parts.js';
 import { protocolEditor } from './protocol-editor.js';
 import { activeProfile, definition, supportedProtocols, skillLabel } from '../domain/profiles.js';
 import { defaultProtocol, exerciseProtocol, exerciseBpm, protocolPulse } from '../domain/protocols.js';
@@ -6,7 +6,7 @@ import type { Experience, ProtocolKind } from '../domain/practice-types.js';
 import { store } from '../app/store.js';
 import type { Exercise, Goal, Preset, Routine, RoutineBlock, Setlist, Song, SongSection, TrainerConfig } from '../domain/models.js';
 import { validateExercise, validateGoal, validateRoutine, validateRoutineBlock, validateSetlist, validateSong, validateTrainer } from '../domain/validation.js';
-import { freshBlocks, metadata, nowISO, uuid } from '../domain/utils.js';
+import { advanceISO, freshBlocks, metadata, uuid } from '../domain/utils.js';
 import { el } from './dom.js';
 import { checkbox, formDialog, formNumber, formText, input, notify, select, textarea } from './components.js';
 import { navigate } from '../app/navigation.js';
@@ -31,14 +31,23 @@ export function editExercise(exercise?:Exercise):void{
     input('tags','Tags, separated by commas',e.tags.join(', '),'text',{maxlength:2000}),textarea('notes','Personal notes',e.notes),
   ],async form=>{
     const protocol=editors.get(kind.querySelector('select')!.value as ProtocolKind)!.read(form),timing=protocolPulse(protocol);
-    const saved=validateExercise({...e,name:formText(form,'name'),instrument:definition(profile.instrumentType).label,profileId:profile.id,skillArea:formText(form,'skillArea'),level:formText(form,'level') as Experience,defaultSeconds:Math.round(formNumber(form,'defaultMinutes')*60),protocol,
+    let saved=validateExercise({...e,updatedAt:advanceISO(e.updatedAt),name:formText(form,'name'),instrument:definition(profile.instrumentType).label,profileId:profile.id,skillArea:formText(form,'skillArea'),level:formText(form,'level') as Experience,defaultSeconds:Math.round(formNumber(form,'defaultMinutes')*60),protocol,
       description:formText(form,'description'),instructions:formText(form,'instructions'),tags:formText(form,'tags').split(',').map(t=>t.trim()).filter(Boolean),notes:formText(form,'notes'),
       defaultBpm:timing?.bpm,minBpm:undefined,maxBpm:undefined,targetBpm:protocol.kind==='tempo'&&formText(form,'targetBpm')?formNumber(form,'targetBpm'):undefined,meter:timing?{beats:timing.beats,beatUnit:timing.beatUnit}:undefined,subdivision:timing?.subdivision,sticking:protocol.kind==='tempo'?protocol.sticking:undefined,accents:undefined});
     await store.workspace(data=>{
-      data.exercises=data.exercises.some(e=>e.id===saved.id)?data.exercises.map(e=>e.id===saved.id?saved:e):[...data.exercises,saved];
-      for(const plans of [data.routines,data.dailyPlans])for(const plan of plans)for(const block of plan.blocks)if(block.exerciseId===saved.id&&!block.protocol){
-        if(!timing)block.bpm=undefined;
-        if(protocol.kind!=='tempo')block.tempoTrainer=undefined;
+      const current=data.exercises.find(item=>item.id===saved.id);if(exercise&&!current)throw new Error('This exercise no longer exists.');
+      const previousName=current?.name??e.name;saved=validateExercise({...saved,createdAt:current?.createdAt??saved.createdAt,updatedAt:advanceISO(current?.updatedAt??saved.updatedAt)});
+      data.exercises=current?data.exercises.map(item=>item.id===saved.id?saved:item):[...data.exercises,saved];
+      for(const plans of [data.routines,data.dailyPlans])for(const plan of plans){
+        let changed=false;
+        for(const block of plan.blocks)if(block.exerciseId===saved.id){
+          if(block.title===previousName&&block.title!==saved.name){block.title=saved.name;changed=true;}
+          if(!block.protocol){
+            if(!timing&&block.bpm!==undefined){block.bpm=undefined;changed=true;}
+            if(protocol.kind!=='tempo'&&block.tempoTrainer!==undefined){block.tempoTrainer=undefined;changed=true;}
+          }
+        }
+        if(changed)plan.updatedAt=advanceISO(plan.updatedAt);
       }
       return data;
     });notify(exercise?'Exercise saved.':'Exercise created.');if(!exercise)navigate(`/library/${saved.id}`);
@@ -70,8 +79,8 @@ export function editSong(song?:Song):void{
     if(song){
       await store.workspace(workspace=>{
         const current=workspace.songs.find(item=>item.id===song.id);if(!current)throw new Error('This song no longer exists.');
-        const merged=validateSong({...current,...changes,updatedAt:nowISO()});saved=merged;
-        workspace.songs=workspace.songs.map(item=>item.id===song.id?merged:item);return workspace;
+        const previousTitle=current.title,merged=validateSong({...current,...changes,updatedAt:advanceISO(current.updatedAt)});saved=merged;
+        workspace.songs=workspace.songs.map(item=>item.id===song.id?merged:item);if(previousTitle!==merged.title)syncSongTitleReferences(workspace,song.id,previousTitle);return workspace;
       });
     }else{saved=validateSong({...s,...changes});await store.save('songs',saved);}
     if(!saved)throw new Error('The song could not be saved.');notify('Song saved.');if(!song)navigate(`/songs/${saved.id}`);

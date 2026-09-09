@@ -32,6 +32,6 @@ export interface LessonAttempt {
 export interface LessonRecord { lessonId:string; notes:string; attempts:LessonAttempt[] }
 export interface CourseProgress {
   id:string; profileId:string; courseId:string; courseTitle:string; revision:number;
-  active:boolean; createdAt:string; updatedAt:string; placement?:boolean[]; launchOptions?:LessonLaunchOptions; lessons:LessonRecord[];
+  active:boolean; createdAt:string; updatedAt:string; placement?:boolean[]; launchOptions?:LessonLaunchOptions; launchLessonId?:string; lessons:LessonRecord[];
 }
 export interface LessonLaunchOptions { minutes:number; tempo?:number; voice?:{startMidi:number;lowMidi:number;highMidi:number} }
