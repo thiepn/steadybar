@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.1 — Post-release integrity audit — 2026-09-09
+
+- Scope remembered lesson tempo to the lesson that supplied it, preventing a custom tempo from silently leaking into another lesson while retaining safe duration and vocal-range convenience.
+- Derive current-revision session evidence from the immutable supporting session during whole-workspace validation; reject orphaned or altered evidence while retaining unknown historical course revisions.
+- Apply the same 0.5–120 minute limits to imported off-app evidence that live review entry already enforces, and validate current-revision review shapes even when the outcome is “Practice again”.
+- Make the generic session repository APIs uphold the one-active-session and learning-reference invariants instead of relying solely on the dedicated practice controller.
+- Show lesson-attributable evidence time in the review picker instead of total time from unrelated blocks in the same session.
+- Avoid rewriting every inactive course record's timestamp when selecting another course.
+- Add Node and browser regressions for all of the above; the complete existing Chromium, Firefox and WebKit release suite remains mandatory.
+
 ## 2.1.0 — Guided instrument courses — 2026-09-09
 
 - Add Learn: 16 original courses, 94 lessons and 188 runnable tasks, with distinct Foundations, Skill development and Ensemble application pathways for the five principal instruments.

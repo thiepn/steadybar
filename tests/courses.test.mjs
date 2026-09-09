@@ -149,6 +149,22 @@ test('duplicate course records, multiple active courses and profile-incompatible
  for(const change of [d=>d.courseProgress.push({...d.courseProgress[0],id:'duplicate'}),d=>d.courseProgress.push({...d.courseProgress[0],id:'second',courseId:'drums-development'}),d=>d.courseProgress[0].courseId='voice-foundation',d=>d.courseProgress[0].profileId='missing']){const copy=structuredClone(data);change(copy);assert.throws(()=>validateData(copy));}
 });
 
+test('current-revision session evidence must match the actual supporting session',()=>{
+ const {data,p,course,lesson}=setup('guitar'),s=completed(data,p,course,lesson);data.sessions.push(s);
+ learn.reviewLesson(data,p.id,course.id,lesson.id,review(lesson,{evidence:{kind:'session',sessionId:s.id}}),at);assert.doesNotThrow(()=>validateData(data));
+ const orphan=structuredClone(data);orphan.sessions=[];assert.throws(()=>validateData(orphan),/supporting guided session/);
+ const changed=structuredClone(data);changed.courseProgress[0].lessons[0].attempts[0].evidence.seconds+=1;assert.throws(()=>validateData(changed),/supporting guided session/);
+ const historical=structuredClone(data);historical.courseProgress[0].lessons[0].attempts[0].revision=999;historical.sessions=[];assert.doesNotThrow(()=>validateData(historical));
+});
+test('imported off-app evidence obeys the same 0.5–120 minute bounds as live reviews',()=>{
+ const {data,p,course,lesson}=setup('drums');learn.reviewLesson(data,p.id,course.id,lesson.id,review(lesson),at);const backup=createBackup(data);
+ for(const seconds of [29,7201]){const corrupt=structuredClone(backup);corrupt.data.courseProgress[0].lessons[0].attempts[0].evidence.seconds=seconds;assert.throws(()=>parseBackup(JSON.stringify(corrupt)),/0.5–120/);}
+});
+test('remembered launch setup records the lesson that supplied its tempo',()=>{
+ const {data,p,course,lesson}=setup('drums');learn.rememberSetup(data,p.id,course.id,lesson.id,{minutes:10,tempo:299});const progress=learn.progressFor(data,p.id,course.id);
+ assert.equal(progress.launchLessonId,lesson.id);assert.equal(progress.launchOptions.tempo,299);validateData(data);
+});
+
 test('displayed course reading examples never claim to be unseen first reads',()=>{
  const tasks=COURSES.flatMap(c=>c.lessons.flatMap(l=>l.tasks)).filter(t=>t.protocol.kind==='sight-reading');assert.ok(tasks.length>0);for(const t of tasks)assert.equal(t.protocol.firstRead,false);
 });

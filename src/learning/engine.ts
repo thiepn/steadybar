@@ -5,6 +5,7 @@ import { assertProtocolCompatible, validateProtocol } from '../domain/practice-v
 import { patternFits, protocolPulse } from '../domain/protocols.js';
 import { localDate, metadata, uuid } from '../domain/utils.js';
 import { COURSES } from './catalog.js';
+import { sessionEvidenceSeconds } from './evidence.js';
 import type { Course, CourseProgress, Lesson, LessonAttempt, LessonLaunchOptions, LessonRecord } from './types.js';
 import { validateCourseProgress } from './validation.js';
 
@@ -65,7 +66,7 @@ function mutableRecord(progress:CourseProgress,lesson:Lesson):LessonRecord{
 /** Mutates the fresh transactional copy, never a cached page snapshot. */
 export function enroll(data:Data,profileId:string,courseId:string,at=new Date().toISOString()):Data{
   const {course}=requireCourse(data,profileId,courseId),progress=mutableProgress(data,profileId,course,at);
-  for(const p of data.courseProgress??[])if(p.profileId===profileId){p.active=p.id===progress.id;p.updatedAt=at;}
+  for(const p of data.courseProgress??[])if(p.profileId===profileId){const active=p.id===progress.id;if(p.active!==active){p.active=active;p.updatedAt=at;}}
   return data;
 }
 export function savePlacement(data:Data,profileId:string,courseId:string,checks:boolean[],at=new Date().toISOString()):Data{
@@ -79,12 +80,7 @@ export function saveLessonNote(data:Data,profileId:string,courseId:string,lesson
   if(note.length>4000)throw new Error('Keep the lesson note below 4,000 characters.');
   mutableRecord(mutableProgress(data,profileId,course,at),lesson).notes=note.trim();return data;
 }
-export function evidenceSeconds(session:PracticeSession,profileId:string,course:Course,lesson:Lesson):number{
-  if(session.status==='active'||session.profileId!==profileId)return 0;
-  const blocks=session.blocks.filter(b=>b.profileId===profileId&&b.lessonSource?.courseId===course.id&&b.lessonSource.lessonId===lesson.id&&b.lessonSource.revision===course.revision&&b.completed&&!b.skipped&&b.startedAt&&b.actualActiveSeconds>=5);
-  if(!lesson.tasks.every(task=>blocks.some(b=>b.lessonSource?.taskId===task.id)))return 0;
-  const seconds=blocks.reduce((n,b)=>n+b.actualActiveSeconds,0);return seconds>=30?seconds:0;
-}
+export const evidenceSeconds=sessionEvidenceSeconds;
 export function eligibleSessions(data:Data,profileId:string,course:Course,lesson:Lesson):PracticeSession[]{
   return data.sessions.filter(s=>evidenceSeconds(s,profileId,course,lesson)>0).sort((a,b)=>(b.endedAt??b.updatedAt).localeCompare(a.endedAt??a.updatedAt));
 }
@@ -141,7 +137,7 @@ export function rememberSetup(data:Data,profileId:string,courseId:string,lessonI
   const {profile,course}=requireCourse(data,profileId,courseId),lesson=course.lessons.find(l=>l.id===lessonId);
   if(!lesson)throw new Error('Lesson unavailable.');
   lessonBlocks(course,lesson,profile,options); // Revalidate remembered settings against this task.
-  const progress=mutableProgress(data,profileId,course,new Date().toISOString());progress.launchOptions=structuredClone(options);
+  const progress=mutableProgress(data,profileId,course,new Date().toISOString());progress.launchOptions=structuredClone(options);progress.launchLessonId=lesson.id;
   return data;
 }
 export function addLessonToToday(data:Data,profileId:string,courseId:string,lessonId:string,options:LessonLaunchOptions,date=localDate()):Data{

@@ -119,8 +119,10 @@ export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promi
   await write([...new Set([...REFERENCE_STORES,name])],async tx=>{
     const data=await referenceSnapshot(tx);
     if(name==='settings')data.settings=validateSettings(validated);
-    else if(name==='sessions')data.sessions=[validateSession(validated)];
-    else {
+    else if(name==='sessions'){
+      const current=await request(tx.objectStore('sessions').getAll()) as PracticeSession[],session=validateSession(validated as PracticeSession);
+      data.sessions=[...current.filter(row=>row.id!==session.id),session];
+    }else {
       const rows=data[name as Exclude<StoreName,'settings'|'sessions'>]??[];
       // A discriminated store-name selects the already runtime-validated row.
       Object.assign(data,{[name]:[...rows.filter(row=>row.id!==validated.id),validated]});
@@ -143,7 +145,12 @@ export async function patchSettings(change:Partial<Settings>):Promise<void>{
 export async function remove(name:StoreName,id:string):Promise<void> {
   if(name==='profiles')throw new Error('Archive a profile instead of deleting its history.');
   if(name==='settings')throw new Error('Use the explicit workspace reset action.');
-  if(name==='sessions'){await write('sessions',tx=>{tx.objectStore(name).delete(id);});return;}
+  if(name==='sessions'){
+    await write([...STORES],async tx=>{
+      const data=await referenceSnapshot(tx),sessions=await request(tx.objectStore('sessions').getAll()) as PracticeSession[];
+      data.sessions=sessions.filter(session=>session.id!==id);if(data.schemaVersion===2)validateData(data);tx.objectStore(name).delete(id);
+    });return;
+  }
   await write([...REFERENCE_STORES],async tx=>{
     const data=await referenceSnapshot(tx);
     Object.assign(data,{[name]:(data[name]??[]).filter(row=>row.id!==id)});

@@ -20,12 +20,12 @@ export function learningSummary():HTMLElement{
 export function openLessonSetup(course:Course,lesson:Lesson,profileId:string,mode:'practice'|'plan'):void{
   const profile=store.snapshot().profiles?.find(p=>p.id===profileId);if(!profile)throw new Error('Profile unavailable.');
   const vocal=profile.instrumentType==='voice',first=lesson.tasks.map(t=>protocolPulse(t.protocol)).find(Boolean);
-  const saved=progressFor(store.snapshot(),profileId,course.id)?.launchOptions;
+  const progress=progressFor(store.snapshot(),profileId,course.id),saved=progress?.launchOptions,sameLesson=progress?.launchLessonId===lesson.id;
   const times=vocal?['5','10']:['5','10','15','20','30'];
   const children:HTMLElement[]=[el('p',{class:'field-hint'},vocal?'This is a total lesson budget, including listening, rests and reflection—not continuous singing. Stop if your voice becomes uncomfortable.':'The session contains the isolation task and its musical application. A finished timer does not automatically pass a lesson.'),
     select('minutes','Lesson budget',times.map(n=>[n,`${n} minutes`] as [string,string]),String(saved?.minutes??(vocal?5:10))),
     el('ol',{class:'lesson-setup-tasks'},lesson.tasks.map(t=>el('li',{},el('strong',{},t.title),el('p',{},t.instructions))))];
-  if(first)children.push(input('tempo',`Reference tempo · ${first.beatUnit===8?'eighth':'quarter'} notes per minute`,saved?.tempo??first.bpm,'number',{min:20,max:300,step:1,required:true}),el('p',{class:'field-hint'},`${first.beats}/${first.beatUnit} meter. Tempo is optional progression: keep it comfortable; the course never raises it automatically.`));
+  if(first)children.push(input('tempo',`Reference tempo · ${first.beatUnit===8?'eighth':'quarter'} notes per minute`,(sameLesson?saved?.tempo:undefined)??first.bpm,'number',{min:20,max:300,step:1,required:true}),el('p',{class:'field-hint'},`${first.beats}/${first.beatUnit} meter. Tempo is optional progression: keep it comfortable; the course never raises it automatically.`));
   if(vocal){
     const notes=Array.from({length:61},(_,i)=>[String(i+36),noteName(i+36)] as [string,string]);
     children.push(el('p',{class:'learning-safety'},'Set these for your own voice. C4 and the displayed range are examples, not a prescription. The app cannot determine vocal health or your safe range.'),

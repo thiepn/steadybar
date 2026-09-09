@@ -1,5 +1,6 @@
 import { validateCourseProgress, validateLessonSource } from '../learning/validation.js';
 import { COURSES } from '../learning/catalog.js';
+import { sessionEvidenceSeconds } from '../learning/evidence.js';
 export { validateCourseProgress } from '../learning/validation.js';
 import { patternFits, exerciseProtocol, protocolPulse } from './protocols.js';
 import { validateProfile, validateProtocol, validateOutcome, validateProtocolState, validateSongPart, assertProtocolCompatible, assertOutcomeMatches } from './practice-validation.js';
@@ -127,10 +128,21 @@ export function validateData(input:unknown):Data {
     if(new Set(learning.map(p=>`${p.profileId}/${p.courseId}`)).size!==learning.length)fail('Course progress','one record per profile and course is required');
     const activeCourses=learning.filter(p=>p.active);
     if(new Set(activeCourses.map(p=>p.profileId)).size!==activeCourses.length)fail('Course progress','only one course may be selected per profile');
+    const sessionsById=new Map(d.sessions.map(s=>[s.id,s]));
     for(const row of learning){
       const p=requireProfile(row.profileId),course=COURSES.find(c=>c.id===row.courseId);
       if(p.attribution==='unresolved-history')fail('Course progress','historical attribution buckets cannot learn new courses');
       if(course&&course.instrument!==p.instrumentType)fail('Course progress','course belongs to a different instrument');
+      if(!course)continue;
+      for(const record of row.lessons){
+        const lesson=course.lessons.find(l=>l.id===record.lessonId);
+        for(const attempt of record.attempts){
+          if(attempt.revision!==course.revision||attempt.evidence.kind!=='session')continue;
+          if(!lesson)fail('Course progress','current-revision session evidence refers to an unavailable lesson');
+          const session=sessionsById.get(attempt.evidence.sessionId??''),seconds=session?sessionEvidenceSeconds(session,row.profileId,course,lesson!):0;
+          if(!session||!seconds||seconds!==attempt.evidence.seconds)fail('Course progress','session evidence does not match its supporting guided session');
+        }
+      }
     }
     const exercises=new Map(d.exercises.map(e=>[e.id,e])),songs=new Map(d.songs.map(s=>[s.id,s]));
     for(const r of [...d.routines,...d.dailyPlans]){requireProfile(r.profileId);for(const b of r.blocks){

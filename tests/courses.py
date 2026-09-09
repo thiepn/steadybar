@@ -119,6 +119,15 @@ class Courses(e2e.MusicPracticeTests):
         self.begin('piano');self.page.get_by_role('button',name='Hear pitch sequence',exact=True).click()
         self.wait_state("load('audio/reference.js').reference.running",lambda value:value)
         self.route('/courses');self.assertFalse(self.read("load('audio/reference.js').reference.running"))
+    def test_89_cross_lesson_tempo_defaults_do_not_leak(self):
+        self.begin('drums')
+        timed=self.read("""(()=>{const c=load('learning/catalog.js').COURSES.find(c=>c.id==='drums-foundation'),pulse=load('domain/protocols.js').protocolPulse;return c.lessons.map(l=>({id:l.id,bpm:l.tasks.map(t=>pulse(t.protocol)).find(Boolean)?.bpm})).filter(x=>Number.isInteger(x.bpm)).slice(0,2);})()""")
+        self.assertEqual(len(timed),2)
+        first=next(l for l in self.course['lessons'] if l['id']==timed[0]['id']);second=next(l for l in self.course['lessons'] if l['id']==timed[1]['id'])
+        self.lesson=first;self.open_lesson();self.page.get_by_role('button',name='Add lesson to Today',exact=True).click();tempo=self.page.locator('dialog[open] input[name=tempo]');expect(tempo).to_have_value(str(timed[0]['bpm']));tempo.fill('299');self.save_dialog('Add both tasks to Today')
+        self.open_lesson();self.page.get_by_role('button',name='Practice this lesson',exact=True).click();expect(self.page.locator('dialog[open] input[name=tempo]')).to_have_value('299');self.page.get_by_role('button',name='Close dialog',exact=True).click()
+        self.lesson=second;self.open_lesson();self.page.get_by_role('button',name='Practice this lesson',exact=True).click();expect(self.page.locator('dialog[open] input[name=tempo]')).to_have_value(str(timed[1]['bpm']));self.page.get_by_role('button',name='Close dialog',exact=True).click()
+
     def test_89_native_v3_backup_restore_and_offline_learning(self):
         if e2e.OPTIONS.render:self.skipTest('Actual IndexedDB restore, reload and service worker require a real origin.')
         self.begin('guitar');self.fill_review();self.save_dialog('Save lesson review');self.route('/settings')
