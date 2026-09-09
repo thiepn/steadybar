@@ -1,4 +1,5 @@
 name: Prepare Steadybar 2.1.1 source metadata
+# verifier revision 4: exact escaping/import/concurrency guards
 on:
   push:
     branches: [fix/v210-postrelease-audit]
