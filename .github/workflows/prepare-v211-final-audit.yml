@@ -1,0 +1,39 @@
+name: Prepare Steadybar 2.1.1 final audit
+on:
+  push:
+    branches: [fix/v210-postrelease-audit]
+    paths: [.github/workflows/prepare-v211-final-audit.yml]
+permissions:
+  contents: write
+jobs:
+  apply-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/v210-postrelease-audit
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply final audit fixes
+        run: python3 tools/apply_v211_reading_plan_fix.py
+      - name: Remove one-shot patcher
+        run: git rm tools/apply_v211_reading_plan_fix.py
+      - name: Verify final candidate
+        run: |
+          git diff --check
+          npm ci
+          npm run check
+          python3 -m py_compile tests/courses.py tests/profiles.py tests/ui_polish.py tests/colors.py tests/workbench.py tests/ci_render.py tests/ci_native.py tests/e2e.py
+      - name: Commit verified final audit fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Preserve sight-reading provenance and starter-plan metadata'
+          git push origin HEAD:fix/v210-postrelease-audit
