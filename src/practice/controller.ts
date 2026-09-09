@@ -7,7 +7,7 @@ import { get, insertActiveSession, updateSession } from '../db/database.js';
 import { store } from '../app/store.js';
 import { audio } from '../audio/engine.js';
 import { defaultAccents, type BeatEvent } from '../audio/scheduler.js';
-import { blockElapsed, checkpointSession, createSession, finishBlock, pauseSession, recoverSession, restartBlock } from './logic.js';
+import { blockElapsed, checkpointSession, createSession, finishBlock, pauseSession, preserveReadingIdentity, recoverSession, restartBlock } from './logic.js';
 import { clampBpm, nowISO, uuid } from '../domain/utils.js';
 import { trainerBpm } from '../domain/trainer.js';
 import { ExclusiveLease, SESSION_LOCK } from '../platform/locks.js';
@@ -172,10 +172,12 @@ export class PracticeController {
     });
   }
   async configureProtocol(input:PracticeProtocol):Promise<void>{
-    const config=validateProtocol(input);await this.pause();
+    const requested=validateProtocol(input);await this.pause();
     await this.mutate(s=>{
       let b=s.blocks[s.activeBlockIndex]!;const profile=store.snapshot().profiles?.find(p=>p.id===b.profileId);
-      if(!profile)throw new Error('The session profile is unavailable.');assertProtocolCompatible(config,profile);
+      if(!profile)throw new Error('The session profile is unavailable.');
+      const practiced=Boolean(b.startedAt)||b.actualActiveSeconds>0||(b.outcomes?.length??0)>0||b.tempoAttempts.length>0;
+      const config=preserveReadingIdentity(b.protocolSnapshot,requested,practiced);assertProtocolCompatible(config,profile);
       if(b.actualActiveSeconds>0||(b.outcomes?.length??0)>0||b.tempoAttempts.length){s=restartBlock(s);b=s.blocks[s.activeBlockIndex]!;}
       delete b.lessonSource;
       b.protocolSnapshot=config;b.protocolState={step:0,clean:0,total:0,...(config.kind==='vocal-pattern'?{rootMidi:config.startMidi}:{})};

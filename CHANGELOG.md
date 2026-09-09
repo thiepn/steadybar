@@ -8,6 +8,8 @@
 - Make the generic session repository APIs uphold the one-active-session and learning-reference invariants instead of relying solely on the dedicated practice controller.
 - Show lesson-attributable evidence time in the review picker instead of total time from unrelated blocks in the same session.
 - Avoid rewriting every inactive course record's timestamp when selecting another course.
+- Prevent sight-reading task edits from restoring first-read status for an already-started or already-known passage; genuinely changed material may still be explicitly marked new.
+- Rebuilding an existing Today starter plan now preserves its ID/creation time while monotonically advancing `updatedAt`.
 - Add Node and browser regressions for all of the above; the complete existing Chromium, Firefox and WebKit release suite remains mandatory.
 
 ## 2.1.0 — Guided instrument courses — 2026-09-09

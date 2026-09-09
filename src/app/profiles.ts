@@ -87,8 +87,9 @@ export function fitRoutine(routine:Routine,minutes:number):Routine['blocks']{
 export async function prepareStarterPlan(minutes:number):Promise<void>{
   await store.workspace(data=>{
     const p=activeProfile(data),routine=selectStarterRoutine(data,p,minutes);if(!routine)throw new Error('Create a routine for this profile first.');
-    const date=localDate(),existing=data.dailyPlans.find(plan=>plan.profileId===p.id&&plan.date===date);
-    const plan={...(existing??metadata()),date,profileId:p.id,sourceRoutineId:routine.id,blocks:fitRoutine(routine,minutes)};
+    const date=localDate(),existing=data.dailyPlans.find(plan=>plan.profileId===p.id&&plan.date===date),base=existing??metadata();
+    const updatedAt=new Date(Math.max(Date.now(),Date.parse(base.updatedAt)+1)).toISOString();
+    const plan={...base,updatedAt,date,profileId:p.id,sourceRoutineId:routine.id,blocks:fitRoutine(routine,minutes)};
     return {...data,dailyPlans:[...data.dailyPlans.filter(v=>v.id!==plan.id),plan]};
   });
 }
