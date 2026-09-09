@@ -20,6 +20,31 @@ jobs:
           cache: npm
       - name: Apply audited fixes
         run: python3 tools/apply_v211_postrelease_audit.py
+      - name: Resolve strict TypeScript narrowing in generated validators
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/learning/validation.ts')
+          s=p.read_text()
+          old="""    if(course&&a.revision===course.revision){
+                if(!lesson||a.checks.length!==lesson.checks.length||a.answers.length!==lesson.questions.length)fail(path,'the review does not match this lesson revision');
+                if(a.result==='passed'&&lesson.questions.some((q,i)=>q.answer!==a.answers[i]))fail(path,'the passing check does not match this lesson revision');
+              }
+          """
+          new="""    if(course&&a.revision===course.revision){
+                if(!lesson)fail(path,'the review does not match this lesson revision');
+                if(a.checks.length!==lesson!.checks.length||a.answers.length!==lesson!.questions.length)fail(path,'the review does not match this lesson revision');
+                if(a.result==='passed'&&lesson!.questions.some((q,i)=>q.answer!==a.answers[i]))fail(path,'the passing check does not match this lesson revision');
+              }
+          """
+          if old not in s: raise SystemExit('learning validator narrowing target missing')
+          p.write_text(s.replace(old,new,1))
+          p=Path('src/domain/validation.ts');s=p.read_text()
+          old="sessionEvidenceSeconds(session,row.profileId,course,lesson)"
+          if old not in s: raise SystemExit('data validator narrowing target missing')
+          p.write_text(s.replace(old,"sessionEvidenceSeconds(session,row.profileId,course,lesson!)",1))
+          PY
       - name: Remove one-shot patcher from candidate
         run: git rm tools/apply_v211_postrelease_audit.py
       - name: Verify exact source tree
