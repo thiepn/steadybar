@@ -2,6 +2,8 @@
 from __future__ import annotations
 import json
 import re
+import subprocess
+from urllib.request import urlopen
 import time
 import unittest
 import e2e
@@ -137,9 +139,32 @@ class Courses(e2e.MusicPracticeTests):
         self.assertEqual(json.loads(safety_path.read_text())['data']['courseProgress'],[])
         expect(self.page.get_by_role('heading',name='Settings',exact=True)).to_be_visible()
         self.assertEqual(self.state()['courseProgress'],backup['data']['courseProgress'])
-        self.open_lesson();self.page.wait_for_function('()=>!!navigator.serviceWorker.controller');self.context.set_offline(True)
-        self.page.reload(wait_until='networkidle');expect(self.page.locator('.lesson-state')).to_have_text('Self-checked');expect(self.page.get_by_role('heading',name='Worked example',exact=True)).to_be_visible()
-        self.context.set_offline(False)
+        self.open_lesson();self.page.evaluate('navigator.serviceWorker.ready.then(()=>true)')
+        self.page.reload(wait_until='networkidle');expect(self.page.locator('.lesson-state')).to_have_text('Self-checked')
+        self.page.wait_for_function('()=>!!navigator.serviceWorker.controller')
+        # Match ci_native.py: stop the actual HTTP server instead of using
+        # WebKit's emulated-offline reload, which can return an internal error.
+        # The refused HTTP request and successful reload prove real cache use.
+        cls=type(self);self.assertIsNotNone(cls.server,'Offline certification needs a test-owned HTTP origin.')
+        cls.server.terminate();cls.server.wait(timeout=10)
+        try:
+            with self.assertRaises(OSError):urlopen(e2e.URL,timeout=1)
+            self.page.reload(wait_until='domcontentloaded')
+            expect(self.page.locator('.lesson-state')).to_have_text('Self-checked')
+            expect(self.page.get_by_role('heading',name='Worked example',exact=True)).to_be_visible()
+            self.page.get_by_role('button',name='Edit lesson note',exact=True).click()
+            self.page.get_by_label('Material, feedback and next repair',exact=True).fill('Saved with the HTTP origin stopped.')
+            self.save_dialog('Save lesson note')
+            self.page.reload(wait_until='domcontentloaded')
+            expect(self.page.locator('.lesson-state')).to_have_text('Self-checked')
+            expect(self.page.locator('.lesson-notes')).to_contain_text('Saved with the HTTP origin stopped.')
+            self.assertEqual(self.state()['courseProgress'][0]['lessons'][0]['attempts'],backup['data']['courseProgress'][0]['lessons'][0]['attempts'])
+        finally:
+            cls.server=subprocess.Popen(['node','scripts/serve.mjs'],cwd=e2e.ROOT,stdout=subprocess.DEVNULL,stderr=subprocess.STDOUT)
+            for _ in range(50):
+                try:urlopen(e2e.URL,timeout=1).close();break
+                except OSError:time.sleep(.1)
+            else:self.fail('Test HTTP origin could not be restarted.')
     def test_90_native_database_three_to_four_preserves_old_practice(self):
         if e2e.OPTIONS.render:self.skipTest('Physical IndexedDB migration requires a real origin.')
         self.begin('drums')
