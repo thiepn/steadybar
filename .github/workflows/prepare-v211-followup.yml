@@ -20,6 +20,17 @@ jobs:
           cache: npm
       - name: Apply follow-up audit fixes
         run: python3 tools/apply_v211_followup.py
+      - name: Preserve existing ended-session error contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/db/database.ts');s=p.read_text()
+          old='Ended practice history is immutable. Edit only its reflection through the history workspace.'
+          new='This practice session already ended. Ended practice history is immutable; edit only its reflection through History.'
+          if old not in s: raise SystemExit('ended-session message target missing')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Remove one-shot patcher
         run: git rm tools/apply_v211_followup.py
       - name: Verify candidate
