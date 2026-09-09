@@ -7,14 +7,17 @@ def repl(path,old,new,count=1):
     p.write_text(s.replace(old,new,count))
 
 def before(path,marker,text): repl(path,marker,text+marker)
+def span(path,start,end,new):
+    p=ROOT/path;s=p.read_text();a=s.find(start)
+    if a<0: raise SystemExit(f'{path}: start marker missing: {start!r}')
+    b=s.find(end,a+len(start))
+    if b<0: raise SystemExit(f'{path}: end marker missing: {end!r}')
+    p.write_text(s[:a]+new+s[b:])
 
-# Shared monotonic entity timestamp helper. Workspace-level mutations bypass
-# AppStore.save(), so they must explicitly advance nested entity metadata.
 repl('src/domain/utils.ts',
 "export const nowISO = (): string => new Date().toISOString();\n",
 "export const nowISO = (): string => new Date().toISOString();\nexport const advanceISO = (previous:string,now=Date.now()):string => new Date(Math.max(now,Date.parse(previous)+1)).toISOString();\n")
 
-# Starter-plan rebuild already advances metadata; use the shared contract.
 repl('src/app/profiles.ts',
 "import { freshBlocks, localDate, metadata, nowISO } from '../domain/utils.js';",
 "import { advanceISO, freshBlocks, localDate, metadata, nowISO } from '../domain/utils.js';")
@@ -22,9 +25,6 @@ repl('src/app/profiles.ts',
 "const updatedAt=new Date(Math.max(Date.now(),Date.parse(base.updatedAt)+1)).toISOString();",
 "const updatedAt=advanceISO(base.updatedAt);")
 
-# Onboarding may run over an existing/migrated workspace. Never select the
-# protected historical attribution bucket as the new active custom profile, and
-# keep profile metadata truthful when onboarding changes or retires profiles.
 repl('src/app/onboarding.ts',
 "import { localDate, metadata } from '../domain/utils.js';",
 "import { advanceISO, localDate, metadata } from '../domain/utils.js';")
@@ -41,8 +41,6 @@ repl('src/app/onboarding.ts',
 "next.profiles=profiles(next).map(item=>item.id===p!.id?p!:pristine?{...item,archived:true}:item);",
 "next.profiles=profiles(next).map(item=>item.id===p!.id?p!:pristine&&!item.archived?{...item,archived:true,updatedAt:advanceISO(item.updatedAt)}:item);")
 
-# Source section edits can rewrite future plans/routines. Update canonical labels
-# and parent metadata without touching custom titles or historical session snapshots.
 repl('src/app/song-parts.ts',
 "import type { Song, SongSection } from '../domain/models.js';",
 "import type { Data, Song, SongSection } from '../domain/models.js';")
@@ -59,8 +57,8 @@ before('src/app/song-parts.ts',
       if(block.songId!==songId)continue;
       const part=block.songPartId?song.parts?.find(p=>p.id===block.songPartId):undefined;
       const section=block.songSectionId?(part?.sections??song.sections).find(s=>s.id===block.songSectionId):undefined;
-      const before=section?`${previousTitle} · ${section.name}`:previousTitle,next=section?`${song.title} · ${section.name}`:song.title;
-      if(block.title===before&&block.title!==next){block.title=next;changed=true;}
+      const oldTitle=section?`${previousTitle} · ${section.name}`:previousTitle,nextTitle=section?`${song.title} · ${section.name}`:song.title;
+      if(block.title===oldTitle&&block.title!==nextTitle){block.title=nextTitle;changed=true;}
     }
     if(changed)plan.updatedAt=advanceISO(plan.updatedAt);
   }
@@ -69,21 +67,9 @@ before('src/app/song-parts.ts',
 repl('src/app/song-parts.ts',
 "song.updatedAt = new Date().toISOString();",
 "song.updatedAt = advanceISO(song.updatedAt);",count=2)
-repl('src/app/song-parts.ts',
-"""    const owner = part ?? song;
-    const before = owner.sections;
-    owner.sections = change(before).map((section, order) => ({ ...section, order }));
-    const removed = before.filter(section => !owner.sections.some(s => s.id === section.id));
-    // Future plan references must not become orphaned. Historic snapshots are independent.
-    for (const section of removed) for (const collection of [data.routines, data.dailyPlans]) {
-      for (const plan of collection) for (const block of plan.blocks) {
-        if (block.songId === songId && block.songSectionId === section.id && block.songPartId === partId) {
-          block.type = 'song'; block.songSectionId = undefined;
-          block.notes = [block.notes, `Earlier section: ${section.name}. ${section.notes}`].filter(Boolean).join('\n');
-        }
-      }
-    }
-""",
+span('src/app/song-parts.ts',
+"    const owner = part ?? song;\n",
+"    song.updatedAt = advanceISO(song.updatedAt);",
 """    const owner = part ?? song;
     const before = structuredClone(owner.sections);
     owner.sections = change(structuredClone(before)).map((section, order) => ({ ...section, order }));
@@ -105,9 +91,6 @@ repl('src/app/song-parts.ts',
     }
 """)
 
-# Exercise editing is transactional because it may repair future references. That
-# path must stamp the exercise and any changed parent rows, and canonical future
-# labels should follow a source rename.
 repl('src/ui/editors.ts',
 "import { changeSongSections } from '../app/song-parts.js';",
 "import { changeSongSections, syncSongTitleReferences } from '../app/song-parts.js';")
@@ -151,7 +134,6 @@ repl('src/ui/editors.ts',
         workspace.songs=workspace.songs.map(item=>item.id===song.id?merged:item);if(previousTitle!==merged.title)syncSongTitleReferences(workspace,song.id,previousTitle);return workspace;
 """)
 
-# Pure timestamp contract.
 before('tests/core.test.mjs',
 "test('UUIDs use secure v4 format and are unique across generated records',()=>{",
 """test('entity metadata advances monotonically even when the wall clock does not',()=>{
@@ -159,23 +141,23 @@ before('tests/core.test.mjs',
 });
 """)
 
-# Native/rendered onboarding regression: a historical custom attribution bucket
-# must never become the selected practice workspace.
 before('tests/profiles.py',
 "    def test_60_guitar_round_goals_and_progress(self):",
-"""    def test_59_onboarding_skips_historical_custom_profiles_and_stamps_metadata(self):
-        before=self.state()['profiles'][0]['updatedAt'];self.page.wait_for_timeout(2)
+"""    def test_58_onboarding_existing_profile_advances_profile_metadata(self):
+        factory=self.state()['profiles'][0];self.page.wait_for_timeout(2);self.onboard_type('drums',starter=False)
+        saved=next(p for p in self.state()['profiles'] if p['id']==factory['id']);self.assertGreater(saved['updatedAt'],factory['updatedAt'])
+
+    def test_59_onboarding_skips_historical_custom_profiles(self):
+        factory=self.state()['profiles'][0];self.page.wait_for_timeout(2)
         self.read("load('app/store.js').store.workspace(d=>{const at=new Date().toISOString();d.profiles.push({id:'historical-custom-onboarding',name:'Earlier custom practice',instrumentType:'custom',family:'general',level:'beginner',focusAreas:[],defaultSessionMinutes:30,archived:false,createdAt:at,updatedAt:at,attribution:'unresolved-history'});return d})")
         self.page.get_by_label('Instrument',exact=True).select_option('custom');self.onboard(False)
-        data=self.state();active=next(p for p in data['profiles'] if p['id']==data['settings']['activeProfileId'])
+        data=self.state();active=next(p for p in data['profiles'] if p['id']==data['settings']['activeProfileId']);retired=next(p for p in data['profiles'] if p['id']==factory['id'])
         self.assertEqual(active['instrumentType'],'custom');self.assertNotEqual(active.get('attribution'),'unresolved-history');self.assertNotEqual(active['id'],'historical-custom-onboarding')
         self.assertTrue(any(p['id']=='historical-custom-onboarding' and p.get('attribution')=='unresolved-history' for p in data['profiles']))
-        self.assertTrue(any(p['updatedAt']>before for p in data['profiles'] if p['id']!=active['id']))
+        self.assertTrue(retired['archived']);self.assertGreater(retired['updatedAt'],factory['updatedAt'])
 
 """)
 
-# User-visible source-reference regression: canonical future labels and parent
-# timestamps follow source edits/removals, while IDs/history remain untouched.
 before('tests/profiles.py',
 "    def test_76_profile_management_preserves_focuses_names_and_history_buckets(self):",
 """    def test_75_source_edits_refresh_future_labels_and_parent_metadata(self):
@@ -188,7 +170,7 @@ before('tests/profiles.py',
 
         song_id=self.create_song('Reference source');self.page.get_by_role('button',name='Add section',exact=True).click();self.dialog_fill('Section name','Verse');self.save_dialog('Save section')
         self.route('/');self.page.get_by_role('button',name='Add block',exact=True).click();dialog=self.page.locator('dialog[open]');dialog.get_by_label('Block type',exact=True).select_option('song-section');dialog.get_by_label('Song',exact=True).select_option(song_id);dialog.get_by_label('Section',exact=True).select_option(label='Verse');self.save_dialog('Add block')
-        data=self.state();plan=next(p for p in data['dailyPlans'] if p['profileId']==data['settings']['activeProfileId']);song=next(s for s in data['songs'] if s['id']==song_id);section=song['sections'][0];stamp=plan['updatedAt']
+        data=self.state();plan=next(p for p in data['dailyPlans'] if p['profileId']==data['settings']['activeProfileId']);stamp=plan['updatedAt']
         self.route('/songs/'+song_id);self.page.get_by_role('button',name='Edit Verse',exact=True).click();self.dialog_fill('Section name','Middle 8');self.save_dialog('Save section')
         data=self.state();plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['title'],'Reference source · Middle 8');self.assertGreater(plan['updatedAt'],stamp);stamp=plan['updatedAt']
         self.page.get_by_role('button',name='Edit song',exact=True).click();self.dialog_fill('Title','Reference source renamed');self.save_dialog('Save song')
