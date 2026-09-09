@@ -1,0 +1,35 @@
+name: Export Steadybar 2.1.1 audit source
+on:
+  push:
+    branches: [audit/v211-source-snapshot]
+    paths: [.github/workflows/export-v211-audit-source.yml]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 89845ba28fcb28eb349aff9526dd5785c10fa77e
+          persist-credentials: false
+      - name: Record exact source identity
+        run: |
+          test "$(git rev-parse HEAD)" = 89845ba28fcb28eb349aff9526dd5785c10fa77e
+          git status --short
+      - uses: actions/upload-artifact@v4
+        with:
+          name: steadybar-v211-source-audit
+          path: |
+            src
+            tests
+            scripts
+            package.json
+            package-lock.json
+            tsconfig.json
+            index.html
+            manifest.webmanifest
+            CHANGELOG.md
+            docs
+          include-hidden-files: true
+          retention-days: 1
