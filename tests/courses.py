@@ -124,8 +124,19 @@ class Courses(e2e.MusicPracticeTests):
         target=e2e.ARTIFACTS/'courses-backup-v3.json';dl.value.save_as(target);backup=json.loads(target.read_text())
         self.assertEqual(backup['version'],3);self.assertEqual(len(backup['data']['courseProgress']),1)
         self.read("load('db/database.js').replaceData({...load('app/store.js').store.snapshot(),courseProgress:[]})")
-        self.page.reload(wait_until='networkidle');self.page.get_by_label('Choose backup file',exact=True).set_input_files(str(target));self.confirm('Back up & replace')
-        self.wait_state("load('app/store.js').store.snapshot().courseProgress.length",lambda n:n==1)
+        self.page.reload(wait_until='networkidle')
+        expect(self.page.get_by_role('heading',name='Settings',exact=True)).to_be_visible()
+        self.assertEqual(self.state()['courseProgress'],[])
+        self.page.get_by_label('Choose backup file',exact=True).set_input_files(str(target))
+        # Confirmation closes before the asynchronous restore/reload finishes.
+        # Observe that document transition, then the rendered workspace, rather
+        # than importing the new store before its IndexedDB initialization.
+        with self.page.expect_download() as safety:
+            with self.page.expect_event('domcontentloaded'):self.confirm('Back up & replace')
+        safety_path=e2e.ARTIFACTS/'courses-pre-restore-safety.json';safety.value.save_as(safety_path)
+        self.assertEqual(json.loads(safety_path.read_text())['data']['courseProgress'],[])
+        expect(self.page.get_by_role('heading',name='Settings',exact=True)).to_be_visible()
+        self.assertEqual(self.state()['courseProgress'],backup['data']['courseProgress'])
         self.open_lesson();self.page.wait_for_function('()=>!!navigator.serviceWorker.controller');self.context.set_offline(True)
         self.page.reload(wait_until='networkidle');expect(self.page.locator('.lesson-state')).to_have_text('Self-checked');expect(self.page.get_by_role('heading',name='Worked example',exact=True)).to_be_visible()
         self.context.set_offline(False)
@@ -144,7 +155,9 @@ class Courses(e2e.MusicPracticeTests):
             r.onsuccess=()=>{const names=db.STORES.filter(n=>n!=='courseProgress'),tx=r.result.transaction(names,'readwrite');for(const name of names)for(const row of name==='settings'?[d.settings]:d[name]??[])tx.objectStore(name).put(row);tx.oncomplete=()=>{r.result.close();resolve();};tx.onabort=()=>reject(tx.error);};
           });return {profile:d.settings.activeProfileId,exerciseIds:d.exercises.map(e=>e.id),session:s};
         })()""")
-        self.page.reload(wait_until='networkidle');data=self.state();self.assertEqual(data['settings']['activeProfileId'],result['profile']);self.assertEqual([e['id'] for e in data['exercises']],sorted(result['exerciseIds']))
+        self.page.reload(wait_until='networkidle')
+        expect(self.page.get_by_role('heading',name=self.lesson['title'],exact=True)).to_be_visible()
+        data=self.state();self.assertEqual(data['settings']['activeProfileId'],result['profile']);self.assertEqual([e['id'] for e in data['exercises']],sorted(result['exerciseIds']))
         self.assertEqual(data['courseProgress'],[]);self.assertEqual(data['sessions'][0],result['session']);self.assertEqual(self.read("load('db/database.js').openDatabase().then(d=>d.version)"),4)
     def matrix(self,kind):
         self.begin(kind);self.route('/courses');expect(self.page.locator('.course-card')).to_have_count(1 if kind=='custom' else 3)
@@ -158,7 +171,11 @@ class Courses(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height})
             self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width,f'{kind} {width}')
             for name in ('Practice this lesson','Add lesson to Today','Review this lesson'):
-                box=self.page.get_by_role('button',name=name,exact=True).bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],44);self.assertGreaterEqual(box['width'],44)
+                box=self.page.get_by_role('button',name=name,exact=True).bounding_box();self.assertIsNotNone(box)
+                # Firefox can subtract large document offsets as 43.999878 for
+                # a computed 44px box. Normalize only sub-millipixel precision.
+                self.assertGreaterEqual(round(box['height'],3),44,f'{kind} {name} {width}: {box}')
+                self.assertGreaterEqual(round(box['width'],3),44,f'{kind} {name} {width}: {box}')
             for control in self.page.locator('.learning-page input,.learning-page select').all():self.assertTrue(control.get_attribute('aria-label') or control.get_attribute('id'))
             if width in (390,1440):self.page.screenshot(path=str(e2e.ARTIFACTS/f'courses-{kind}-{width}.png'),full_page=True)
             results.append({'instrument':kind,'width':width,'height':height,'overflow':False})
