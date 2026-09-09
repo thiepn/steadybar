@@ -87,7 +87,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData(migratePracticeData(exported.data)));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeData(exported.data),courseProgress:exported.data.courseProgress??[]}));
 });
 test('restore pauses a running checkpoint immediately, before any page reload',async()=>{
   const data=seedData(),s=active();s.runtime.phase='running';s.runtime.runStartedAt='2026-09-01T10:00:00.000Z';s.blocks[0].actualActiveSeconds=32;data.sessions=[s];
@@ -132,4 +132,33 @@ test('referenced records cannot be deleted and profiles use archival rather than
 test('explicit reset removes old upgrade data as well as profiles and practice records',async()=>{
  const legacy=seedData();legacy.settings.instrument='Guitar';await db.replaceData(legacy);await db.initializeDatabase();assert.ok(await db.migrationBackup());
  await db.resetWorkspace();assert.equal(await db.migrationBackup(),undefined);const d=await db.readData();assert.equal(d.profiles.length,1);assert.equal(d.settings.onboardingDone,false);assert.equal(d.sessions.length,0);
+});
+
+// Learning records share the same all-store commit barrier as practice history.
+const learning=await import('../dist/app/learning/engine.js');
+const catalog=await import('../dist/app/learning/catalog.js');
+const courseReview=(id)=>({id,checks:[true,true,true],answers:[catalog.COURSES[0].lessons[0].questions[0].answer],confidence:3,notes:'A real review',evidence:{kind:'off-app',minutes:5,confirmed:true}});
+test('concurrent lesson note and review mutations preserve both committed changes',async()=>{
+ await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES[0],l=c.lessons[0];
+ await Promise.all([db.mutateWorkspace(data=>learning.saveLessonNote(data,pid,c.id,l.id,'Keep this observation')),db.mutateWorkspace(data=>learning.reviewLesson(data,pid,c.id,l.id,courseReview('review-concurrent')))]);
+ const saved=(await db.readData()).courseProgress[0].lessons[0];assert.equal(saved.notes,'Keep this observation');assert.equal(saved.attempts.length,1);assert.equal(saved.attempts[0].result,'passed');
+});
+test('learning progress is not reported durable until the transaction commits',async()=>{
+ await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES[0];adapter.state.holdCommit=true;let resolved=false;
+ const operation=db.mutateWorkspace(data=>learning.enroll(data,pid,c.id)).then(()=>{resolved=true;});
+ for(let i=0;i<100&&!adapter.state.held.length;i++)await flush();
+ assert.equal(resolved,false);assert.equal(adapter.state.tables.get('courseProgress').size,0);adapter.releaseCommits();await operation;assert.equal(resolved,true);assert.equal((await db.readData()).courseProgress.length,1);
+});
+test('failed lesson review commit rolls back without losing earlier notes or practice',async()=>{
+ await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES[0],l=c.lessons[0];
+ await db.mutateWorkspace(data=>learning.saveLessonNote(data,pid,c.id,l.id,'Keep this note'));
+ const before=await db.readData();adapter.state.failCommit=new DOMException('Learning quota failure','QuotaExceededError');
+ await assert.rejects(db.mutateWorkspace(data=>learning.reviewLesson(data,pid,c.id,l.id,courseReview('failed-commit'))),/Learning quota failure/);assert.deepEqual(await db.readData(),before);
+});
+test('backup round trip retains learning history and reset clears it only when requested',async()=>{
+ await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES[0],l=c.lessons[0];
+ await db.mutateWorkspace(data=>learning.reviewLesson(data,pid,c.id,l.id,courseReview('backup-review')));
+ const before=await db.readData(),backup=createBackup(before);assert.equal(backup.version,3);
+ await db.resetWorkspace();assert.equal((await db.readData()).courseProgress.length,0);
+ await restoreBackup(backup);assert.deepEqual(await db.readData(),before);
 });

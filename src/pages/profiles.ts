@@ -1,3 +1,4 @@
+import { learningSummary } from '../ui/learning.js';
 import { activeProfile, definition, practiceProfiles, profiles } from '../domain/profiles.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
@@ -13,6 +14,7 @@ export function profilesPage():Page{
     stat('Available profiles',available.length,String(archived.length)+' archived'),
     stat('Practice focuses',selected.focusAreas.length,selected.focusAreas.join(' · ')||'Not set'),
     stat('Session preference',`${selected.defaultSessionMinutes} min`,selected.level)));
+  page.append(learningSummary());
   page.append(profileManagement());
   if(historical.length)page.append(el('section',{class:'panel profile-history-note'},sectionHeader('Historical attribution'),el('p',{class:'muted small'},'Earlier practice is kept separately when an older session could not be assigned to an instrument safely. It remains visible in History but cannot be used as a new-practice profile.')));
   return {node:page};

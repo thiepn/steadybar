@@ -135,6 +135,18 @@ export function editGoal(goal?:Goal):void{
 }
 export function editBlock(block:RoutineBlock|undefined,onSave:(block:RoutineBlock)=>Promise<unknown>):void{
   const b=block||freeBlock(),data=store.view(),profile=activeProfile(store.snapshot());
+  if(b.lessonSource&&b.protocol){
+    const pulse='pulse' in b.protocol?b.protocol.pulse:undefined;
+    formDialog('Edit guided lesson block',[
+      el('p',{class:'field-hint'},'This keeps the lesson task and its course identity. Adjust its time, optional tempo and cue here. To practice something different, remove this block and add an ordinary practice block.'),
+      input('minutes','Duration (minutes)',b.targetSeconds/60,'number',{min:1/60,max:1440,step:'any',required:true}),
+      ...(pulse?[bpmInput('bpm',`Reference tempo · ${pulse.beatUnit===8?'eighth':'quarter'} notes per minute`,b.bpm??pulse.bpm)]:[]),textarea('notes','Practice cue',b.notes),
+    ],async form=>{
+      const protocol=structuredClone(b.protocol!);
+      if('pulse' in protocol&&protocol.pulse)protocol.pulse.bpm=formNumber(form,'bpm');
+      await onSave(validateRoutineBlock({...b,protocol,targetSeconds:Math.round(formNumber(form,'minutes')*60),bpm:pulse?formNumber(form,'bpm'):undefined,notes:formText(form,'notes')}));
+    },'Save block');return;
+  }
   const typeSelect=select('type','Block type',[['exercise','Exercise'],['song','Entire song'],['song-section','Song section'],['free','Free practice']],block?b.type:'exercise');
   const source=el('div'),title=input('title','Block title',b.title,'text',{maxlength:200});
   const tempo=bpmInput('bpm','Starting BPM',b.bpm);

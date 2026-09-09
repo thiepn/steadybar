@@ -226,7 +226,7 @@ class Profiles(e2e.MusicPracticeTests):
         self.route('/settings')
         with self.page.expect_download() as download:self.page.get_by_role('button',name='Export backup',exact=True).click()
         target=e2e.ARTIFACTS/'profiles-v2-backup.json';download.value.save_as(target)
-        data=json.loads(target.read_text());self.assertEqual(data['version'],2);self.assertGreaterEqual(len(data['data']['profiles']),2)
+        data=json.loads(target.read_text());self.assertEqual(data['version'],3);self.assertGreaterEqual(len(data['data']['profiles']),2)
         self.page.reload(wait_until='networkidle');expect(self.page.get_by_role('heading',name='Settings',exact=True)).to_be_visible()
         self.assertEqual(self.profile()['name'],'Voice practice')
         # Actual import/reload, not just parsing a JSON fixture.
@@ -269,7 +269,7 @@ class Profiles(e2e.MusicPracticeTests):
         self.page.reload(wait_until='networkidle');expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
         self.assertEqual(self.state()['schemaVersion'],2);self.assertEqual(self.profile()['instrumentType'],'guitar')
         self.assertEqual(len(self.read("load('app/store.js').store.view().exercises")),30)
-        self.assertEqual(self.page.evaluate("indexedDB.databases().then(d=>d.find(d=>d.name==='music-practice-os').version)"),3)
+        self.assertEqual(self.page.evaluate("indexedDB.databases().then(d=>d.find(d=>d.name==='music-practice-os').version)"),4)
         self.route('/settings')
         with self.page.expect_download() as download:self.page.get_by_role('button',name='Export pre-upgrade backup',exact=True).click()
         path=e2e.ARTIFACTS/'actual-pre-upgrade.json';download.value.save_as(path)

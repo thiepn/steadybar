@@ -1,3 +1,4 @@
+import { learningSummary } from '../ui/learning.js';
 import { activeProfile } from '../domain/profiles.js';
 import { exerciseProtocol } from '../domain/protocols.js';
 import { protocolResults, summarizeResults } from '../domain/protocol-analytics.js';
@@ -12,6 +13,7 @@ import { dayChart, lineChart } from '../ui/charts.js';
 export function progressPage():Page{
   let chartCleanup=()=>{},drawVersion=0,disposed=false;
   const data=store.view(),profile=activeProfile(store.snapshot()),page=el('div',{class:'page'},pageHeader('','Progress',`${profile.name} · Practice time, task results and reflection.`));
+  page.append(learningSummary());
   if(!finishedSessions(data.sessions).length){page.append(empty('No practice data yet','Finish a session to see your practice time and recorded attempts here.',link('Start practice','/practice','button primary','play'),'progress'));return {node:page,cleanup:()=>{disposed=true;chartCleanup();}};}
   const range=el('select',{'aria-label':'Progress date range'},[['7','7 days'],['30','30 days'],['90','3 months'],['365','1 year'],['all','All time'],['custom','Custom range']].map(([v,l])=>el('option',{value:v,selected:v==='30'},l)));
   const from=el('input',{type:'date','aria-label':'From date',value:localDate()}),to=el('input',{type:'date','aria-label':'To date',value:localDate()}),custom=el('div',{class:'actions',hidden:true},field('From',from),field('To',to));

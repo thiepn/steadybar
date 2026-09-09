@@ -1,8 +1,8 @@
 {
   "name": "steadybar",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
-  "description": "Steadybar — a local-first music practice workspace.",
+  "description": "Steadybar \u2014 a local-first music practice workspace.",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -18,7 +18,8 @@
     "test:ui": "python3 tests/e2e.py --render",
     "test:visual": "python3 tests/e2e.py --render --visual",
     "test:workbench": "python3 tests/workbench.py",
-    "test:profiles": "python3 tests/profiles.py"
+    "test:profiles": "python3 tests/profiles.py",
+    "test:courses": "python3 tests/courses.py"
   },
   "devDependencies": {
     "typescript": "5.8.3"

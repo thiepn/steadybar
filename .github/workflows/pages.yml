@@ -45,6 +45,8 @@ jobs:
         run: python tests/run_suite.py tests/workbench.py
       - name: Verify profile migration and instrument-specific practice
         run: python tests/run_suite.py tests/profiles.py
+      - name: Verify guided courses, assessments, learning migration and offline progress
+        run: python tests/run_suite.py tests/courses.py
       - name: Keep browser QA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -105,6 +107,8 @@ jobs:
         run: python tests/run_suite.py tests/workbench.py
       - name: Verify profile migration and instrument-specific practice
         run: python tests/run_suite.py tests/profiles.py
+      - name: Verify guided courses, assessments, learning migration and offline progress
+        run: python tests/run_suite.py tests/courses.py
       - name: Keep engine evidence
         if: always()
         uses: actions/upload-artifact@v4

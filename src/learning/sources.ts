@@ -1,0 +1,18 @@
+import type { LearningSource } from './types.js';
+/** Sources inform topic coverage. All lessons, examples and rubrics are original. */
+export const LEARNING_SOURCES:readonly LearningSource[]=[
+  {id:'berklee-drums',title:'Drum Set Performance 101',publisher:'Berklee Online',url:'https://online.berklee.edu/courses/drum-set-performance-101',purpose:'Coverage benchmark: time, coordination, reading, technique and repertoire belong together.'},
+  {id:'pas',title:'International Drum Rudiments',publisher:'Percussive Arts Society',url:'https://pas.org/rudiments/',purpose:'Rudiment terminology; no PAS notation images or audio are reproduced.'},
+  {id:'drumeo-fills',title:'Beginner Drum Fills',publisher:'Drumeo',url:'https://www.drumeo.com/beat/beginner-drum-fills/',purpose:'Musical application: practice returning from a fill to the groove.'},
+  {id:'justin',title:'Beginner Guitar Course',publisher:'JustinGuitar',url:'https://www.justinguitar.com/beginner',purpose:'Coverage benchmark: setup, chords, rhythm, songs, ear work and consolidation. This is not the JustinGuitar course.'},
+  {id:'berklee-guitar',title:'Rhythm and Groove Guitar',publisher:'Berklee Online',url:'https://online.berklee.edu/courses/rhythm-and-groove-guitar',purpose:'Development benchmark: movable voicings, rhythm and arranging. No commercial song examples are copied.'},
+  {id:'studybass',title:'Bass Lesson Study Guide',publisher:'StudyBass',url:'https://www.studybass.com/study-guide/',purpose:'Coverage benchmark: technique, rhythm, note knowledge and harmonic function.'},
+  {id:'muting',title:'Open-String Muting',publisher:'StudyBass',url:'https://www.studybass.com/lessons/bass-technique/open-string-muting/',purpose:'Both hands participate in controlling unwanted strings and note endings.'},
+  {id:'berklee-piano',title:'Piano Technique 101',publisher:'Berklee Online',url:'https://online.berklee.edu/courses/piano-technique-101',purpose:'Technique and musical application: coordination, articulation, dynamics and pedal. Its intermediate prerequisites are not treated as beginner requirements here.'},
+  {id:'berklee-reading',title:'Keyboard Lab — Smart Reading',publisher:'Berklee College of Music',url:'https://college.berklee.edu/courses/ilpn-101',purpose:'Combine note reading, chord symbols and ensemble accompaniment.'},
+  {id:'berklee-voice',title:'Voice Technique 101',publisher:'Berklee Online',url:'https://online.berklee.edu/courses/voice-technique-101',purpose:'Coverage benchmark: healthy habits, pitch, breath, expression and harmony.'},
+  {id:'nidcd',title:'Taking Care of Your Voice',publisher:'NIDCD / NIH',url:'https://www.nidcd.nih.gov/health/taking-care-your-voice',purpose:'Do not sing through hoarseness, pain or vocal fatigue; voice problems require qualified assessment.'},
+  {id:'ensemble',title:'Rhythm Section Ensemble',publisher:'Berklee College of Music',url:'https://college.berklee.edu/courses/enmx-100',purpose:'Application benchmark: listen, rehearse and support other players instead of practicing technique in isolation.'},
+  {id:'interleaving',title:'Optimizing Music Learning (2016)',publisher:'Carter & Grahn, Frontiers in Psychology',url:'https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2016.01251/full',purpose:'Exploratory support for varied practice; not proof of a universal best schedule.'},
+  {id:'spacing',title:'Lack of spacing effects during piano learning (2017)',publisher:'Wiseheart et al., PLOS ONE',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC5553926/',purpose:'Important limitation: spacing benefits cannot simply be assumed for every motor task. Review intervals here are adjustable practice policy, not validated mastery prediction.'},
+];

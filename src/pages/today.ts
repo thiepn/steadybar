@@ -1,3 +1,4 @@
+import { learningSummary } from '../ui/learning.js';
 import { activeProfile, profileName } from '../domain/profiles.js';
 import { prepareStarterPlan } from '../app/profiles.js';
 import { confirmAction, select } from '../ui/components.js';
@@ -22,6 +23,7 @@ export function todayPage(): Page {
   const week = filterSessions(data.sessions, localDate(weekStart), localDate(weekEnd));
   const savePlan = async (blocks: RoutineBlock[]) => store.save('dailyPlans', { ...(plan || metadata()), profileId:profile.id,date: localDate(), blocks });
   const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`));
+  page.append(learningSummary());
   const budget=select('timeBudget','Session time',[['15','15 min'],['20','20 min'],['30','30 min'],['45','45 min'],['60','60 min']],String(profile.defaultSessionMinutes));
   const prepare=button('Build a plan',async()=>{if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a profile-specific starter sequence for this time budget. Existing history is unchanged.','Build plan'))return;await prepareStarterPlan(Number(budget.querySelector('select')!.value));},'secondary');
   page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},profile.instrumentType==='voice'?'Voice routines include rest and listening.':'Uses this profile’s saved starter routine; you can edit every block.')));

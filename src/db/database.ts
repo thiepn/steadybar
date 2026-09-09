@@ -1,3 +1,5 @@
+import type { CourseProgress } from '../learning/types.js';
+import { validateCourseProgress } from '../learning/validation.js';
 import { assertProtocolCompatible } from '../domain/practice-validation.js';
 import { isPracticeProfile } from '../domain/profiles.js';
 import type { PracticeProfile } from '../domain/practice-types.js';
@@ -9,11 +11,11 @@ import { seedData } from './seed.js';
 
 // Keep the original storage identifier so existing practice data survives the Steadybar rename.
 export const DB_NAME = 'music-practice-os';
-export const DB_VERSION = 3;
-export const STORES = ['profiles','exercises','songs','routines','dailyPlans','sessions','goals','setlists','metronomePresets','settings'] as const;
+export const DB_VERSION = 4;
+export const STORES = ['profiles','courseProgress','exercises','songs','routines','dailyPlans','sessions','goals','setlists','metronomePresets','settings'] as const;
 export type StoreName = typeof STORES[number];
-export interface StoreTypes { profiles:PracticeProfile; exercises:Exercise; songs:Song; routines:Routine; dailyPlans:DailyPlan; sessions:PracticeSession; goals:Goal; setlists:Setlist; metronomePresets:Preset; settings:Settings }
-const validators: { [K in StoreName]: Validator<StoreTypes[K]> } = {profiles:validateProfile,exercises:validateExercise,songs:validateSong,routines:validateRoutine,dailyPlans:validatePlan,sessions:validateSession,goals:validateGoal,setlists:validateSetlist,metronomePresets:validatePreset,settings:validateSettings};
+export interface StoreTypes { courseProgress:CourseProgress; profiles:PracticeProfile; exercises:Exercise; songs:Song; routines:Routine; dailyPlans:DailyPlan; sessions:PracticeSession; goals:Goal; setlists:Setlist; metronomePresets:Preset; settings:Settings }
+const validators: { [K in StoreName]: Validator<StoreTypes[K]> } = {courseProgress:validateCourseProgress,profiles:validateProfile,exercises:validateExercise,songs:validateSong,routines:validateRoutine,dailyPlans:validatePlan,sessions:validateSession,goals:validateGoal,setlists:validateSetlist,metronomePresets:validatePreset,settings:validateSettings};
 
 /** v1 → v2: introduce visibility policy without altering any practice records. */
 export function migrateSettingsV1(input: Partial<Settings>): Settings {
@@ -62,6 +64,7 @@ export async function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
             if(storeName==='dailyPlans')table.createIndex('profileDate',['profileId','date'],{unique:true});
           }
         }
+        if(event.oldVersion<4&&!db.objectStoreNames.contains('courseProgress'))db.createObjectStore('courseProgress',{keyPath:'id'});
         if(event.oldVersion<3){
           if(!db.objectStoreNames.contains('profiles'))db.createObjectStore('profiles',{keyPath:'id'});
           if(!db.objectStoreNames.contains('migrationBackups'))db.createObjectStore('migrationBackups',{keyPath:'id'});
@@ -191,6 +194,7 @@ export async function readData():Promise<Data> {
     const source=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]]));
     if(!source.settings)throw new Error('Application settings are missing. Reload, or restore a known-good backup.');
     if((source.profiles as unknown[])?.length)source.schemaVersion=2;
+    else if(!(source.courseProgress as unknown[])?.length)delete source.courseProgress;
     return source as unknown as Data;
   }catch(error){await done.catch(()=>{});throw error;}
 }
@@ -227,7 +231,7 @@ export async function initializeDatabase():Promise<void> {
       for(const profile of repaired.profiles??[])if(JSON.stringify(previousProfiles.get(profile.id))!==JSON.stringify(profile))tx.objectStore('profiles').put(profile);
       return;
     }
-    const previous=prefs ? Object.fromEntries(STORES.filter(n=>n!=='profiles').map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
+    const previous=prefs ? Object.fromEntries(STORES.filter(n=>n!=='profiles'&&n!=='courseProgress').map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
     const seed=validateData(migratePracticeData(validateData(previous)));
     if(prefs)tx.objectStore('migrationBackups').put({id:'before-practice-profiles-v2',data:previous});
     for(const name of STORES){const table=tx.objectStore(name);table.clear();for(const row of name==='settings'?[seed.settings]:(seed[name]??[]))table.put(row);}

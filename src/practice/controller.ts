@@ -177,6 +177,7 @@ export class PracticeController {
       let b=s.blocks[s.activeBlockIndex]!;const profile=store.snapshot().profiles?.find(p=>p.id===b.profileId);
       if(!profile)throw new Error('The session profile is unavailable.');assertProtocolCompatible(config,profile);
       if(b.actualActiveSeconds>0||(b.outcomes?.length??0)>0||b.tempoAttempts.length){s=restartBlock(s);b=s.blocks[s.activeBlockIndex]!;}
+      delete b.lessonSource;
       b.protocolSnapshot=config;b.protocolState={step:0,clean:0,total:0,...(config.kind==='vocal-pattern'?{rootMidi:config.startMidi}:{})};
       b.outcomes=[];b.tempoAttempts=[];b.initialBpm=protocolPulse(config)?.bpm;b.finalBpm=b.initialBpm;
       const timing=protocolPulse(config);b.meterSnapshot=timing?{beats:timing.beats,beatUnit:timing.beatUnit}:s.blocks[s.activeBlockIndex]!.meterSnapshot;b.subdivisionSnapshot=timing?.subdivision??1;

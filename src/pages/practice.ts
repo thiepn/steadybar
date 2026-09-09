@@ -1,3 +1,4 @@
+import { learningSummary } from '../ui/learning.js';
 import { taskPanel, type TaskPanel } from '../ui/protocol-practice.js';
 import { protocolPulse } from '../domain/protocols.js';
 import { activeProfile, profileName } from '../domain/profiles.js';
@@ -19,6 +20,7 @@ import { sessionPage } from './history.js';
 export function practicePage():Page{
   const snapshot=store.snapshot(),data=store.view(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=snapshot.sessions.find(s=>s.status==='active');
   const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Choose a plan, an exercise, or a timed free session.'));
+  page.append(learningSummary());
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},`Unfinished ${profileName(snapshot,active.profileId)} session`),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
   const planned=el('section',{class:'panel launcher-plan'},sectionHeader('Today’s session',`${plan?.blocks.length||0} blocks · ${duration(routineDuration(plan?.blocks||[]))}`));
   if(plan?.blocks.length)planned.append(el('ol',{class:'launch-sequence'},plan.blocks.map(b=>el('li',{},el('span',{},b.title),el('span',{class:'muted'},`${duration(b.targetSeconds)}${b.bpm===undefined?'':` · ${b.bpm} BPM`}`)))),button('Start today’s plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary','play'));
