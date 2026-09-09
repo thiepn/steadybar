@@ -44,6 +44,17 @@ export function selectedCourse(data:Data,profile:PracticeProfile):Course|undefin
   const available=coursesFor(profile),selected=data.courseProgress?.find(p=>p.profileId===profile.id&&p.active);
   return available.find(c=>c.id===selected?.courseId)??available[0];
 }
+export interface LearningTarget {course:Course;lesson:Lesson;nextStage:boolean;allStagesComplete:boolean}
+/** Choose actionable learning, advancing a finished quiet stage instead of falling back to lesson one. */
+export function learningTarget(data:Data,profile:PracticeProfile,now=new Date()):LearningTarget|undefined{
+  const course=selectedCourse(data,profile);if(!course)return undefined;
+  const progress=progressFor(data,profile.id,course.id),lesson=nextLesson(course,progress,now),status=lessonStatus(course,recordFor(progress,lesson.id),now);
+  const settled=courseComplete(course,progress)&&status!=='Practice again'&&status!=='Review suggested';
+  if(!settled)return {course,lesson,nextStage:false,allStagesComplete:false};
+  const available=coursesFor(profile),next=available[available.indexOf(course)+1];
+  if(next)return {course:next,lesson:nextLesson(next,progressFor(data,profile.id,next.id),now),nextStage:true,allStagesComplete:false};
+  return {course,lesson,nextStage:false,allStagesComplete:true};
+}
 export function lessonLink(course:Course,lesson:Lesson,profileId:string):string{return `/courses/${course.id}/${lesson.id}/${profileId}`;}
 function requireCourse(data:Data,profileId:string,courseId:string):{profile:PracticeProfile;course:Course}{
   const profile=data.profiles?.find(p=>p.id===profileId),course=courseById(courseId);
