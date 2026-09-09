@@ -18,8 +18,28 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Normalize current first-read test marker for one-shot patcher
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/profiles.test.mjs');s=p.read_text()
+          current="test('first read is not awarded again when the same material is restarted or revisited',()=>{"
+          marker="test('first-read provenance turns repeats into repeat reading automatically',()=>{"
+          if s.count(current)!=1: raise SystemExit('current first-read test marker missing or duplicated')
+          p.write_text(s.replace(current,marker,1))
+          PY
       - name: Apply final audit fixes
         run: python3 tools/apply_v211_reading_plan_fix.py
+      - name: Restore canonical first-read test name
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/profiles.test.mjs');s=p.read_text()
+          marker="test('first-read provenance turns repeats into repeat reading automatically',()=>{"
+          current="test('first read is not awarded again when the same material is restarted or revisited',()=>{"
+          if s.count(marker)!=1: raise SystemExit('patched first-read test marker missing or duplicated')
+          p.write_text(s.replace(marker,current,1))
+          PY
       - name: Remove one-shot patcher
         run: git rm tools/apply_v211_reading_plan_fix.py
       - name: Verify final candidate
