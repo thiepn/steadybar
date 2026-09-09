@@ -121,7 +121,8 @@ export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promi
     if(name==='settings')data.settings=validateSettings(validated);
     else if(name==='sessions'){
       const current=await request(tx.objectStore('sessions').getAll()) as PracticeSession[],session=validateSession(validated as PracticeSession);
-      data.sessions=[...current.filter(row=>row.id!==session.id),session];
+      if(current.some(row=>row.id===session.id))throw new Error('Use the guarded session commands to update an existing practice session.');
+      data.sessions=[...current,session];
     }else {
       const rows=data[name as Exclude<StoreName,'settings'|'sessions'>]??[];
       // A discriminated store-name selects the already runtime-validated row.

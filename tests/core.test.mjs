@@ -98,6 +98,9 @@ test('validation rejects duplicate attempt IDs within a block',()=>{
 test('validation rejects a running timer without an ISO start timestamp',()=>{
  const s=logic.createSession([free()],seedData());s.runtime.phase='running';delete s.runtime.runStartedAt;assert.throws(()=>v.validateSession(s),/timestamp|start/i);
 });
+test('entity metadata advances monotonically even when the wall clock does not',()=>{
+ const previous='2026-09-09T12:00:00.100Z';assert.equal(u.advanceISO(previous,Date.parse(previous)),'2026-09-09T12:00:00.101Z');assert.equal(u.advanceISO(previous,Date.parse(previous)-1000),'2026-09-09T12:00:00.101Z');
+});
 test('UUIDs use secure v4 format and are unique across generated records',()=>{
  const ids=Array.from({length:1000},()=>u.uuid());assert.equal(new Set(ids).size,1000);assert.ok(ids.every(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)));
 });

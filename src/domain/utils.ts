@@ -7,6 +7,7 @@ export const uuid = (): string => {
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
 };
 export const nowISO = (): string => new Date().toISOString();
+export const advanceISO = (previous:string,now=Date.now()):string => new Date(Math.max(now,Date.parse(previous)+1)).toISOString();
 export const metadata = (): Entity => { const now = nowISO(); return { id:uuid(), createdAt:now, updatedAt:now }; };
 export const localDate = (input: Date | string = new Date()): string => {
   const d = typeof input === 'string' ? new Date(input) : input;

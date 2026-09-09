@@ -66,6 +66,10 @@ test('generic session writes cannot bypass the one-active-session invariant',asy
   await db.initializeDatabase();const first=active(),second=active();await db.put('sessions',first);
   await assert.rejects(db.put('sessions',second),/one active session/);assert.deepEqual((await db.all('sessions')).map(s=>s.id),[first.id]);
 });
+test('generic session put cannot rewrite an existing ended history row',async()=>{
+ await db.initializeDatabase();let s=finishBlock(active());await db.put('sessions',s);const before=structuredClone(await db.get('sessions',s.id));
+ await assert.rejects(db.put('sessions',{...s,sessionNotes:'rewritten through generic put'}),/guarded session commands/);assert.deepEqual(await db.get('sessions',s.id),before);
+});
 test('generic entity saves still validate after a session-backed lesson review exists',async()=>{
  await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES.find(c=>c.id==='drums-foundation'),l=c.lessons[0],p=d.profiles.find(p=>p.id===pid);
  let s=createSession(learning.lessonBlocks(c,l,p,{minutes:5}),d);for(let i=0;i<l.tasks.length;i++){s.blocks[i].startedAt='2026-09-09T12:00:00.000Z';s.blocks[i].actualActiveSeconds=20;s=finishBlock(s,false,Date.parse('2026-09-09T12:01:00.000Z')+i*20000);}d.sessions=[s];

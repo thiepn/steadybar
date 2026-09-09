@@ -1,8 +1,8 @@
 import { store } from './store.js';
 import { el } from '../ui/dom.js';
 import { button, dialog, notify, select } from '../ui/components.js';
-import { localDate, metadata } from '../domain/utils.js';
-import { definition, PROFILE_DEFINITIONS, FAMILIES, skillLabel, profiles } from '../domain/profiles.js';
+import { advanceISO, localDate, metadata } from '../domain/utils.js';
+import { definition, PROFILE_DEFINITIONS, FAMILIES, isPracticeProfile, skillLabel, profiles } from '../domain/profiles.js';
 import type { Experience, InstrumentType, InstrumentFamily } from '../domain/practice-types.js';
 import { makeProfile, provisionProfile, selectStarterRoutine, fitRoutine } from './profiles.js';
 export function showOnboarding():void{
@@ -15,12 +15,12 @@ export function showOnboarding():void{
   const finish=async(useStarter:boolean)=>{
     const type=instrument.querySelector('select')!.value as InstrumentType,aim=focus.querySelector('select')!.value,minutes=Number(duration.querySelector('select')!.value);
     await store.workspace(data=>{
-      let next=data,p=profiles(data).find(p=>p.instrumentType===type&&!p.archived);
+      let next=data,p=profiles(data).find(p=>p.instrumentType===type&&isPracticeProfile(p));
       if(!p){p=makeProfile({name:definition(type).label,instrumentType:type,family:family.querySelector('select')!.value as InstrumentFamily,level:level.querySelector('select')!.value as Experience,focusAreas:[aim],defaultSessionMinutes:minutes});next=provisionProfile(data,p);}
-      p={...p,level:level.querySelector('select')!.value as Experience,focusAreas:[aim],defaultSessionMinutes:minutes};
+      p={...p,level:level.querySelector('select')!.value as Experience,focusAreas:[aim],defaultSessionMinutes:minutes,updatedAt:advanceISO(p.updatedAt)};
       // Only hide the unused factory profile on a genuinely new installation.
       const pristine=!data.settings.onboardingDone&&!data.sessions.length&&!data.exercises.some(e=>!e.builtin)&&!data.songs.length&&!data.dailyPlans.length;
-      next.profiles=profiles(next).map(item=>item.id===p!.id?p!:pristine?{...item,archived:true}:item);
+      next.profiles=profiles(next).map(item=>item.id===p!.id?p!:pristine&&!item.archived?{...item,archived:true,updatedAt:advanceISO(item.updatedAt)}:item);
       next.settings={...next.settings,instrument:definition(type).label,aim,onboardingDone:true,activeProfileId:p.id,primaryProfileId:p.id};
       if(useStarter){const routine=selectStarterRoutine(next,p,minutes);if(routine)next.dailyPlans.push({...metadata(),profileId:p.id,date:localDate(),sourceRoutineId:routine.id,blocks:fitRoutine(routine,minutes)});}
       return next;

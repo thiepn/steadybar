@@ -2,7 +2,7 @@ import { store } from './store.js';
 import { activeProfile, definition, isPracticeProfile, practiceProfiles, profiles } from '../domain/profiles.js';
 import type { Data, Routine } from '../domain/models.js';
 import type { Experience, InstrumentFamily, InstrumentType, PracticeProfile } from '../domain/practice-types.js';
-import { freshBlocks, localDate, metadata, nowISO } from '../domain/utils.js';
+import { advanceISO, freshBlocks, localDate, metadata, nowISO } from '../domain/utils.js';
 import { starterContent } from '../db/profile-content.js';
 import { validateProfile } from '../domain/practice-validation.js';
 
@@ -88,7 +88,7 @@ export async function prepareStarterPlan(minutes:number):Promise<void>{
   await store.workspace(data=>{
     const p=activeProfile(data),routine=selectStarterRoutine(data,p,minutes);if(!routine)throw new Error('Create a routine for this profile first.');
     const date=localDate(),existing=data.dailyPlans.find(plan=>plan.profileId===p.id&&plan.date===date),base=existing??metadata();
-    const updatedAt=new Date(Math.max(Date.now(),Date.parse(base.updatedAt)+1)).toISOString();
+    const updatedAt=advanceISO(base.updatedAt);
     const plan={...base,updatedAt,date,profileId:p.id,sourceRoutineId:routine.id,blocks:fitRoutine(routine,minutes)};
     return {...data,dailyPlans:[...data.dailyPlans.filter(v=>v.id!==plan.id),plan]};
   });

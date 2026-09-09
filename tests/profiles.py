@@ -85,6 +85,19 @@ class Profiles(e2e.MusicPracticeTests):
         else:self.assertEqual(len(block['outcomes']),1)
         return exercise,session
 
+    def test_58_onboarding_existing_profile_advances_profile_metadata(self):
+        factory=self.state()['profiles'][0];self.page.wait_for_timeout(2);self.onboard_type('drums',starter=False)
+        saved=next(p for p in self.state()['profiles'] if p['id']==factory['id']);self.assertGreater(saved['updatedAt'],factory['updatedAt'])
+
+    def test_59_onboarding_skips_historical_custom_profiles(self):
+        factory=self.state()['profiles'][0];self.page.wait_for_timeout(2)
+        self.read("load('app/store.js').store.workspace(d=>{const at=new Date().toISOString();d.profiles.push({id:'historical-custom-onboarding',name:'Earlier custom practice',instrumentType:'custom',family:'general',level:'beginner',focusAreas:[],defaultSessionMinutes:30,archived:false,createdAt:at,updatedAt:at,attribution:'unresolved-history'});return d})")
+        self.page.get_by_label('Instrument',exact=True).select_option('custom');self.onboard(False)
+        data=self.state();active=next(p for p in data['profiles'] if p['id']==data['settings']['activeProfileId']);retired=next(p for p in data['profiles'] if p['id']==factory['id'])
+        self.assertEqual(active['instrumentType'],'custom');self.assertNotEqual(active.get('attribution'),'unresolved-history');self.assertNotEqual(active['id'],'historical-custom-onboarding')
+        self.assertTrue(any(p['id']=='historical-custom-onboarding' and p.get('attribution')=='unresolved-history' for p in data['profiles']))
+        self.assertTrue(retired['archived']);self.assertGreater(retired['updatedAt'],factory['updatedAt'])
+
     def test_60_guitar_round_goals_and_progress(self):
         self.onboard_type('guitar');exercise,session=self.complete_example('guitar')
         self.assertNotIn('initialBpm',session['blocks'][0]);self.assertEqual(session['blocks'][0]['outcomes'][0]['clean'],8)
@@ -330,6 +343,26 @@ class Profiles(e2e.MusicPracticeTests):
         saved=next(s for s in self.state()['songs'] if s['id']==song_id)
         self.assertEqual(saved['title'],'Concurrent song renamed');self.assertEqual(saved['notes'],'Base edit')
         self.assertEqual([s['name'] for s in saved['sections']],['Concurrent section']);self.assertEqual([p['name'] for p in saved['parts']],['Concurrent guitar part'])
+
+    def test_75_source_edits_refresh_future_labels_and_parent_metadata(self):
+        self.onboard_type('guitar');data=self.state();plan=data['dailyPlans'][0]
+        candidate=next((b for b in plan['blocks'] if b.get('exerciseId')),None);self.assertIsNotNone(candidate)
+        exercise=next(e for e in data['exercises'] if e['id']==candidate['exerciseId']);old_name=exercise['name'];old_exercise_stamp=exercise['updatedAt'];old_plan_stamp=plan['updatedAt']
+        self.route('/library/'+exercise['id']);self.page.get_by_role('button',name='Edit',exact=True).click();self.dialog_fill('Name',old_name+' renamed')
+        self.read("load('app/store.js').store.workspace(d=>{const e=d.exercises.find(e=>e.id==="+json.dumps(exercise['id'])+");e.name='Concurrent source name';e.updatedAt=new Date(Date.parse(e.updatedAt)+5).toISOString();for(const p of [...d.routines,...d.dailyPlans]){let changed=false;for(const b of p.blocks)if(b.exerciseId===e.id&&b.title==="+json.dumps(old_name)+"){b.title='Concurrent source name';changed=true;}if(changed)p.updatedAt=new Date(Date.parse(p.updatedAt)+5).toISOString();}return d})")
+        self.save_dialog('Save exercise')
+        data=self.state();saved=next(e for e in data['exercises'] if e['id']==exercise['id']);plan=next(p for p in data['dailyPlans'] if p['id']==plan['id'])
+        self.assertGreater(saved['updatedAt'],old_exercise_stamp);self.assertGreater(plan['updatedAt'],old_plan_stamp);self.assertTrue(any(b.get('exerciseId')==exercise['id'] and b['title']==old_name+' renamed' for b in plan['blocks']))
+
+        song_id=self.create_song('Reference source');self.page.get_by_role('button',name='Add section',exact=True).click();self.dialog_fill('Section name','Verse');self.save_dialog('Save section')
+        self.route('/');self.page.get_by_role('button',name='Add block',exact=True).click();dialog=self.page.locator('dialog[open]');dialog.get_by_label('Block type',exact=True).select_option('song-section');dialog.get_by_label('Song',exact=True).select_option(song_id);dialog.get_by_label('Section',exact=True).select_option(label='Verse');self.save_dialog('Add block')
+        data=self.state();plan=next(p for p in data['dailyPlans'] if p['profileId']==data['settings']['activeProfileId']);stamp=plan['updatedAt']
+        self.route('/songs/'+song_id);self.page.get_by_role('button',name='Edit Verse',exact=True).click();self.dialog_fill('Section name','Middle 8');self.save_dialog('Save section')
+        data=self.state();plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['title'],'Reference source · Middle 8');self.assertGreater(plan['updatedAt'],stamp);stamp=plan['updatedAt']
+        self.page.get_by_role('button',name='Edit song',exact=True).click();self.dialog_fill('Title','Reference source renamed');self.save_dialog('Save song')
+        data=self.state();plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['title'],'Reference source renamed · Middle 8');self.assertGreater(plan['updatedAt'],stamp);stamp=plan['updatedAt']
+        self.page.get_by_role('button',name='Remove Middle 8',exact=True).click();self.confirm('Remove section')
+        data=self.state();plan=next(p for p in data['dailyPlans'] if p['id']==plan['id']);block=next(b for b in plan['blocks'] if b.get('songId')==song_id);self.assertEqual(block['type'],'song');self.assertNotIn('songSectionId',block);self.assertEqual(block['title'],'Reference source renamed');self.assertGreater(plan['updatedAt'],stamp)
 
     def test_76_profile_management_preserves_focuses_names_and_history_buckets(self):
         self.onboard_type('guitar');first=self.profile();self.route('/profiles')

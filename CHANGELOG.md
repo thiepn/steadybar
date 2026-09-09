@@ -5,11 +5,13 @@
 - Scope remembered lesson tempo to the lesson that supplied it, preventing a custom tempo from silently leaking into another lesson while retaining safe duration and vocal-range convenience.
 - Derive current-revision session evidence from the immutable supporting session during whole-workspace validation; reject orphaned or altered evidence while retaining unknown historical course revisions.
 - Apply the same 0.5–120 minute limits to imported off-app evidence that live review entry already enforces, and validate current-revision review shapes even when the outcome is “Practice again”.
-- Make the generic session repository APIs uphold the one-active-session and learning-reference invariants instead of relying solely on the dedicated practice controller.
+- Make the generic session repository APIs uphold the one-active-session and learning-reference invariants instead of relying solely on the dedicated practice controller; generic inserts can no longer overwrite an existing session/history row.
 - Show lesson-attributable evidence time in the review picker instead of total time from unrelated blocks in the same session.
 - Avoid rewriting every inactive course record's timestamp when selecting another course.
 - Prevent sight-reading task edits from restoring first-read status for an already-started or already-known passage; genuinely changed material may still be explicitly marked new.
 - Rebuilding an existing Today starter plan now preserves its ID/creation time while monotonically advancing `updatedAt`.
+- Keep entity metadata and future source references coherent during workspace-level edits: exercise edits now stamp themselves and affected parent plans/routines; canonical exercise/song-section labels follow source renames/removals without rewriting custom titles or history.
+- Harden onboarding over migrated workspaces so protected historical custom attribution buckets cannot become the selected practice profile, and onboarding profile changes advance metadata.
 - Add Node and browser regressions for all of the above; the complete existing Chromium, Firefox and WebKit release suite remains mandatory.
 
 ## 2.1.0 — Guided instrument courses — 2026-09-09
