@@ -1,0 +1,59 @@
+name: Prepare verified guided courses 2.1.0
+on:
+  push:
+    branches: [transfer/guided-courses-v210]
+    paths: [.github/workflows/prepare-guided-courses-v210.yml]
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: transfer/guided-courses-v210
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify exact transport and release baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check <<'CHECKSUMS'
+          44104c30d3ffe87b4c48203d358bdb0c12b4ee2ee5a279183fd90c016567306c  .transfer/v210-01.b64
+          a749457b33e285c5fcfd086a5e65c395ed76cb53f61e3c59966787cb2f2bdba6  .transfer/v210-02.b64
+          5f9796607cd2905c37d1d2ae4e9a8932063b361a89833f3cd0e3b24a832e592b  .transfer/v210-03.b64
+          99fa9f82459396e75a6513d51274f617de7b365136976fd504a846494cfb6b02  .transfer/v210-04.b64
+          fd2d4d7a7da1c169f07a277043b34ad1a708d305505993c05362e957f773e054  .transfer/v210-05.b64
+          c1af89321a68d00d344808b609c45889d6db517d0672dc53651ee5a9bdc15443  .transfer/v210-06.b64
+          a9f53f762aa334576796e4d6d22465d13c585c8c08c98f7ef93f5db281d61f2c  .transfer/v210-07.b64
+          3c6f7141fe455e5faf4b28ca58f5e70d29f66f882130f24eaa7c6d1cfa3a65c6  .transfer/v210-08.b64
+          f5f5ee617fccd0cc28a3a01f03efddb8cb2e97e63cab92d54af5b2a863b34f14  .transfer/v210-09.b64
+          13d3d15d4a741881acc6fdd831565c154b8510759692d4b21f5dba5a2a13c2c8  .transfer/v210-10.b64
+          4f32101f65f40d9c2d7e63d1b3fcef14d7afc977e80682c4f0ef55cf5d6e2276  .transfer/v210-11.b64
+          CHECKSUMS
+          cat .transfer/v210-{01..11}.b64 | base64 --decode > /tmp/v210.patch.xz
+          echo 'cb3bc6e0236124ec981da815a525361fbada5578d8bbf7411b010ebc93fdecf4  /tmp/v210.patch.xz' | sha256sum --check
+          xz --decompress --stdout /tmp/v210.patch.xz > /tmp/v210.patch
+          git fetch origin main feat/guided-courses-v210
+          test "$(git rev-parse origin/main)" = c09519389f9a295ec7c5140e445ada4ef6e27176
+          test "$(git rev-parse origin/feat/guided-courses-v210)" = c09519389f9a295ec7c5140e445ada4ef6e27176
+          git checkout --detach c09519389f9a295ec7c5140e445ada4ef6e27176
+          git apply --check /tmp/v210.patch
+          git apply --index /tmp/v210.patch
+          git diff --cached --check
+      - name: Clean install and complete code verification
+        run: npm ci && npm run check
+      - name: Verify browser test sources
+        run: python3 -m py_compile tests/courses.py tests/profiles.py tests/ui_polish.py tests/colors.py tests/workbench.py tests/ci_render.py tests/ci_native.py tests/e2e.py
+      - name: Commit exact verified application tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Add instrument-specific guided courses and learning records'
+          git push origin HEAD:feat/guided-courses-v210
