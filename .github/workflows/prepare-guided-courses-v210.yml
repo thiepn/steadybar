@@ -53,6 +53,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Workflow changes require the separately authorized GitHub connector.
+          # Preserve the existing workflow here; it is updated before the PR opens.
+          git restore --source=c09519389f9a295ec7c5140e445ada4ef6e27176 --staged --worktree .github/workflows/pages.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Add instrument-specific guided courses and learning records'
