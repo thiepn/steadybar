@@ -7,12 +7,19 @@ def repl(path,old,new,count=1):
     p.write_text(s.replace(old,new,count))
 
 # The preceding generated patch intentionally writes TypeScript source. Preserve
-# the two-character backslash-n escape rather than an actual newline in a quote.
+# one backslash-n escape in the emitted TypeScript rather than an actual newline
+# in a quoted string or a double-escaped literal backslash-n at runtime.
 p=ROOT/'src/app/song-parts.ts';s=p.read_text()
-bad="join('\n');changed=true;"  # Python interprets \n here as the emitted newline character.
-good="join('\\\\n');changed=true;"
+bad="join('\n');changed=true;"
+good=r"join('\n');changed=true;"
 if s.count(bad)!=1: raise SystemExit(f'src/app/song-parts.ts: expected one emitted newline escape bug, found {s.count(bad)}')
 p.write_text(s.replace(bad,good,1))
+
+# editSong no longer uses nowISO after the metadata patch moves it to the shared
+# monotonic helper.
+repl('src/ui/editors.ts',
+"import { advanceISO, freshBlocks, metadata, nowISO, uuid } from '../domain/utils.js';",
+"import { advanceISO, freshBlocks, metadata, uuid } from '../domain/utils.js';")
 
 # Resolve exercise edits against the fresh transactional source. This keeps
 # timestamps monotonic and lets a deliberate last writer synchronize future
