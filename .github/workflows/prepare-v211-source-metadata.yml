@@ -20,20 +20,22 @@ jobs:
           cache: npm
       - name: Apply audited source metadata fixes
         run: python3 tools/apply_v211_source_metadata.py
-      - name: Remove one-shot patcher
-        run: git rm tools/apply_v211_source_metadata.py
+      - name: Apply existing-session put guard
+        run: python3 tools/apply_v211_session_put_guard.py
+      - name: Remove one-shot patchers
+        run: git rm tools/apply_v211_source_metadata.py tools/apply_v211_session_put_guard.py
       - name: Verify exact candidate
         run: |
           git diff --check
           npm ci
           npm run check
           python3 -m py_compile tests/courses.py tests/profiles.py tests/ui_polish.py tests/colors.py tests/workbench.py tests/ci_render.py tests/ci_native.py tests/e2e.py
-      - name: Commit verified source metadata hardening
+      - name: Commit verified hardening
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Keep source references and entity metadata coherent'
+          git commit -m 'Keep source references, metadata and session history coherent'
           git push origin HEAD:fix/v210-postrelease-audit
