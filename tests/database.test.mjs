@@ -182,7 +182,7 @@ test('generic session deletion cannot orphan current guided-learning evidence',a
 test('backup round trip retains learning history and reset clears it only when requested',async()=>{
  await db.initializeDatabase();const d=await db.readData(),pid=d.settings.activeProfileId,c=catalog.COURSES[0],l=c.lessons[0];
  await db.mutateWorkspace(data=>learning.reviewLesson(data,pid,c.id,l.id,courseReview('backup-review')));
- const before=await db.readData(),backup=createBackup(before);assert.equal(backup.version,3);
+ const before=await db.readData(),backup=createBackup(before);assert.equal(backup.version,4);
  await db.resetWorkspace();assert.equal((await db.readData()).courseProgress.length,0);
  await restoreBackup(backup);assert.deepEqual(await db.readData(),before);
 });
