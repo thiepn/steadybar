@@ -82,6 +82,7 @@ export function evidenceFromSessions(data:Data):PracticeEvidence[] {
         profileId,targetKeys,targets,timestamp:block.evaluation.timestamp,
         source:{kind:'block-evaluation',sessionId:session.id,blockId:block.id},
         context:block.evaluation.context,practiced:true,reliability:'self-report',result:block.evaluation.result,
+        ...(block.finalBpm??block.initialBpm?{bpm:block.finalBpm??block.initialBpm}:{}),
         limitations:[...block.evaluation.limitations],
       });
       for(const attempt of block.tempoAttempts)evidence.push({
