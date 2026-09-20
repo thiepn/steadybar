@@ -78,16 +78,14 @@ export const validatePriorityCycle:Validator<PriorityCycle>=(v,p='Priority cycle
 };
 
 export function assertPracticeTargetReferences(target:PracticeTargetRef,profileId:string,data:Data,path='Practice target'):void {
-  const profile=data.profiles?.find(p=>p.id===profileId);
-  if(!profile)fail(path,'profile does not exist');
+  const profile=data.profiles?.find(p=>p.id===profileId)??fail(path,'profile does not exist');
   if(target.kind==='skill'){
     if(target.profileId!==profileId||!isSkillForInstrument(target.skillId,profile.instrumentType))fail(path,'skill does not belong to this profile');
   }else if(target.kind==='exercise'){
     const exercise=data.exercises.find(e=>e.id===target.exerciseId);
     if(!exercise||exercise.profileId!==profileId)fail(path,'exercise does not belong to this profile');
   }else if(target.kind==='song'||target.kind==='song-section'||target.kind==='song-transition'){
-    const song=data.songs.find(s=>s.id===target.songId);
-    if(!song)fail(path,'song does not exist');
+    const song=data.songs.find(s=>s.id===target.songId)??fail(path,'song does not exist');
     const part=target.partId?song.parts?.find(p=>p.id===target.partId):undefined;
     if(target.partId&&(!part||part.profileId!==profileId))fail(path,'song part does not belong to this profile');
     if(target.kind==='song-section'&&!(part?.sections??song.sections).some(s=>s.id===target.sectionId))fail(path,'song section does not exist');
@@ -100,7 +98,6 @@ export function assertPracticeStateReferences(state:PracticeState,data:Data):voi
 }
 
 export function assertPriorityCycleReferences(cycle:PriorityCycle,data:Data):void {
-  const profile=data.profiles?.find(p=>p.id===cycle.profileId);
-  if(!profile)fail('Priority cycle','profile does not exist');
+  const profile=data.profiles?.find(p=>p.id===cycle.profileId)??fail('Priority cycle','profile does not exist');
   for(const item of cycle.items)if(!isSkillForInstrument(item.skillId,profile.instrumentType))fail('Priority cycle','skill does not belong to this profile');
 }
