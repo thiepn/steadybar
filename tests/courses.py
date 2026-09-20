@@ -133,7 +133,7 @@ class Courses(e2e.MusicPracticeTests):
         self.begin('guitar');self.fill_review();self.save_dialog('Save lesson review');self.route('/settings')
         with self.page.expect_download() as dl:self.page.get_by_role('button',name='Export backup',exact=True).click()
         target=e2e.ARTIFACTS/'courses-backup-v3.json';dl.value.save_as(target);backup=json.loads(target.read_text())
-        self.assertEqual(backup['version'],3);self.assertEqual(len(backup['data']['courseProgress']),1)
+        self.assertEqual(backup['version'],4);self.assertEqual(len(backup['data']['courseProgress']),1)
         self.read("load('db/database.js').replaceData({...load('app/store.js').store.snapshot(),courseProgress:[]})")
         self.page.reload(wait_until='networkidle')
         expect(self.page.get_by_role('heading',name='Settings',exact=True)).to_be_visible()
@@ -185,14 +185,14 @@ class Courses(e2e.MusicPracticeTests):
           await new Promise((resolve,reject)=>{const r=indexedDB.deleteDatabase(db.DB_NAME);r.onsuccess=resolve;r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Fixture deletion blocked'));});
           await new Promise((resolve,reject)=>{
             const r=indexedDB.open(db.DB_NAME,3);r.onerror=()=>reject(r.error);
-            r.onupgradeneeded=()=>{for(const name of [...db.STORES.filter(n=>n!=='courseProgress'),'migrationBackups']){const t=r.result.createObjectStore(name,{keyPath:'id'});if(name==='sessions'){t.createIndex('status','status');t.createIndex('startedAt','startedAt');}if(name==='dailyPlans')t.createIndex('profileDate',['profileId','date'],{unique:true});}};
+            r.onupgradeneeded=()=>{for(const name of [...db.STORES.filter(n=>!['courseProgress','practiceStates','priorityCycles'].includes(n)),'migrationBackups']){const t=r.result.createObjectStore(name,{keyPath:'id'});if(name==='sessions'){t.createIndex('status','status');t.createIndex('startedAt','startedAt');}if(name==='dailyPlans')t.createIndex('profileDate',['profileId','date'],{unique:true});}};
             r.onsuccess=()=>{const names=db.STORES.filter(n=>n!=='courseProgress'),tx=r.result.transaction(names,'readwrite');for(const name of names)for(const row of name==='settings'?[d.settings]:d[name]??[])tx.objectStore(name).put(row);tx.oncomplete=()=>{r.result.close();resolve();};tx.onabort=()=>reject(tx.error);};
           });return {profile:d.settings.activeProfileId,exerciseIds:d.exercises.map(e=>e.id),session:s};
         })()""")
         self.page.reload(wait_until='networkidle')
         expect(self.page.get_by_role('heading',name=self.lesson['title'],exact=True)).to_be_visible()
         data=self.state();self.assertEqual(data['settings']['activeProfileId'],result['profile']);self.assertEqual([e['id'] for e in data['exercises']],sorted(result['exerciseIds']))
-        self.assertEqual(data['courseProgress'],[]);self.assertEqual(data['sessions'][0],result['session']);self.assertEqual(self.read("load('db/database.js').openDatabase().then(d=>d.version)"),4)
+        self.assertEqual(data['courseProgress'],[]);self.assertEqual(data['sessions'][0],result['session']);self.assertEqual(self.read("load('db/database.js').openDatabase().then(d=>d.version)"),5)
     def matrix(self,kind):
         self.begin(kind);self.route('/courses');expect(self.page.locator('.course-card')).to_have_count(1 if kind=='custom' else 3)
         lessons=self.read(f"load('learning/catalog.js').COURSES.filter(c=>c.instrument==={json.dumps(kind)}).flatMap(c=>c.lessons)")
