@@ -215,7 +215,7 @@ export async function readData():Promise<Data> {
     const source=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]]));
     if(!source.settings)throw new Error('Application settings are missing. Reload, or restore a known-good backup.');
     if((source.profiles as unknown[])?.length){source.schemaVersion=2;source.practiceModelVersion=1;source.practiceStates??=[];source.priorityCycles??=[];}
-    else if(!(source.courseProgress as unknown[])?.length)delete source.courseProgress;
+    else {if(!(source.courseProgress as unknown[])?.length)delete source.courseProgress;delete source.practiceStates;delete source.priorityCycles;delete source.practiceModelVersion;}
     return source as unknown as Data;
   }catch(error){await done.catch(()=>{});throw error;}
 }
@@ -255,7 +255,7 @@ export async function initializeDatabase():Promise<void> {
       }
       return;
     }
-    const previous=prefs ? Object.fromEntries(STORES.filter(n=>n!=='profiles'&&n!=='courseProgress').map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
+    const previous=prefs ? Object.fromEntries(STORES.filter(n=>!['profiles','courseProgress','practiceStates','priorityCycles'].includes(n)).map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
     const seed=validateData(migratePracticeModel(migratePracticeData(validateData(previous))));
     if(prefs)tx.objectStore('migrationBackups').put({id:'before-practice-profiles-v2',data:previous});
     for(const name of STORES){const table=tx.objectStore(name);table.clear();for(const row of name==='settings'?[seed.settings]:(seed[name]??[]))table.put(row);}
