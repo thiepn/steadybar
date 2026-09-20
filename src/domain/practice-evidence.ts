@@ -7,14 +7,17 @@ export interface PracticeEvidence {
   id:string;
   profileId:string;
   targetKeys:string[];
+  targets:PracticeTargetRef[];
   timestamp:string;
   source:
+    | {kind:'practice-block';sessionId:string;blockId:string}
     | {kind:'block-evaluation';sessionId:string;blockId:string}
     | {kind:'tempo-attempt';sessionId:string;blockId:string;attemptId:string}
     | {kind:'protocol-outcome';sessionId:string;blockId:string;outcomeId:string}
     | {kind:'lesson-review';courseId:string;lessonId:string;attemptId:string}
     | {kind:'objective-measurement';measurementId:string};
   context:PracticeContext;
+  practiced:boolean;
   reliability:EvidenceReliability;
   result?:PracticeResult;
   bpm?:number;
@@ -70,24 +73,28 @@ export function evidenceFromSessions(data:Data):PracticeEvidence[] {
       if(!targetKeys.length)continue;
       const profileId=block.profileId??session.profileId;
       if(!profileId)continue;
+      if(block.actualActiveSeconds>0||block.completed)evidence.push({
+        id:`block:${session.id}:${block.id}`,profileId,targetKeys,targets,timestamp:block.endedAt??session.endedAt??block.startedAt??session.startedAt,
+        source:{kind:'practice-block',sessionId:session.id,blockId:block.id},context:context(block),practiced:true,reliability:'legacy',limitations:[],
+      });
       if(block.evaluation)evidence.push({
         id:`evaluation:${session.id}:${block.id}:${block.evaluation.id}`,
-        profileId,targetKeys,timestamp:block.evaluation.timestamp,
+        profileId,targetKeys,targets,timestamp:block.evaluation.timestamp,
         source:{kind:'block-evaluation',sessionId:session.id,blockId:block.id},
-        context:block.evaluation.context,reliability:'self-report',result:block.evaluation.result,
+        context:block.evaluation.context,practiced:true,reliability:'self-report',result:block.evaluation.result,
         limitations:[...block.evaluation.limitations],
       });
       for(const attempt of block.tempoAttempts)evidence.push({
         id:`tempo:${session.id}:${block.id}:${attempt.id}`,
-        profileId,targetKeys,timestamp:attempt.timestamp,
+        profileId,targetKeys,targets,timestamp:attempt.timestamp,
         source:{kind:'tempo-attempt',sessionId:session.id,blockId:block.id,attemptId:attempt.id},
-        context:context(block),reliability:'legacy',result:legacyRatingToPracticeResult(attempt.rating),bpm:attempt.bpm,limitations:[],
+        context:context(block),practiced:true,reliability:'legacy',result:legacyRatingToPracticeResult(attempt.rating),bpm:attempt.bpm,limitations:[],
       });
       for(const outcome of block.outcomes??[])evidence.push({
         id:`outcome:${session.id}:${block.id}:${outcome.id}`,
-        profileId,targetKeys,timestamp:outcome.timestamp,
+        profileId,targetKeys,targets,timestamp:outcome.timestamp,
         source:{kind:'protocol-outcome',sessionId:session.id,blockId:block.id,outcomeId:outcome.id},
-        context:context(block),reliability:outcome.kind==='recall'?'structured-check':'self-report',
+        context:context(block),practiced:true,reliability:outcome.kind==='recall'?'structured-check':'self-report',
         limitations:[],quality:outcomeQuality(outcome),
       });
     }
@@ -103,9 +110,9 @@ export function evidenceFromLessons(data:Data):PracticeEvidence[] {
         const target:PracticeTargetRef={kind:'lesson',profileId:progress.profileId,courseId:progress.courseId,lessonId:record.lessonId,revision:attempt.revision};
         evidence.push({
           id:`lesson:${progress.courseId}:${record.lessonId}:${attempt.id}`,
-          profileId:progress.profileId,targetKeys:[practiceTargetKey(target)],timestamp:attempt.at,
+          profileId:progress.profileId,targetKeys:[practiceTargetKey(target)],targets:[target],timestamp:attempt.at,
           source:{kind:'lesson-review',courseId:progress.courseId,lessonId:record.lessonId,attemptId:attempt.id},
-          context:'normal',reliability:'structured-check',result:attempt.result==='passed'?'solid':'not-yet',limitations:[],
+          context:'normal',practiced:attempt.evidence.kind!=='reflection',reliability:'structured-check',result:attempt.result==='passed'?'solid':'not-yet',limitations:[],
         });
       }
     }
