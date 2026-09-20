@@ -1,7 +1,6 @@
 import type { Data } from './models.js';
 import { allPracticeEvidence, type PracticeEvidence } from './practice-evidence.js';
 import type { PracticeState, PracticeTargetRef } from './practice-state.js';
-import { practiceTargetKey } from './practice-state.js';
 
 function latest(values:string[]):string|undefined{return [...values].sort().at(-1);}
 function earliest(values:string[]):string|undefined{return [...values].sort()[0];}
