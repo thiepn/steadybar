@@ -4,18 +4,21 @@ import { assertProtocolCompatible } from '../domain/practice-validation.js';
 import { isPracticeProfile } from '../domain/profiles.js';
 import type { PracticeProfile } from '../domain/practice-types.js';
 import { migratePracticeData, normalizeProfileSelection } from './profile-migration.js';
+import { migratePracticeModel } from './practice-model-migration.js';
 import type { Data, DailyPlan, Exercise, Goal, PracticeSession, Preset, Routine, Setlist, Settings, Song } from '../domain/models.js';
+import type { PracticeState, PriorityCycle } from '../domain/practice-state.js';
 import { DEFAULT_SETTINGS } from '../domain/models.js';
 import { validateProfile, validateData, validateExercise, validateGoal, validatePlan, validatePreset, validateRoutine, validateSession, validateSetlist, validateSettings, validateSong, type Validator } from '../domain/validation.js';
+import { validatePracticeState, validatePriorityCycle } from '../domain/practice-state-validation.js';
 import { seedData } from './seed.js';
 
 // Keep the original storage identifier so existing practice data survives the Steadybar rename.
 export const DB_NAME = 'music-practice-os';
-export const DB_VERSION = 4;
-export const STORES = ['profiles','courseProgress','exercises','songs','routines','dailyPlans','sessions','goals','setlists','metronomePresets','settings'] as const;
+export const DB_VERSION = 5;
+export const STORES = ['profiles','courseProgress','exercises','songs','routines','dailyPlans','sessions','goals','setlists','practiceStates','priorityCycles','metronomePresets','settings'] as const;
 export type StoreName = typeof STORES[number];
-export interface StoreTypes { courseProgress:CourseProgress; profiles:PracticeProfile; exercises:Exercise; songs:Song; routines:Routine; dailyPlans:DailyPlan; sessions:PracticeSession; goals:Goal; setlists:Setlist; metronomePresets:Preset; settings:Settings }
-const validators: { [K in StoreName]: Validator<StoreTypes[K]> } = {courseProgress:validateCourseProgress,profiles:validateProfile,exercises:validateExercise,songs:validateSong,routines:validateRoutine,dailyPlans:validatePlan,sessions:validateSession,goals:validateGoal,setlists:validateSetlist,metronomePresets:validatePreset,settings:validateSettings};
+export interface StoreTypes { courseProgress:CourseProgress; profiles:PracticeProfile; exercises:Exercise; songs:Song; routines:Routine; dailyPlans:DailyPlan; sessions:PracticeSession; goals:Goal; setlists:Setlist; practiceStates:PracticeState; priorityCycles:PriorityCycle; metronomePresets:Preset; settings:Settings }
+const validators: { [K in StoreName]: Validator<StoreTypes[K]> } = {courseProgress:validateCourseProgress,profiles:validateProfile,exercises:validateExercise,songs:validateSong,routines:validateRoutine,dailyPlans:validatePlan,sessions:validateSession,goals:validateGoal,setlists:validateSetlist,practiceStates:validatePracticeState,priorityCycles:validatePriorityCycle,metronomePresets:validatePreset,settings:validateSettings};
 
 /** v1 → v2: introduce visibility policy without altering any practice records. */
 export function migrateSettingsV1(input: Partial<Settings>): Settings {
@@ -65,6 +68,10 @@ export async function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
           }
         }
         if(event.oldVersion<4&&!db.objectStoreNames.contains('courseProgress'))db.createObjectStore('courseProgress',{keyPath:'id'});
+        if(event.oldVersion<5){
+          if(!db.objectStoreNames.contains('practiceStates'))db.createObjectStore('practiceStates',{keyPath:'id'});
+          if(!db.objectStoreNames.contains('priorityCycles'))db.createObjectStore('priorityCycles',{keyPath:'id'});
+        }
         if(event.oldVersion<3){
           if(!db.objectStoreNames.contains('profiles'))db.createObjectStore('profiles',{keyPath:'id'});
           if(!db.objectStoreNames.contains('migrationBackups'))db.createObjectStore('migrationBackups',{keyPath:'id'});
@@ -112,7 +119,7 @@ const REFERENCE_STORES=STORES;
 async function referenceSnapshot(tx:IDBTransaction):Promise<Data>{
   const rows=await Promise.all(REFERENCE_STORES.map(name=>request(tx.objectStore(name).getAll())));
   const data=Object.fromEntries(REFERENCE_STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]])) as unknown as Data;
-  if(data.profiles?.length)data.schemaVersion=2;return data;
+  if(data.profiles?.length){data.schemaVersion=2;data.practiceModelVersion=1;data.practiceStates??=[];data.priorityCycles??=[];}return data;
 }
 export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promise<void> {
   const validated=validators[name](value);
@@ -202,7 +209,7 @@ export async function readData():Promise<Data> {
     await done;
     const source=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]]));
     if(!source.settings)throw new Error('Application settings are missing. Reload, or restore a known-good backup.');
-    if((source.profiles as unknown[])?.length)source.schemaVersion=2;
+    if((source.profiles as unknown[])?.length){source.schemaVersion=2;source.practiceModelVersion=1;source.practiceStates??=[];source.priorityCycles??=[];}
     else if(!(source.courseProgress as unknown[])?.length)delete source.courseProgress;
     return source as unknown as Data;
   }catch(error){await done.catch(()=>{});throw error;}
@@ -212,7 +219,7 @@ export async function mutateWorkspace(fn:(data:Data)=>Data):Promise<Data>{
   return write([...STORES],async tx=>{
     const rows=await Promise.all(STORES.map(name=>request(tx.objectStore(name).getAll())));
     const current=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]])) as unknown as Data;
-    current.schemaVersion=2;
+    current.schemaVersion=2;current.practiceModelVersion=1;current.practiceStates??=[];current.priorityCycles??=[];
     const next=validateData(fn(structuredClone(current)));
     for(const name of STORES){
       const table=tx.objectStore(name),previous=name==='settings'?[current.settings]:(current[name]??[]),after=name==='settings'?[next.settings]:(next[name]??[]);
@@ -234,14 +241,17 @@ export async function initializeDatabase():Promise<void> {
     const prefs=rows[STORES.indexOf('settings')]?.[0] as Settings|undefined,profileRows=rows[STORES.indexOf('profiles')] as PracticeProfile[]|undefined;
     if(prefs && profileRows?.length){
       const current=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?prefs:rows[i]])) as unknown as Data;current.schemaVersion=2;
-      const repaired=validateData(normalizeProfileSelection(current));
-      if(JSON.stringify(repaired.settings)!==JSON.stringify(prefs))tx.objectStore('settings').put(repaired.settings);
-      const previousProfiles=new Map(profileRows.map(profile=>[profile.id,profile]));
-      for(const profile of repaired.profiles??[])if(JSON.stringify(previousProfiles.get(profile.id))!==JSON.stringify(profile))tx.objectStore('profiles').put(profile);
+      const repaired=validateData(migratePracticeModel(normalizeProfileSelection(current)));
+      for(const name of STORES){
+        const table=tx.objectStore(name),before=name==='settings'?[prefs]:(rows[STORES.indexOf(name)]??[]),after=name==='settings'?[repaired.settings]:(repaired[name]??[]);
+        const previous=new Map((before as {id:string}[]).map(row=>[row.id,row])),ids=new Set((after as {id:string}[]).map(row=>row.id));
+        for(const row of before as {id:string}[])if(!ids.has(row.id))table.delete(row.id);
+        for(const row of after as {id:string}[])if(JSON.stringify(previous.get(row.id))!==JSON.stringify(row))table.put(row);
+      }
       return;
     }
     const previous=prefs ? Object.fromEntries(STORES.filter(n=>n!=='profiles'&&n!=='courseProgress').map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
-    const seed=validateData(migratePracticeData(validateData(previous)));
+    const seed=validateData(migratePracticeModel(migratePracticeData(validateData(previous))));
     if(prefs)tx.objectStore('migrationBackups').put({id:'before-practice-profiles-v2',data:previous});
     for(const name of STORES){const table=tx.objectStore(name);table.clear();for(const row of name==='settings'?[seed.settings]:(seed[name]??[]))table.put(row);}
   });
@@ -249,7 +259,7 @@ export async function initializeDatabase():Promise<void> {
 
 /** Explicit destructive reset only; the UI exports a safety backup first. */
 export async function resetWorkspace():Promise<void>{
-  const next=validateData(migratePracticeData(seedData()));
+  const next=validateData(migratePracticeModel(migratePracticeData(seedData())));
   await write([...STORES,'migrationBackups'],tx=>{
     tx.objectStore('migrationBackups').clear();
     for(const name of STORES){const table=tx.objectStore(name);table.clear();for(const row of name==='settings'?[next.settings]:(next[name]??[]))table.put(row);}
