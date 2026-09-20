@@ -22,7 +22,7 @@ const baseCounts={drums:30,guitar:30,bass:25,piano:30,voice:25};
 for(const type of Object.keys(baseCounts)){
  test(`${type}: original starter library validates with distinct skills and protocols`,()=>{
   const d=dataset(type);assert.equal(d.exercises.length,baseCounts[type]);assert.ok(new Set(d.exercises.map(e=>e.skillArea)).size>=5);
-  for(const e of d.exercises){assert.equal(e.profileId,d.settings.activeProfileId);assertProtocolCompatible(e.protocol,d.profiles[0]);assert.ok(e.instructions.length>40);assert.ok(definition(type).skills.includes(e.skillArea));}
+  for(const e of d.exercises){assert.equal(e.profileId,d.settings.activeProfileId);assertProtocolCompatible(e.protocol,d.profiles[0]);assert.ok(e.instructions.length>40);assert.ok(definition(type).skills.includes(e.skillArea));assert.ok(e.primarySkillId);}
   assert.equal(d.sessions.length,0);
  });
  for(const minutes of [15,30,45,60])test(`${type}: ${minutes}-minute template sums exactly and preserves all referenced tasks`,()=>{
