@@ -1,5 +1,6 @@
 import {validateData,validateSession} from '../dist/app/domain/validation.js';
 import {migratePracticeData} from '../dist/app/db/profile-migration.js';
+import {migratePracticeModel} from '../dist/app/db/practice-model-migration.js';
 /** Real database repository functions against a controlled transaction adapter.
  * Native IndexedDB/reload tests remain in e2e.py and require a real browser origin. */
 import test,{beforeEach} from 'node:test';
@@ -105,7 +106,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData({...migratePracticeData(exported.data),courseProgress:exported.data.courseProgress??[]}));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[]}));
 });
 test('restore pauses a running checkpoint immediately, before any page reload',async()=>{
   const data=seedData(),s=active();s.runtime.phase='running';s.runtime.runStartedAt='2026-09-01T10:00:00.000Z';s.blocks[0].actualActiveSeconds=32;data.sessions=[s];
