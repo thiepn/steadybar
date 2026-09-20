@@ -249,7 +249,7 @@ class Profiles(e2e.MusicPracticeTests):
         self.route('/settings')
         with self.page.expect_download() as download:self.page.get_by_role('button',name='Export backup',exact=True).click()
         target=e2e.ARTIFACTS/'profiles-v2-backup.json';download.value.save_as(target)
-        data=json.loads(target.read_text());self.assertEqual(data['version'],3);self.assertGreaterEqual(len(data['data']['profiles']),2)
+        data=json.loads(target.read_text());self.assertEqual(data['version'],4);self.assertGreaterEqual(len(data['data']['profiles']),2)
         self.page.reload(wait_until='networkidle');expect(self.page.get_by_role('heading',name='Settings',exact=True)).to_be_visible()
         self.assertEqual(self.profile()['name'],'Voice practice')
         # Actual import/reload, not just parsing a JSON fixture.
