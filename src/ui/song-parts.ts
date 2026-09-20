@@ -26,7 +26,7 @@ export function editSongPart(song: Song, initial?: SongPart): void {
     el('p', { class: 'field-hint' }, 'This part has its own sections and readiness. Shared song details and other profiles remain unchanged.'),
   ], async form => {
     const latest = store.snapshot().songs.find(s => s.id === song.id)?.parts?.find(p => p.id === part.id);
-    const saved = validateSongPart({ ...part, sections: latest?.sections ?? part.sections, name: formText(form, 'name'), key: formText(form, 'key'), status: formText(form, 'status'), notes: formText(form, 'notes'), role: formText(form, 'role'), tuning: cap.includes('fretboard') ? formText(form, 'tuning') : part.tuning, capo: form.has('capo') && formText(form, 'capo') ? formNumber(form, 'capo') : undefined, range: cap.includes('voice') ? formText(form, 'range') : part.range });
+    const saved = validateSongPart({ ...part, sections: latest?.sections ?? part.sections, transitions: latest?.transitions ?? part.transitions, name: formText(form, 'name'), key: formText(form, 'key'), status: formText(form, 'status'), notes: formText(form, 'notes'), role: formText(form, 'role'), tuning: cap.includes('fretboard') ? formText(form, 'tuning') : part.tuning, capo: form.has('capo') && formText(form, 'capo') ? formNumber(form, 'capo') : undefined, range: cap.includes('voice') ? formText(form, 'range') : part.range });
     await saveSongPart(song.id, saved); notify('Song part saved.');
   }, 'Save part');
 }
