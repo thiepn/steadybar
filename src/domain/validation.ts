@@ -184,6 +184,6 @@ export function validateBackup(input: unknown): Backup {
   if(head.version !== 1 && head.version !== 2 && head.version !== 3 && head.version !== 4) fail('Backup','this backup uses an unsupported format version');
   if((head.version===2||head.version===3||head.version===4) && (head.data===null||typeof head.data!=='object'||!('schemaVersion' in head.data)||head.data.schemaVersion!==2))fail('Backup','profile backups require a version 2 workspace');
   if((head.version===3||head.version===4)&&(!head.data||typeof head.data!=='object'||!('courseProgress' in head.data)||!Array.isArray(head.data.courseProgress)))fail('Backup','version 3+ requires course progress, even when empty');
-  if(head.version===4&&(!head.data||typeof head.data!=='object'||head.data.practiceModelVersion!==1||!Array.isArray(head.data.practiceStates)||!Array.isArray(head.data.priorityCycles)))fail('Backup','version 4 requires practice model state');
+  if(head.version===4){const data=head.data as Record<string,unknown>|null;if(!data||data.practiceModelVersion!==1||!Array.isArray(data.practiceStates)||!Array.isArray(data.priorityCycles))fail('Backup','version 4 requires practice model state');}
   return {format:'music-practice-os',version:head.version as 1|2|3|4,exportedAt:iso(head.exportedAt,'Exported at'),data:validateData(head.data)};
 }
