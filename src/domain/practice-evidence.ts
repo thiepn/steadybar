@@ -43,19 +43,20 @@ function context(block:PracticeBlock):PracticeContext {
   return block.evaluation?.context??contextForIntent(block.prescriptionSnapshot?.intent);
 }
 
+const qualityScore=(value:number)=>value as 1|2|3|4|5;
 function outcomeQuality(outcome:ProtocolOutcome):PracticeEvidence['quality'] {
   switch(outcome.kind){
     case 'groove':return [
-      {dimension:'timing',value:outcome.timing,source:'self-report'},
-      {dimension:'physical-control',value:outcome.control,source:'self-report'},
-      {dimension:'sound',value:outcome.articulation,source:'self-report'},
+      {dimension:'timing',value:qualityScore(outcome.timing),source:'self-report'},
+      {dimension:'physical-control',value:qualityScore(outcome.control),source:'self-report'},
+      {dimension:'sound',value:qualityScore(outcome.articulation),source:'self-report'},
     ];
-    case 'reading':return [{dimension:'musicality',value:outcome.continuity,source:'self-report'}];
+    case 'reading':return [{dimension:'musicality',value:qualityScore(outcome.continuity),source:'self-report'}];
     case 'voice':return [
-      {dimension:'sound',value:outcome.pitch,source:'self-report'},
-      {dimension:'physical-control',value:outcome.ease,source:'self-report'},
+      {dimension:'sound',value:qualityScore(outcome.pitch),source:'self-report'},
+      {dimension:'physical-control',value:qualityScore(outcome.ease),source:'self-report'},
     ];
-    case 'reflection':return [{dimension:'musicality',value:outcome.rating,source:'self-report'}];
+    case 'reflection':return [{dimension:'musicality',value:qualityScore(outcome.rating),source:'self-report'}];
     default:return undefined;
   }
 }
