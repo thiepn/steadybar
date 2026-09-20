@@ -3,6 +3,7 @@ import type { PracticeProtocol } from '../domain/practice-types.js';
 import { validateProtocol, validateOutcome, assertOutcomeMatches, assertProtocolCompatible } from '../domain/practice-validation.js';
 import { protocolPulse, patternFits, fretPrompt } from '../domain/protocols.js';
 import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TrainerConfig } from '../domain/models.js';
+import type { LimitationTag, PracticeContext, PracticeResult } from '../domain/practice-state.js';
 import { get, insertActiveSession, updateSession } from '../db/database.js';
 import { store } from '../app/store.js';
 import { audio } from '../audio/engine.js';
@@ -188,6 +189,10 @@ export class PracticeController {
     });
   }
   async note(text:string):Promise<void>{await this.mutate(s=>{s.blocks[s.activeBlockIndex]!.notes=text;return s;});}
+  async evaluate(result:PracticeResult,context:PracticeContext='normal',limitations:LimitationTag[]=[],note=''):Promise<void>{
+    if(new Set(limitations).size!==limitations.length)throw new Error('Practice limitations must be unique.');
+    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;block.evaluation={id:uuid(),timestamp:nowISO(),result,context,limitations:[...limitations],note:note.trim()};return s;});
+  }
   async trainer(config:TrainerConfig | undefined):Promise<void>{
     await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;if(config.mode==='endurance')block.targetSeconds=Math.ceil(block.actualActiveSeconds)+config.seconds;}return s;});
   }
