@@ -22,10 +22,11 @@ function sessionsForExercise(sessions:PracticeSession[],exerciseId:string){
 export function migratePracticeModel(input:Data):Data {
   const data=structuredClone(input);
   if(data.schemaVersion!==2)return data;
+  const alreadyCurrent=data.practiceModelVersion===1;
   data.practiceModelVersion=1;
   data.priorityCycles??=[];
   data.exercises=data.exercises.map(exercise=>withSkill(exercise,data));
-  if(data.practiceStates)return data;
+  if(alreadyCurrent){data.practiceStates??=[];return data;}
 
   const states:PracticeState[]=[];
   const exercises=[...data.exercises].sort((a,b)=>a.id.localeCompare(b.id));
