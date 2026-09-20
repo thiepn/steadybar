@@ -4,7 +4,7 @@ import { sessionEvidenceSeconds } from '../learning/evidence.js';
 export { validateCourseProgress } from '../learning/validation.js';
 import { patternFits, exerciseProtocol, protocolPulse } from './protocols.js';
 import { validateProfile, validateProtocol, validateOutcome, validateProtocolState, validateSongPart, validateSongTransition, assertProtocolCompatible, assertOutcomeMatches } from './practice-validation.js';
-import { assertPracticeStateReferences, assertPriorityCycleReferences, validatePlanGeneration, validatePracticeEvaluation, validatePracticePrescription, validatePracticeState, validatePriorityCycle } from './practice-state-validation.js';
+import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPriorityCycleReferences, validatePlanGeneration, validatePracticeEvaluation, validatePracticePrescription, validatePracticeState, validatePriorityCycle } from './practice-state-validation.js';
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
@@ -154,10 +154,11 @@ export function validateData(input:unknown):Data {
       if(effective&&b.tempoTrainer&&effective.kind!=='tempo')fail('Block','tempo trainer is not valid for this task');
       if(effective&&!protocolPulse(effective)&&b.bpm!==undefined)fail('Block','self-paced tasks cannot carry a tempo override');
       if(b.profileId && b.profileId!==r.profileId)fail('Block','profile differs from its plan or routine');
+      if(b.prescription)assertPracticeTargetReferences(b.prescription.target,r.profileId!,d,'Block prescription');
       if(b.exerciseId){const e=exercises.get(b.exerciseId);if(!e||e.profileId!==r.profileId)fail('Block','exercise must belong to this profile');}
       if(b.songId){const song=songs.get(b.songId);if(!song)fail('Block','song does not exist');const part=b.songPartId?song!.parts?.find(p=>p.id===b.songPartId):undefined;if(b.songPartId&&(!part||part.profileId!==r.profileId))fail('Block','song part must belong to this profile');if(b.songSectionId && !(part?.sections??song!.sections).some(s=>s.id===b.songSectionId))fail('Block','song section does not exist');}
     }}
-    for(const s of d.sessions){requireProfile(s.profileId);for(const b of s.blocks){const p=requireProfile(b.profileId);if(!b.protocolSnapshot)fail('Session','version 2 blocks require a protocol snapshot');assertProtocolCompatible(b.protocolSnapshot!,p);}}
+    for(const s of d.sessions){requireProfile(s.profileId);for(const b of s.blocks){const p=requireProfile(b.profileId);if(!b.protocolSnapshot)fail('Session','version 2 blocks require a protocol snapshot');assertProtocolCompatible(b.protocolSnapshot!,p);if(b.prescriptionSnapshot)assertPracticeTargetReferences(b.prescriptionSnapshot.target,b.profileId!,d,'Session prescription');}}
     for(const g of d.goals){
       if(g.profileId)requireProfile(g.profileId);
       const exercise=g.exerciseId?exercises.get(g.exerciseId):undefined;
