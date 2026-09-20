@@ -2,6 +2,7 @@ import type { Exercise, Routine, RoutineBlock } from '../domain/models.js';
 import type { Experience, PracticeProfile, PracticeProtocol } from '../domain/practice-types.js';
 import { definition } from '../domain/profiles.js';
 import { defaultProtocol, exerciseProtocol, protocolPulse, pulse } from '../domain/protocols.js';
+import { skillIdForExercise } from '../domain/skill-graph.js';
 import { seedData } from './seed.js';
 
 type ContentRow = [name:string,skill:string,instructions:string,protocol:PracticeProtocol,level?:Experience];
@@ -153,6 +154,7 @@ export function starterContent(profile:PracticeProfile):{exercises:Exercise[];ro
     }
   }
   for(const exercise of exercises){
+    exercise.primarySkillId??=skillIdForExercise(profile.instrumentType,exercise.skillArea,exercise.category);
     const kind=exercise.protocol!.kind;
     exercise.defaultSeconds=kind==='chord-changes'?60:kind==='vocal-pattern'||kind==='pitch-match'?120:kind==='sight-reading'||kind==='fretboard'?180:300;
   }
