@@ -36,8 +36,9 @@ export function rebuildPracticeStates(data:Data):PracticeState[] {
     const timestamps=events.map(e=>e.timestamp),derivedAt=latest(timestamps)??old?.engine.derivedAt??old?.updatedAt??old?.createdAt;
     if(!derivedAt)return [];
     const createdAt=old?.createdAt??earliest(timestamps)??derivedAt;
+    const updatedAt=latest([derivedAt,...(old?.updatedAt?[old.updatedAt]:[])])??derivedAt;
     return [{
-      id:old?.id??stableId(group.profileId,group.targetKey),createdAt,updatedAt:derivedAt,profileId:group.profileId,targetKey:group.targetKey,target,
+      id:old?.id??stableId(group.profileId,group.targetKey),createdAt,updatedAt,profileId:group.profileId,targetKey:group.targetKey,target,
       mastery:events.length?'unassessed':'discover',
       ...(practiced.length?{lastPracticedAt:latest(practiced.map(e=>e.timestamp))}:{}),
       ...(evaluated.length?{lastEvaluatedAt:latest(evaluated.map(e=>e.timestamp))}:{}),
