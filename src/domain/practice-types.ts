@@ -38,9 +38,18 @@ export type ProtocolOutcome = OutcomeBase & (
   | { kind: 'reflection'; rating: number; source: 'self-report' }
 );
 export interface ProtocolState { step: number; clean: number; total: number; rootMidi?: number; lastReferenceAt?: string }
+export interface SongTransition {
+  id:string;
+  fromSectionId:string;
+  toSectionId:string;
+  name?:string;
+  notes:string;
+}
+
 export interface SongPart {
   id: string; profileId: string; name: string; instrumentType: InstrumentType;
   notes: string; key: string; status: 'learning' | 'practicing' | 'performance-ready';
   tuning: string; capo?: number; role: string; range: string;
   sections: { id: string; name: string; bars?: number; bpmOverride?: number; notes: string; order: number }[];
+  transitions?: SongTransition[];
 }
