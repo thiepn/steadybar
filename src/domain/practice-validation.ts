@@ -1,4 +1,4 @@
-import type { PracticeProfile, PracticeProtocol, ProtocolOutcome, SongPart, ProtocolState } from './practice-types.js';
+import type { PracticeProfile, PracticeProtocol, ProtocolOutcome, SongPart, SongTransition, ProtocolState } from './practice-types.js';
 import { arr, bool, bpm, id, iso, name, num, obj, one, optional, order, text, uniqueIds, fail, type Validator } from './schema.js';
 import { definition, supportedProtocols } from './profiles.js';
 import { patternFits } from './protocols.js';
@@ -64,7 +64,8 @@ export function assertOutcomeMatches(outcome:ProtocolOutcome,protocol:PracticePr
     if(expected!==outcome.expected)fail('Outcome','recall pitch does not match tuning');
   }
 }
+export const validateSongTransition:Validator<SongTransition>=obj({id,fromSectionId:id,toSectionId:id,name:optional(name),notes:text()});
 export const validateSongPart:Validator<SongPart>=(v,p='Part')=>{
-  const r=obj({id,profileId:id,name,instrumentType:one('drums','guitar','bass','piano','voice','custom'),notes:text(),key:text(40),status:one('learning','practicing','performance-ready'),tuning:text(200),capo:optional(num(0,12,true)),role:text(200),range:text(100),sections:arr(obj({id,name,bars:optional(num(1,1000,true)),bpmOverride:optional(bpm),notes:text(),order}),200)})(v,p);
-  uniqueIds(r.sections,`${p}.sections`);return r;
+  const r=obj({id,profileId:id,name,instrumentType:one('drums','guitar','bass','piano','voice','custom'),notes:text(),key:text(40),status:one('learning','practicing','performance-ready'),tuning:text(200),capo:optional(num(0,12,true)),role:text(200),range:text(100),sections:arr(obj({id,name,bars:optional(num(1,1000,true)),bpmOverride:optional(bpm),notes:text(),order}),200),transitions:optional(arr(validateSongTransition,400))})(v,p);
+  uniqueIds(r.sections,`${p}.sections`);if(r.transitions){uniqueIds(r.transitions,`${p}.transitions`);const ids=new Set(r.sections.map(s=>s.id));for(const t of r.transitions){if(t.fromSectionId===t.toSectionId)fail(p,'a transition must connect two different sections');if(!ids.has(t.fromSectionId)||!ids.has(t.toSectionId))fail(p,'transition references an unavailable section');}}return r;
 };
