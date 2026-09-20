@@ -162,8 +162,13 @@ export async function remove(name:StoreName,id:string):Promise<void> {
   await write([...REFERENCE_STORES],async tx=>{
     const data=await referenceSnapshot(tx);
     Object.assign(data,{[name]:(data[name]??[]).filter(row=>row.id!==id)});
+    const removedStates=(data.practiceStates??[]).filter(state=>
+      (name==='exercises'&&state.target.kind==='exercise'&&state.target.exerciseId===id)||
+      (name==='songs'&&['song','song-section','song-transition'].includes(state.target.kind)&&'songId' in state.target&&state.target.songId===id));
+    if(removedStates.length)data.practiceStates=(data.practiceStates??[]).filter(state=>!removedStates.some(removed=>removed.id===state.id));
     if(data.schemaVersion===2)validateData(data);
     tx.objectStore(name).delete(id);
+    for(const state of removedStates)tx.objectStore('practiceStates').delete(state.id);
   });
 }
 export async function updateSession(id:string,fn:(session:PracticeSession)=>PracticeSession):Promise<PracticeSession> {
