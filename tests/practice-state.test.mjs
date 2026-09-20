@@ -4,6 +4,7 @@ import {seedData} from '../dist/app/db/seed.js';
 import {migratePracticeData} from '../dist/app/db/profile-migration.js';
 import {migratePracticeModel} from '../dist/app/db/practice-model-migration.js';
 import {evidenceForTarget} from '../dist/app/domain/practice-evidence.js';
+import {rebuildPracticeStates} from '../dist/app/domain/practice-state-rebuild.js';
 import {legacyRatingToPracticeResult,practiceTargetKey} from '../dist/app/domain/practice-state.js';
 import {skillIdForExercise,skillDefinitionsFor} from '../dist/app/domain/skill-graph.js';
 import {validateData,validateSong} from '../dist/app/domain/validation.js';
@@ -76,10 +77,30 @@ test('normalized evidence preserves source identity and legacy reliability',()=>
   session.blocks[0].evaluation={id:'eval-1',timestamp:'2026-09-20T12:04:00.000Z',result:'solid',context:'cold',limitations:[],note:''};
   data.sessions=[session];
   const migrated=migratePracticeModel(data),rows=evidenceForTarget(migrated,{kind:'exercise',exerciseId:exercise.id});
-  assert.equal(rows.length,2);
+  assert.equal(rows.length,3);
   const attempt=rows.find(row=>row.source.kind==='tempo-attempt'),evaluation=rows.find(row=>row.source.kind==='block-evaluation');
   assert.equal(attempt.reliability,'legacy');assert.equal(attempt.result,'usable');assert.equal(attempt.bpm,100);
   assert.equal(evaluation.reliability,'self-report');assert.equal(evaluation.context,'cold');assert.equal(evaluation.result,'solid');
+});
+
+test('practice state rebuild is deterministic and preserves manual scheduling overrides',()=>{
+  const data=modern(),exercise=data.exercises[0],session=exerciseSession(data,exercise);
+  session.blocks[0].tempoAttempts=[{id:'rebuild-attempt',bpm:100,rating:'clean',timestamp:'2026-09-20T12:02:00.000Z',note:''}];
+  data.sessions=[session];
+  const migrated=migratePracticeModel(data),first=rebuildPracticeStates(migrated);
+  const state=first.find(s=>s.target.kind==='exercise'&&s.target.exerciseId===exercise.id);
+  assert.ok(state);
+  state.scheduling.manualPriority=2;state.scheduling.snoozedUntil='2026-09-25T12:00:00.000Z';
+  migrated.practiceStates=first;
+  const second=rebuildPracticeStates(migrated),again=second.find(s=>s.target.kind==='exercise'&&s.target.exerciseId===exercise.id);
+  assert.equal(again.id,state.id);
+  assert.equal(again.scheduling.manualPriority,2);
+  assert.equal(again.scheduling.snoozedUntil,'2026-09-25T12:00:00.000Z');
+  assert.equal(again.mastery,'unassessed');
+  assert.equal(again.tempo.peak,100);
+  assert.equal(again.tempo.working,undefined);
+  assert.equal(again.tempo.cold,undefined);
+  assert.deepEqual(rebuildPracticeStates({...migrated,practiceStates:second}),second);
 });
 
 test('practice prescriptions survive immutable session snapshots',()=>{
