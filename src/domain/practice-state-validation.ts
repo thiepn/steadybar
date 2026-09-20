@@ -77,27 +77,26 @@ export const validatePriorityCycle:Validator<PriorityCycle>=(v,p='Priority cycle
   return r;
 };
 
-export function assertPracticeStateReferences(state:PracticeState,data:Data):void {
-  const profile=data.profiles?.find(p=>p.id===state.profileId);
-  if(!profile)fail('Practice state','profile does not exist');
-  const target=state.target;
+export function assertPracticeTargetReferences(target:PracticeTargetRef,profileId:string,data:Data,path='Practice target'):void {
+  const profile=data.profiles?.find(p=>p.id===profileId);
+  if(!profile)fail(path,'profile does not exist');
   if(target.kind==='skill'){
-    if(target.profileId!==state.profileId||!isSkillForInstrument(target.skillId,profile.instrumentType))fail('Practice state','skill does not belong to this profile');
+    if(target.profileId!==profileId||!isSkillForInstrument(target.skillId,profile.instrumentType))fail(path,'skill does not belong to this profile');
   }else if(target.kind==='exercise'){
     const exercise=data.exercises.find(e=>e.id===target.exerciseId);
-    if(!exercise||exercise.profileId!==state.profileId)fail('Practice state','exercise does not belong to this profile');
+    if(!exercise||exercise.profileId!==profileId)fail(path,'exercise does not belong to this profile');
   }else if(target.kind==='song'||target.kind==='song-section'||target.kind==='song-transition'){
     const song=data.songs.find(s=>s.id===target.songId);
-    if(!song)fail('Practice state','song does not exist');
+    if(!song)fail(path,'song does not exist');
     const part=target.partId?song.parts?.find(p=>p.id===target.partId):undefined;
-    if(target.partId&&(!part||part.profileId!==state.profileId))fail('Practice state','song part does not belong to this profile');
-    if(target.kind==='song-section'){
-      if(!(part?.sections??song.sections).some(s=>s.id===target.sectionId))fail('Practice state','song section does not exist');
-    }
-    if(target.kind==='song-transition'){
-      if(!(part?.transitions??song.transitions??[]).some(t=>t.id===target.transitionId))fail('Practice state','song transition does not exist');
-    }
-  }else if(target.kind==='lesson'&&target.profileId!==state.profileId)fail('Practice state','lesson target belongs to a different profile');
+    if(target.partId&&(!part||part.profileId!==profileId))fail(path,'song part does not belong to this profile');
+    if(target.kind==='song-section'&&!(part?.sections??song.sections).some(s=>s.id===target.sectionId))fail(path,'song section does not exist');
+    if(target.kind==='song-transition'&&!(part?.transitions??song.transitions??[]).some(t=>t.id===target.transitionId))fail(path,'song transition does not exist');
+  }else if(target.kind==='lesson'&&target.profileId!==profileId)fail(path,'lesson target belongs to a different profile');
+}
+
+export function assertPracticeStateReferences(state:PracticeState,data:Data):void {
+  assertPracticeTargetReferences(state.target,state.profileId,data,'Practice state');
 }
 
 export function assertPriorityCycleReferences(cycle:PriorityCycle,data:Data):void {
