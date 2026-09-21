@@ -173,6 +173,7 @@ class Workbench(e2e.MusicPracticeTests):
     def test_49_block_summary_commits_history_and_mastery(self):
         self.onboard();self.route('/library/rudiment-2')
         self.page.get_by_role('button',name='Start practice',exact=True).click();self.start()
+        self.page.get_by_text('What limited it? · optional',exact=True).click()
         self.page.get_by_label('Timing',exact=True).check()
         self.page.get_by_role('button',name='Solid',exact=True).click()
         expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
