@@ -129,7 +129,9 @@ function maintenancePasses(events:PracticeEvidence[]):number {
 }
 
 export function nextReviewAt(events:PracticeEvidence[],mastery:MasteryState):string|undefined {
-  const modern=sorted(events.filter(modernResult)),latest=modern.at(-1);
+  const modern=sorted(events.filter(modernResult)),working=tempoLevels(events)?.working;
+  const relevant=modern.filter(e=>!(e.result!=='solid'&&e.bpm!==undefined&&working!==undefined&&e.bpm>working));
+  const latest=relevant.at(-1)??modern.at(-1);
   if(!latest||mastery==='discover'||mastery==='unassessed')return undefined;
   if(latest.result==='not-yet')return addDays(latest.timestamp,1);
   if(latest.result==='usable')return addDays(latest.timestamp,2);
