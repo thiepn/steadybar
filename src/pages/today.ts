@@ -29,7 +29,7 @@ export function todayPage(): Page {
   const budget=select('timeBudget','Session time',allowed.map(value=>[String(value),value+' min'] as [string,string]),String(defaultMinutes));
   const intent=select('autopilotIntent','Practice emphasis',[['balanced','Balanced'],['songs','Songs'],['timing','Timing'],['technique','Technique']],'balanced');
   const generate=async(startNow:boolean)=>{
-    if(startNow&&active){await launchPractice([]);return;}
+    if(startNow&&await store.activeSession()){await launchPractice([]);return;}
     if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Autopilot will rebuild today from your current priorities, review schedule and repertoire. Practice history is unchanged.',startNow?'Replace & start':'Build plan'))return;
     const minutes=Number(budget.querySelector('select')!.value),sessionIntent=intent.querySelector('select')!.value as AutopilotSessionIntent;
     const generated=await prepareAutopilotPlan(minutes,sessionIntent);
