@@ -93,7 +93,6 @@ export function masteryFromEvidence(events:PracticeEvidence[],tempo=tempoLevels(
   else state='learn';
 
   const latest=modern.at(-1)!;
-  const weakTail=[...modern].reverse().take?[]:[]; // Kept explicit below for broad browser compatibility.
   let establishedNotYet=0;
   for(const row of [...modern].reverse()){
     if(!establishedFailure(row,tempo?.working))break;
