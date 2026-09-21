@@ -67,7 +67,7 @@ export function activePracticePage():Page{
 
   const start=button('Start practice',()=>practice.toggle(),'primary focus-start','play');
   const metro=button('Metronome on',()=>practice.toggleAudio(),'ghost focus-metro','volume');
-  const finishUnrated=button('Finish without rating',()=>practice.finishBlock(),'ghost');
+  const finishUnrated=button('Finish block',()=>practice.finishBlock(),'ghost');
   const skip=button('Skip block',()=>practice.finishBlock(true),'ghost','skip');
   const restart=button('Restart block',async()=>{await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart');
 
@@ -76,7 +76,7 @@ export function activePracticePage():Page{
   const selectedLimitations=()=>limitationChecks.filter(label=>(label.querySelector('input') as HTMLInputElement).checked).map(label=>(label.querySelector('input') as HTMLInputElement).value as LimitationTag);
   const resetLimitations=()=>limitationChecks.forEach(label=>(label.querySelector('input') as HTMLInputElement).checked=false);
   const summaryFeedback=el('p',{class:'attempt-feedback small',role:'status'});
-  const complete=async(result:PracticeResult)=>{try{await practice.completeBlock(result,selectedLimitations());summaryFeedback.textContent='';resetLimitations();stage.scrollTo?.({top:0,behavior:'smooth'});}catch(e){notify(e instanceof Error?e.message:'The block result could not be saved.','error');}};
+  const complete=async(result:PracticeResult)=>{try{await practice.completeBlock(result,selectedLimitations());summaryFeedback.textContent='';resetLimitations();window.scrollTo({top:0,behavior:'smooth'});}catch(e){notify(e instanceof Error?e.message:'The block result could not be saved.','error');}};
   const summaryButtons=[
     button('Not yet',()=>complete('not-yet'),'focus-result result-not-yet'),
     button('Usable',()=>complete('usable'),'focus-result result-usable'),
