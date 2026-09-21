@@ -514,9 +514,9 @@ class MusicPracticeTests(unittest.TestCase):
         self.page.get_by_role('button',name='Start free practice',exact=True).click();self.start()
         message=self.read("""(async()=>{
             const controller=load('practice/controller.js').practice,db=load('db/database.js');
-            await db.updateSession(controller.session.id,s=>{
+            await db.finalizeSession(controller.session.id,s=>{
                 s=load('practice/logic.js').pauseSession(s);s.status='completed';s.endedAt=new Date().toISOString();
-                s.blocks[0].completed=true;return s;
+                s.blocks[0].completed=true;s.blocks[0].endedAt=s.endedAt;return s;
             });
             try{await controller.setBpm(200);return 'incorrectly accepted';}catch(error){return error.message;}
         })()""")
@@ -547,7 +547,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.page.get_by_role('button',name='Start free practice',exact=True).click();self.start();self.finish()
         self.read("""(async()=>{
             const store=load('app/store.js').store,s=store.snapshot().sessions[0];
-            await load('db/database.js').updateSession(s.id,row=>{row.blocks[0].actualActiveSeconds=12;return row;});
+            await load('db/database.js').mutateWorkspace(d=>{d.sessions.find(row=>row.id===s.id).blocks[0].actualActiveSeconds=12;return d;});
             await store.refresh();
         })()""")
         self.route('/progress')
