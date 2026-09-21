@@ -65,7 +65,7 @@ class Workbench(e2e.MusicPracticeTests):
             with self.subTest(viewport=(width,height)):
                 self.page.set_viewport_size({'width':width,'height':height});self.page.evaluate('window.scrollTo(0,0)')
                 self.assert_bounds(width)
-                for label in ('Pause practice','Metronome on','Clean','Finish block','Skip block'):
+                for label in ('Pause practice','Metronome on','Not yet','Usable','Solid'):
                     button=self.page.get_by_role('button',name=label,exact=True);box=button.bounding_box();self.assertIsNotNone(box)
                     self.assertLessEqual(box['y']+box['height'],height+1,f'{width} {label} {box}')
                     self.assertGreaterEqual(box['height'],44)
@@ -121,7 +121,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(self.page.evaluate('window.__churn'),0)
         self.assertTrue(self.read("load('audio/engine.js').audio.running"));self.assertGreater(self.read("load('practice/controller.js').practice.elapsed()"),1)
         self.page.evaluate('window.__observer.disconnect()')
-        self.page.get_by_role('button',name='Clean',exact=True).click()
+        self.open_focus_drawer('Detailed attempt');self.page.get_by_role('button',name='Clean',exact=True).click()
         expect(self.page.get_by_text(re.compile('Recorded .* BPM · clean.'))).to_be_visible()
 
     def test_45_chart_labels_follow_container_and_filter_changes(self):
@@ -213,6 +213,26 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(result['sourcePlan'],self.read("load('app/store.js').store.snapshot().dailyPlans.find(p=>p.generation?.kind==='autopilot').id"))
         self.assertEqual(result['generatedBy'],['autopilot','autopilot'])
         self.assertTrue(all(result['scheduled']))
+
+
+    def test_51_focus_player_primary_surface_and_auto_advance(self):
+        self.onboard(True);self.page.get_by_role('button',name='Start full session',exact=True).click();self.start()
+        for width,height in ((320,568),(390,844),(820,1180),(1440,900)):
+            with self.subTest(viewport=(width,height)):
+                self.page.set_viewport_size({'width':width,'height':height});self.page.evaluate('window.scrollTo(0,0)')
+                expect(self.page.locator('.focus-workspace')).to_be_visible();self.assert_bounds(width)
+                for label in ('Pause practice','Metronome on','Not yet','Usable','Solid'):
+                    control=self.page.get_by_role('button',name=label,exact=True);box=control.bounding_box();self.assertIsNotNone(box)
+                    self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1,f'{width} {label} {box}')
+                self.assertFalse(self.page.locator('details.focus-attempts').evaluate('(e)=>e.open'))
+                self.assertFalse(self.page.locator('details.focus-tools').evaluate('(e)=>e.open'))
+        self.open_focus_drawer('Detailed attempt');expect(self.page.get_by_role('button',name='Clean',exact=True)).to_be_visible()
+        self.open_focus_drawer('Tools & block options');expect(self.page.get_by_role('button',name='Skip block',exact=True)).to_be_visible()
+        self.page.locator('details.focus-attempts > summary').click();self.page.locator('details.focus-tools > summary').click()
+        before=self.read("load('practice/controller.js').practice.session.activeBlockIndex")
+        self.page.get_by_role('button',name='Solid',exact=True).click()
+        after=self.wait_read("load('practice/controller.js').practice.session.activeBlockIndex",lambda value:value==before+1)
+        self.assertEqual(after,before+1);expect(self.page.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
 
 
 
