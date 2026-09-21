@@ -282,7 +282,6 @@ class MusicPracticeTests(unittest.TestCase):
         self.save_dialog('Use trainer')
         self.page.get_by_role('button',name='Resume practice',exact=True).click()
         self.open_focus_drawer('Detailed attempt')
-        self.open_focus_drawer('Detailed attempt')
         for _ in range(3):self.page.get_by_role('button',name='Clean',exact=True).click()
         self.finish()
 
