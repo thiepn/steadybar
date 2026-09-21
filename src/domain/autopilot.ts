@@ -1,4 +1,4 @@
-import type { DailyPlan, Data, Exercise, PracticeSession, RoutineBlock, Song, SongSection } from './models.js';
+import type { DailyPlan, Data, PracticeSession, RoutineBlock, Song, SongSection } from './models.js';
 import { exerciseBpm } from './protocols.js';
 import { rankPracticeTargets, type PriorityCandidate } from './priority-engine.js';
 import { skillDefinition } from './skill-graph.js';
@@ -33,7 +33,6 @@ export interface AutopilotBuild {
   totalSeconds:number;
 }
 
-const DAY=24*60*60*1000;
 const time=(value:Date|string|number|undefined)=>value===undefined?Date.now():value instanceof Date?value.getTime():typeof value==='number'?value:Date.parse(value);
 const iso=(value:Date|string|number|undefined)=>new Date(time(value)).toISOString();
 
@@ -74,12 +73,9 @@ function complementary(candidate:PriorityCandidate,intent:AutopilotSessionIntent
   return domains.has('groove')||domains.has('fills')||domains.has('musicality');
 }
 function warmupCandidate(data:Data,candidate:PriorityCandidate):boolean {
-  if(candidate.target.kind!=='exercise')return false;
-  const exercise=data.exercises.find(e=>e.id===candidate.target.exerciseId);
+  const target=candidate.target;if(target.kind!=='exercise')return false;
+  const exercise=data.exercises.find(e=>e.id===target.exerciseId);
   return exercise?.category==='warmup'||exercise?.skillArea==='warmup'||exercise?.tags.includes('warmup')||false;
-}
-function dueRetention(candidate:PriorityCandidate):boolean {
-  return candidate.reasons.includes('retention-due')||candidate.state?.mastery==='retest';
 }
 function overlap(a:PriorityCandidate,b:PriorityCandidate|undefined):boolean {
   if(!b)return false;
@@ -181,15 +177,16 @@ function arrangement(song:Song,target:Extract<PracticeTargetRef,{kind:'song'|'so
   return {part,sections:part?.sections??song.sections,transitions:part?.transitions??song.transitions??[]};
 }
 function songBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:SlotRole,intent:AutopilotSessionIntent):RoutineBlock {
-  if(candidate.target.kind!=='song'&&candidate.target.kind!=='song-section'&&candidate.target.kind!=='song-transition')throw new Error('Expected a repertoire target.');
-  const song=data.songs.find(s=>s.id===candidate.target.songId);if(!song)throw new Error('Autopilot song target is unavailable.');
-  const info=arrangement(song,candidate.target,candidate.profileId);
+  const target=candidate.target;
+  if(target.kind!=='song'&&target.kind!=='song-section'&&target.kind!=='song-transition')throw new Error('Expected a repertoire target.');
+  const song=data.songs.find(s=>s.id===target.songId);if(!song)throw new Error('Autopilot song target is unavailable.');
+  const info=arrangement(song,target,candidate.profileId);
   let section:SongSection|undefined,title=song.title,notes='',type:RoutineBlock['type']='song';
-  if(candidate.target.kind==='song-section'){
-    section=info.sections.find(s=>s.id===candidate.target.sectionId);if(!section)throw new Error('Autopilot song section is unavailable.');
+  if(target.kind==='song-section'){
+    section=info.sections.find(s=>s.id===target.sectionId);if(!section)throw new Error('Autopilot song section is unavailable.');
     title+=' · '+section.name;notes=section.notes;type='song-section';
-  }else if(candidate.target.kind==='song-transition'){
-    const transition=info.transitions.find(t=>t.id===candidate.target.transitionId);if(!transition)throw new Error('Autopilot song transition is unavailable.');
+  }else if(target.kind==='song-transition'){
+    const transition=info.transitions.find(t=>t.id===target.transitionId);if(!transition)throw new Error('Autopilot song transition is unavailable.');
     const from=info.sections.find(s=>s.id===transition.fromSectionId),to=info.sections.find(s=>s.id===transition.toSectionId);
     if(!from||!to)throw new Error('Autopilot transition sections are unavailable.');
     section=from;title+=' · '+(transition.name||from.name+' → '+to.name);notes=[transition.notes,'Transition: '+from.name+' → '+to.name,from.notes,to.notes].filter(Boolean).join('\n');type='song-section';
@@ -197,8 +194,8 @@ function songBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:Slo
   return {id:uuid(),type,profileId:candidate.profileId,songId:song.id,...(info.part?{songPartId:info.part.id}:{}),...(section?{songSectionId:section.id}:{}),title,targetSeconds:seconds,bpm:section?.bpmOverride??song.bpm,notes,prescription:prescription(candidate,role,intent),order:0};
 }
 function exerciseBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:SlotRole,intent:AutopilotSessionIntent):RoutineBlock {
-  if(candidate.target.kind!=='exercise')throw new Error('Expected an exercise target.');
-  const exercise=data.exercises.find(e=>e.id===candidate.target.exerciseId);if(!exercise)throw new Error('Autopilot exercise target is unavailable.');
+  const target=candidate.target;if(target.kind!=='exercise')throw new Error('Expected an exercise target.');
+  const exercise=data.exercises.find(e=>e.id===target.exerciseId);if(!exercise)throw new Error('Autopilot exercise target is unavailable.');
   return {id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:candidate.profileId,title:exercise.name,targetSeconds:seconds,bpm:exerciseBpm(exercise),notes:'',prescription:prescription(candidate,role,intent),order:0};
 }
 function candidateBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:SlotRole,intent:AutopilotSessionIntent):RoutineBlock {
@@ -211,8 +208,9 @@ function selectSlots(data:Data,candidates:PriorityCandidate[],pattern:{role:Slot
   const selected:PriorityCandidate[]=[],result:AutopilotSelection[]=[];
   let primary:PriorityCandidate|undefined;
   for(const slot of pattern){
-    let candidate=choose(data,candidates,slot.role,intent,selected,primary);
-    if(!candidate)continue;
+    const picked=choose(data,candidates,slot.role,intent,selected,primary);
+    if(!picked)continue;
+    let candidate:PriorityCandidate=picked;
     if(slot.role==='primary')primary=candidate;
     if(selected.some(item=>sameTarget(item,candidate))){
       const alternate=candidates.find(item=>!selected.some(used=>sameTarget(used,item)));
