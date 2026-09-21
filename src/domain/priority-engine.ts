@@ -287,6 +287,8 @@ export function rankExerciseTargets(data:Data,profileId?:string,options:Priority
 }
 
 export function priorityReasonText(candidate:PriorityCandidate):string {
-  const positive=candidate.factors.filter(f=>f.points>0).sort((a,b)=>b.points-a.points||a.code.localeCompare(b.code));
-  return positive[0]?.detail??'General practice candidate';
+  const order:PriorityFactorCode[]=['upcoming-performance','active-goal','active-priority','profile-focus','retention-due','recent-weakness','musical-transfer','domain-balance','neglected','musical-usefulness','repertoire-status','manual-priority'];
+  const positive=candidate.factors.filter(f=>f.points>0);
+  for(const code of order){const match=positive.find(f=>f.code===code);if(match)return match.detail;}
+  return positive.sort((a,b)=>b.points-a.points||a.code.localeCompare(b.code))[0]?.detail??'General practice candidate';
 }
