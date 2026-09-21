@@ -60,15 +60,6 @@ function validTransferEvents(events:PracticeEvidence[]):PracticeEvidence[] {
   return modern.filter(candidate=>['transfer','performance'].includes(candidate.context)&&solid(candidate)&&cold.some(previous=>time(candidate.timestamp)>=time(previous.timestamp)));
 }
 
-function consecutiveResult(events:PracticeEvidence[],result:PracticeResult):number {
-  let count=0;
-  for(const row of [...sorted(events.filter(modernResult))].reverse()){
-    if(row.result!==result)break;
-    count++;
-  }
-  return count;
-}
-
 function establishedFailure(event:PracticeEvidence,working?:number):boolean {
   if(event.result!=='not-yet')return false;
   return event.bpm===undefined||working===undefined||event.bpm<=working;
