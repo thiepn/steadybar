@@ -53,13 +53,13 @@ const scheduling=obj({
   lastScheduledAt:optional(iso),lastSkippedAt:optional(iso),consecutiveSkips:num(0,1000000,true),
   snoozedUntil:optional(iso),manualPriority:one(-2,-1,0,1,2),
 });
-const engine=obj({version:one(1),derivedAt:iso});
+const engine=obj({version:one(1,2),derivedAt:iso});
 
 export const validatePracticeState:Validator<PracticeState>=(v,p='Practice state')=>{
   const r=obj({
     id,createdAt:iso,updatedAt:iso,profileId:id,targetKey:text(600,1),target:validatePracticeTarget,mastery,
     lastPracticedAt:optional(iso),lastEvaluatedAt:optional(iso),lastRetestAt:optional(iso),lastAppliedAt:optional(iso),nextReviewAt:optional(iso),
-    latestResult:optional(result),limitations:arr(limitation,10),evidenceCount:num(0,10000000,true),tempo:optional(tempo),recent,
+    latestResult:optional(result),limitations:arr(limitation,10),challenge:optional(one('reduce','hold','advance')),evidenceCount:num(0,10000000,true),tempo:optional(tempo),recent,
     scheduling,engine,
   })(v,p);
   if(r.targetKey!==practiceTargetKey(r.target))fail(p,'target key does not match target');

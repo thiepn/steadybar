@@ -1,5 +1,6 @@
 import type { Data } from './models.js';
 import { allPracticeEvidence, type PracticeEvidence } from './practice-evidence.js';
+import { MASTERY_ENGINE_VERSION, challengeDirection, masteryFromEvidence, nextReviewAt, tempoLevels } from './mastery-engine.js';
 import type { PracticeState, PracticeTargetRef } from './practice-state.js';
 
 function latest(values:string[]):string|undefined{return [...values].sort().at(-1);}
@@ -28,29 +29,33 @@ export function rebuildPracticeStates(data:Data):PracticeState[] {
     const target=targetFor(group.targetKey,events,old);if(!target)return [];
     const resultEvents=events.filter(e=>e.result!==undefined),lastResult=resultEvents.at(-1);
     const practiced=events.filter(e=>e.practiced),evaluated=events.filter(e=>e.result!==undefined||e.quality?.length);
-    const cold=events.filter(e=>e.context==='cold'),transfer=events.filter(e=>e.context==='transfer');
-    const solidTempo=events.filter(e=>e.bpm!==undefined&&e.result==='solid');
-    const peak=solidTempo.reduce<PracticeEvidence|undefined>((best,row)=>!best||row.bpm!>best.bpm!?row:best,undefined);
+    const retests=events.filter(e=>e.practiced&&e.context==='cold'),applications=events.filter(e=>e.practiced&&['transfer','performance'].includes(e.context));
     const recent=resultEvents.slice(-10).reduce((sum,row)=>{if(row.result==='solid')sum.solid++;else if(row.result==='usable')sum.usable++;else sum.notYet++;return sum;},{solid:0,usable:0,notYet:0});
-    const limitationEvent=[...events].reverse().find(e=>e.limitations.length);
+    const modernResults=resultEvents.filter(e=>e.reliability!=='legacy'),latestModern=modernResults.at(-1);
     const timestamps=events.map(e=>e.timestamp),derivedAt=latest(timestamps)??old?.engine.derivedAt??old?.updatedAt??old?.createdAt;
     if(!derivedAt)return [];
     const createdAt=old?.createdAt??earliest(timestamps)??derivedAt;
     const updatedAt=latest([derivedAt,...(old?.updatedAt?[old.updatedAt]:[])])??derivedAt;
+    const concrete=target.kind!=='skill';
+    const tempo=concrete?tempoLevels(events):undefined;
+    const mastery=concrete?masteryFromEvidence(events,tempo):(events.length?'unassessed':'discover');
+    const review=concrete?nextReviewAt(events,mastery):undefined;
     return [{
       id:old?.id??stableId(group.profileId,group.targetKey),createdAt,updatedAt,profileId:group.profileId,targetKey:group.targetKey,target,
-      mastery:events.length?'unassessed':'discover',
+      mastery,
       ...(practiced.length?{lastPracticedAt:latest(practiced.map(e=>e.timestamp))}:{}),
       ...(evaluated.length?{lastEvaluatedAt:latest(evaluated.map(e=>e.timestamp))}:{}),
-      ...(cold.length?{lastRetestAt:latest(cold.map(e=>e.timestamp))}:{}),
-      ...(transfer.length?{lastAppliedAt:latest(transfer.map(e=>e.timestamp))}:{}),
+      ...(retests.length?{lastRetestAt:latest(retests.map(e=>e.timestamp))}:{}),
+      ...(applications.length?{lastAppliedAt:latest(applications.map(e=>e.timestamp))}:{}),
+      ...(review?{nextReviewAt:review}:{}),
       ...(lastResult?{latestResult:lastResult.result}:{}),
-      limitations:limitationEvent?[...limitationEvent.limitations]:[],
+      limitations:latestModern?[...latestModern.limitations]:[],
+      challenge:concrete?challengeDirection(events):'hold',
       evidenceCount:events.length,
-      ...(peak?{tempo:{peak:peak.bpm,peakAt:peak.timestamp}}:{}),
+      ...(tempo?{tempo}:{}),
       recent,
       scheduling:old?{...old.scheduling}:{consecutiveSkips:0,manualPriority:0},
-      engine:{version:1,derivedAt},
+      engine:{version:MASTERY_ENGINE_VERSION,derivedAt},
     } satisfies PracticeState];
   });
 }

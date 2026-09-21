@@ -13,23 +13,28 @@ function walk(folder){for(const ent of fs.readdirSync(folder,{withFileTypes:true
 walk(src);
 modules['db/database.js']=`
 const v=require('../domain/validation.js');
+const statev=require('../domain/practice-state-validation.js');
 const seed=require('./seed.js').seedData;
 const migrate=require('./profile-migration.js').migratePracticeData;
+const migrateModel=require('./practice-model-migration.js').migratePracticeModel;
+const rebuild=require('../domain/practice-state-rebuild.js').rebuildPracticeStates;
 let data;
-const validators={courseProgress:v.validateCourseProgress,profiles:v.validateProfile,exercises:v.validateExercise,songs:v.validateSong,routines:v.validateRoutine,dailyPlans:v.validatePlan,sessions:v.validateSession,goals:v.validateGoal,setlists:v.validateSetlist,metronomePresets:v.validatePreset,settings:v.validateSettings};
-exports.initializeDatabase=async()=>{data??=v.validateData({...migrate(seed()),courseProgress:[]});};
+const validators={courseProgress:v.validateCourseProgress,profiles:v.validateProfile,exercises:v.validateExercise,songs:v.validateSong,routines:v.validateRoutine,dailyPlans:v.validatePlan,sessions:v.validateSession,goals:v.validateGoal,setlists:v.validateSetlist,practiceStates:statev.validatePracticeState,priorityCycles:statev.validatePriorityCycle,metronomePresets:v.validatePreset,settings:v.validateSettings};
+const fresh=()=>v.validateData({...migrateModel(migrate(seed())),courseProgress:[]});
+exports.initializeDatabase=async()=>{data??=fresh();};
 exports.mutateWorkspace=async fn=>{data=v.validateData(fn(structuredClone(data)));return structuredClone(data);};
 exports.migrationBackup=async()=>undefined;
-exports.resetWorkspace=async()=>{data=v.validateData({...migrate(seed()),courseProgress:[]});};
+exports.resetWorkspace=async()=>{data=fresh();};
 exports.readData=async()=>structuredClone(data);
-exports.all=async name=>structuredClone(name==='settings'?[data.settings]:data[name]);
+exports.all=async name=>structuredClone(name==='settings'?[data.settings]:data[name]??[]);
 exports.get=async(name,id)=>structuredClone(name==='settings'?data.settings:(data[name]??[]).find(x=>x.id===id));
-exports.put=async(name,value)=>{const next=validators[name](value),copy=structuredClone(data);if(name==='settings')copy.settings=next;else{copy[name]??=[];const i=copy[name].findIndex(x=>x.id===next.id);if(i<0)copy[name].push(next);else copy[name][i]=next;}data=copy.schemaVersion===2?v.validateData(copy):copy;};
+exports.put=async(name,value)=>{const next=validators[name](value),copy=structuredClone(data);if(name==='settings')copy.settings=next;else{copy[name]??=[];const i=copy[name].findIndex(x=>x.id===next.id);if(i<0)copy[name].push(next);else copy[name][i]=next;if(name==='sessions'&&next.status!=='active')copy.practiceStates=rebuild(copy);}data=copy.schemaVersion===2?v.validateData(copy):copy;};
 exports.patchSettings=async change=>{await exports.put('settings',{...data.settings,...change});};
-exports.remove=async(name,id)=>{data[name]=data[name].filter(x=>x.id!==id);};
-exports.updateSession=async(id,fn)=>{const s=data.sessions.find(x=>x.id===id);if(!s)throw new Error('Session missing');const n=v.validateSession(fn(structuredClone(s)));if(n.id!==s.id)throw new Error('A session update cannot change its identity.');n.updatedAt=new Date(Math.max(Date.now(),Date.parse(s.updatedAt)+1)).toISOString();await exports.put('sessions',n);return structuredClone(n);};
+exports.remove=async(name,id)=>{const copy=structuredClone(data);copy[name]=copy[name].filter(x=>x.id!==id);if(name==='sessions')copy.practiceStates=rebuild(copy);data=v.validateData(copy);};
+exports.updateSession=async(id,fn)=>{const s=data.sessions.find(x=>x.id===id);if(!s)throw new Error('Session missing');if(s.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');const n=v.validateSession(fn(structuredClone(s)));if(n.status!=='active')throw new Error('Use session finalization to end practice so mastery state is committed atomically.');if(n.id!==s.id)throw new Error('A session update cannot change its identity.');n.updatedAt=new Date(Math.max(Date.now(),Date.parse(s.updatedAt)+1)).toISOString();await exports.put('sessions',n);return structuredClone(n);};
+exports.finalizeSession=async(id,fn)=>{const s=data.sessions.find(x=>x.id===id);if(!s)throw new Error('Session missing');if(s.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');const n=v.validateSession(fn(structuredClone(s)));if(n.status==='active')throw new Error('Finalizing a session requires an ended session state.');if(n.id!==s.id)throw new Error('A session update cannot change its identity.');n.updatedAt=new Date(Math.max(Date.now(),Date.parse(s.updatedAt)+1)).toISOString();const copy=structuredClone(data);copy.sessions=copy.sessions.map(row=>row.id===id?n:row);copy.practiceStates=rebuild(copy);data=v.validateData(copy);return structuredClone(n);};
 exports.insertActiveSession=async s=>{if(data.sessions.some(s=>s.status==='active'))throw new Error('Active session exists');await exports.put('sessions',s);};
-exports.replaceData=async value=>{data=v.validateBackup({format:'music-practice-os',version:1,exportedAt:new Date().toISOString(),data:value}).data;};
+exports.replaceData=async value=>{data=v.validateData(value);};
 `;
 modules['app/pwa.js']=`exports.pwaState={ready:false,error:'Service-worker verification is unavailable in the in-document test harness.'};exports.registerPwa=async()=>{};exports.applyPwaUpdate=()=>{throw new Error('Service workers must be tested against a real localhost server.');};`;
 const header=`(() => {

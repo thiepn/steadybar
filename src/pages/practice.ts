@@ -14,6 +14,7 @@ import { exerciseBlock, freeBlock, launchPractice } from '../practice/launch.js'
 import { practice } from '../practice/controller.js';
 import { duration, clock, localDate } from '../domain/utils.js';
 import { RATINGS } from '../domain/models.js';
+import type { LimitationTag, PracticeResult } from '../domain/practice-state.js';
 import { trainerLabel } from '../domain/trainer.js';
 import { routineDuration } from '../domain/analytics.js';
 import { sessionPage } from './history.js';
@@ -51,6 +52,23 @@ export function activePracticePage():Page{
   const progressText=el('p',{class:'trainer-status'}),notesText=el('p',{class:'active-note-preview muted small'}),attemptText=el('p',{class:'attempt-feedback small',role:'status'});
   const beats=el('div',{class:'practice-beats','aria-hidden':'true'});
   const note=()=>{const current=practice.session!.blocks[practice.session!.activeBlockIndex]!;formDialog('Quick practice note',[textarea('note','What did you notice?',current.notes,4)],async data=>{await practice.note(formText(data,'note'));notify('Practice note saved.');},'Save note');};
+  const limitationOptions:[LimitationTag,string][]=[['timing','Timing'],['coordination','Coordination'],['memory','Memory'],['dynamics','Dynamics'],['tension','Tension'],['sound','Sound'],['accuracy','Accuracy'],['endurance','Endurance'],['too-fast','Too fast'],['form','Form']];
+  const limitationChecks=limitationOptions.map(([value,label])=>el('label',{class:'practice-limitation'},el('input',{type:'checkbox',value}),el('span',{},label)));
+  const selectedLimitations=()=>limitationChecks.filter(label=>(label.querySelector('input') as HTMLInputElement).checked).map(label=>(label.querySelector('input') as HTMLInputElement).value as LimitationTag);
+  const resetLimitations=()=>limitationChecks.forEach(label=>(label.querySelector('input') as HTMLInputElement).checked=false);
+  const summaryFeedback=el('p',{class:'attempt-feedback small',role:'status'});
+  const complete=async(result:PracticeResult)=>{try{await practice.completeBlock(result,selectedLimitations());summaryFeedback.textContent=`Saved · ${result==='not-yet'?'Not yet':result==='usable'?'Usable':'Solid'}.`;resetLimitations();}catch(e){notify(e instanceof Error?e.message:'The block result could not be saved.','error');}};
+  const summaryButtons=[
+    button('Not yet',()=>complete('not-yet'),'rating-button'),
+    button('Usable',()=>complete('usable'),'rating-button'),
+    button('Solid',()=>complete('solid'),'rating-button clean-rating'),
+  ];
+  const blockSummary=el('section',{class:'attempt-section block-summary'},
+    el('div',{class:'label'},'Finish block · overall result'),
+    el('div',{class:'rating-buttons'},summaryButtons),
+    el('details',{class:'practice-limitations'},el('summary',{},'What limited it? · optional'),el('div',{class:'wrap'},limitationChecks)),
+    summaryFeedback,
+    button('Finish without rating',()=>practice.finishBlock(),'ghost'));
   const next=el('div',{class:'next-block'}),queue=el('aside',{class:'practice-queue'});
   const setFocus=async(value:boolean)=>{
     focus=value;page.classList.toggle('focused',focus);focusButton.querySelector('span')!.textContent=focus?'Exit focus':'Focus mode';
@@ -73,7 +91,7 @@ export function activePracticePage():Page{
     beats,
     el('div',{class:'practice-main-controls'},start,metro,button('Finish block',()=>practice.finishBlock(),'secondary','check')),
     el('div',{class:'attempt-section'},el('div',{class:'label'},'Record this attempt'),el('div',{class:'rating-buttons'},ratingButtons),attemptText),
-    taskHost,cues,transition,
+    taskHost,cues,transition,blockSummary,
     el('div',{class:'practice-tools'},button('Quick note',note,'ghost','note'),button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress')),
     progressText,notesText,error,next);
   tempo.id='practice-bpm';
@@ -122,12 +140,13 @@ export function activePracticePage():Page{
       mount(metro,controls,start.nextSibling,hasTempo);mount(attempts,main,taskHost,tempoRating);
       mount(trainerButton,tools,null,tempoRating);
       ratingButtons.forEach(b=>{b.disabled=phase==='ready'||phase==='countin';});
+      summaryButtons.forEach(b=>{b.disabled=phase==='ready'||phase==='countin';});
       error.hidden=!practice.error;text(error,practice.error);
       text(notesText,block.notes);notesText.hidden=!block.notes;
     }
     const configStamp=block.id+JSON.stringify(block.protocolSnapshot);if(taskStamp!==configStamp){taskStamp=configStamp;task?.cleanup();task=taskPanel(block);taskHost.replaceChildren(task.node);}task?.update(block);
     if(lastIndex!==session.activeBlockIndex||lastId!==block.id){
-      lastIndex=session.activeBlockIndex;lastId=block.id;attemptText.textContent='';
+      lastIndex=session.activeBlockIndex;lastId=block.id;attemptText.textContent='';summaryFeedback.textContent='';resetLimitations();
     const upcoming=session.blocks[session.activeBlockIndex+1];next.replaceChildren(el('span',{class:'label'},upcoming?'Up next':'Final block'),el('strong',{},upcoming?`${upcoming.titleSnapshot} · ${duration(upcoming.targetSeconds)}`:'Finish the block to review your session.'));
       beats.replaceChildren(...Array.from({length:block.meterSnapshot.beats},(_,i)=>el('span',{class:'practice-beat'},String(i+1))));
       queue.replaceChildren(sectionHeader('Session sequence'),...session.blocks.map((b,i)=>el('div',{class:`queue-block ${i===session.activeBlockIndex?'current':''}`},el('span',{class:'queue-number'},b.completed?'✓':b.skipped?'—':String(i+1).padStart(2,'0')),el('div',{},el('strong',{},b.titleSnapshot),el('span',{class:'muted small'},`${duration(b.targetSeconds)}${b.initialBpm===undefined?'':` · ${b.initialBpm} BPM`}`)))));

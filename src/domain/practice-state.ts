@@ -112,6 +112,7 @@ export interface PracticeState {
   nextReviewAt?:string;
   latestResult?:PracticeResult;
   limitations:LimitationTag[];
+  challenge?: 'reduce'|'hold'|'advance';
   evidenceCount:number;
   tempo?:{
     peak?:number;
@@ -129,7 +130,7 @@ export interface PracticeState {
     snoozedUntil?:string;
     manualPriority:-2|-1|0|1|2;
   };
-  engine:{version:1;derivedAt:string};
+  engine:{version:1|2;derivedAt:string};
 }
 
 export interface PriorityItem {

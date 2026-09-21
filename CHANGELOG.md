@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.3.0 — Mastery & retention engine — 2026-09-21
+
+- Turn the Phase 2 practice-state foundation into a deterministic mastery engine with Discover → Learn → Build → Stabilize → Retest → Apply → Maintain progression for concrete practice targets.
+- Keep legacy-only history honestly Unassessed; historical clean attempts can still establish Peak BPM without fabricating modern working/cold reliability.
+- Separate Peak, Working and Cold tempo: working/cold levels require repeated modern solid evidence on separated occasions, while failed experiments above established working tempo do not demote mastery.
+- Add conservative review scheduling and maintenance spacing while explicitly treating inactivity as a due-review signal rather than automatic skill loss.
+- Tolerate one weak retained-skill result; repeated Not Yet evidence at or below the established level can move the target back toward Build and recommend reduced challenge.
+- Keep broad skill-domain states as coverage/evidence containers rather than falsely assigning domain-wide mastery or BPM from a few exercises.
+- Upgrade rebuildable practice state to mastery engine v2 while preserving manual priority and snooze overrides from engine-v1 backups.
+- Commit ended session history and rebuilt mastery state atomically; ordinary live-session updates can no longer end practice through a weaker write path.
+- Add optional block-level Not Yet / Usable / Solid summaries and limitation tags while retaining detailed five-level tempo attempts and unrated Finish block compatibility.
+- Add unit, repository-transaction and browser acceptance coverage for mastery transitions, retention, tempo semantics, atomic rollback and active-practice summaries.
+- Priority scoring, Autopilot generation, advanced timing modes, MIDI/microphone analysis and AI remain intentionally outside Phase 3.
+
 ## 2.2.0 — Unified practice-state foundation — 2026-09-21
 
 - Add the Phase 2 practice-model foundation without changing Steadybar into an automatic coach yet: canonical practice targets, Not Yet / Usable / Solid evaluations, practice prescriptions, mastery-state vocabulary and deterministic target identities.

@@ -170,6 +170,24 @@ class Workbench(e2e.MusicPracticeTests):
             expect(self.page.locator('.routine-preview').first).to_be_visible();self.assert_bounds(width)
         self.page.screenshot(path=str(e2e.ARTIFACTS/'workbench-touch-820.png'))
 
+    def test_49_block_summary_commits_history_and_mastery(self):
+        self.onboard();self.route('/library/rudiment-2')
+        self.page.get_by_role('button',name='Start practice',exact=True).click();self.start()
+        self.page.get_by_text('What limited it? · optional',exact=True).click()
+        self.page.get_by_label('Timing',exact=True).check()
+        self.page.get_by_role('button',name='Solid',exact=True).click()
+        expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
+        result=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),session=d.sessions.at(-1),state=d.practiceStates.find(s=>s.target.kind==='exercise'&&s.target.exerciseId==='rudiment-2');
+          return {evaluation:session.blocks[0].evaluation,state};
+        })()""")
+        self.assertEqual(result['evaluation']['result'],'solid');self.assertEqual(result['evaluation']['context'],'normal')
+        self.assertEqual(result['evaluation']['limitations'],['timing'])
+        self.assertEqual(result['state']['mastery'],'stabilize');self.assertEqual(result['state']['latestResult'],'solid')
+        self.assertEqual(result['state']['limitations'],['timing']);self.assertEqual(result['state']['engine']['version'],2)
+        self.assertIsNotNone(result['state']['nextReviewAt'])
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))

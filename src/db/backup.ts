@@ -1,5 +1,6 @@
 import { migratePracticeData } from './profile-migration.js';
 import { migratePracticeModel } from './practice-model-migration.js';
+import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
 import { validateData } from '../domain/validation.js';
 import { validateBackup } from '../domain/validation.js';
 import type { Backup, Data } from '../domain/models.js';
@@ -29,7 +30,9 @@ export function downloadText(text:string,name:string,type='application/json'):vo
 export async function restoreBackup(backup:Backup):Promise<void> {
   const validated=validateBackup(backup);
   // Never restore an old running clock, even during the interval before the page reloads.
-  validated.data=validateData(migratePracticeModel(migratePracticeData(validated.data)));
+  validated.data=migratePracticeModel(migratePracticeData(validated.data));
   validated.data.sessions=validated.data.sessions.map(s=>s.status==='active'?recoverSession(s):s);
+  if(validated.data.schemaVersion===2){validated.data.practiceStates=rebuildPracticeStates(validated.data);}
+  validated.data=validateData(validated.data);
   await replaceData(validated.data);
 }

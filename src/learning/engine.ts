@@ -6,6 +6,7 @@ import { patternFits, protocolPulse } from '../domain/protocols.js';
 import { localDate, metadata, uuid } from '../domain/utils.js';
 import { COURSES } from './catalog.js';
 import { sessionEvidenceSeconds } from './evidence.js';
+import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
 import type { Course, CourseProgress, Lesson, LessonAttempt, LessonLaunchOptions, LessonRecord } from './types.js';
 import { validateCourseProgress } from './validation.js';
 
@@ -116,7 +117,7 @@ export function reviewLesson(data:Data,profileId:string,courseId:string,lessonId
   const passed=evidence.kind!=='reflection'&&input.checks.every(Boolean)&&lesson.questions.every((q,i)=>input.answers[i]===q.answer);
   if(passed&&evidence.kind==='session'&&record.attempts.some(a=>a.revision===course.revision&&a.result==='passed'&&a.evidence.sessionId===evidence.sessionId))throw new Error('This practice session already supports a passing check. Practice again for a new review; old evidence cannot establish later retention.');
   record.attempts.push({id:input.id,at,revision:course.revision,result:passed?'passed':'needs-work',checks:[...input.checks],answers:[...input.answers],confidence:input.confidence,notes:input.notes.trim(),evidence});
-  validateCourseProgress(progress);return data;
+  validateCourseProgress(progress);data.practiceStates=rebuildPracticeStates(data);return data;
 }
 export function lessonBlocks(course:Course,lesson:Lesson,profile:PracticeProfile,options:LessonLaunchOptions):RoutineBlock[]{
   if(course.instrument!==profile.instrumentType||!isPracticeProfile(profile)||!course.lessons.some(l=>l.id===lesson.id))throw new Error('Choose a lesson for the available profile.');
