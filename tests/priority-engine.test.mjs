@@ -27,6 +27,11 @@ function stateFor(exercise,overrides={}){
 }
 function factor(candidate,code){return candidate.factors.find(f=>f.code===code);}
 
+test('legacy pre-profile workspaces return no priority candidates instead of throwing',()=>{
+  const legacy=seedData(at);
+  assert.deepEqual(rankPracticeTargets(legacy,undefined,{now,today}),[]);
+});
+
 test('active goals outrank otherwise similar exercise candidates and explain why',()=>{
   const d=data(),profile=d.settings.activeProfileId,tech=exerciseWith(d,'drums.technique'),timing=exerciseWith(d,'drums.timing');
   d.exercises=[tech,timing];d.goals=[{id:'goal',createdAt:at,updatedAt:at,profileId:profile,type:'bpm',title:'Timing target',description:'',exerciseId:timing.id,targetValue:100,unit:'BPM',completed:false}];
