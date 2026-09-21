@@ -282,6 +282,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.save_dialog('Use trainer')
         self.page.get_by_role('button',name='Resume practice',exact=True).click()
         self.open_focus_drawer('Detailed attempt')
+        self.open_focus_drawer('Detailed attempt')
         for _ in range(3):self.page.get_by_role('button',name='Clean',exact=True).click()
         self.finish()
 
@@ -595,8 +596,8 @@ if __name__=='__main__':
         self.page.get_by_label('BPM',exact=True).fill('105')
         self.page.get_by_label('BPM',exact=True).press('Tab')
         self.start()
-        self.page.get_by_role('button',name='Clean',exact=True).click()
-        self.page.get_by_role('button',name='Quick note',exact=True).click()
+        self.open_focus_drawer('Detailed attempt');self.page.get_by_role('button',name='Clean',exact=True).click()
+        self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Quick note',exact=True).click()
         self.dialog_fill('What did you notice?','Left hand stayed relaxed at 105.')
         self.save_dialog('Save note')
         self.finish()
@@ -621,10 +622,10 @@ if __name__=='__main__':
         self.assertEqual(after[1]['title'],before[2]);self.assertEqual(after[1]['targetSeconds'],720)
         self.page.get_by_role('button',name='Start full session',exact=True).click()
         self.start()
-        self.page.get_by_role('button',name='Finish block',exact=True).click()
-        self.page.get_by_role('button',name='Skip block',exact=True).click()
-        self.start();self.page.get_by_role('button',name='Finish block',exact=True).click()
-        self.start();self.page.get_by_role('button',name='Finish block',exact=True).click()
+        self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Finish block',exact=True).click()
+        self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Skip block',exact=True).click()
+        self.start();self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Finish block',exact=True).click()
+        self.start();self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Finish block',exact=True).click()
         expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
         states=self.read("load('app/store.js').store.snapshot().sessions[0].blocks.map(b=>[b.completed,b.skipped])")
         self.assertEqual(states,[[True,False],[False,True],[True,False],[True,False]])
@@ -723,7 +724,7 @@ if __name__=='__main__':
 
     def test_09_pause_and_trainer_modes(self):
         self.onboard();self.route('/library/rudiment-2');self.page.get_by_role('button',name='Start practice',exact=True).click()
-        self.page.get_by_role('button',name='Tempo trainer',exact=True).click()
+        self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Tempo trainer',exact=True).click()
         self.page.locator('dialog[open]').get_by_label('Training mode',exact=True).select_option('progressive')
         self.dialog_fill('Every (active seconds)',1)
         self.save_dialog('Use trainer')
@@ -733,10 +734,11 @@ if __name__=='__main__':
         before=self.read("load('practice/controller.js').practice.elapsed()")
         self.page.wait_for_timeout(700)
         self.assertEqual(self.read("load('practice/controller.js').practice.elapsed()"),before)
-        self.page.get_by_role('button',name='Tempo trainer',exact=True).click()
+        self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Tempo trainer',exact=True).click()
         self.page.locator('dialog[open]').get_by_label('Training mode',exact=True).select_option('repetition')
         self.save_dialog('Use trainer')
         self.page.get_by_role('button',name='Resume practice',exact=True).click()
+        self.open_focus_drawer('Detailed attempt')
         for _ in range(3):self.page.get_by_role('button',name='Clean',exact=True).click()
         self.finish()
 
@@ -888,7 +890,7 @@ if __name__=='__main__':
         # A tempo attempt now belongs to a tempo task, not untimed free practice.
         self.onboard();self.route('/library/rudiment-2')
         self.page.get_by_role('button',name='Start practice',exact=True).click();self.start()
-        self.page.get_by_role('button',name='Clean',exact=True).click()
+        self.open_focus_drawer('Detailed attempt');self.page.get_by_role('button',name='Clean',exact=True).click()
         self.page.get_by_role('button',name='Save & leave',exact=True).click()
         self.read("load('practice/controller.js').practice.recover()")
         self.route('/practice/active')
@@ -906,7 +908,7 @@ if __name__=='__main__':
         # A tempo attempt now belongs to a tempo task, not untimed free practice.
         self.onboard();self.route('/library/rudiment-2')
         self.page.get_by_role('button',name='Start practice',exact=True).click();self.start()
-        self.page.get_by_role('button',name='Clean',exact=True).click();self.finish()
+        self.open_focus_drawer('Detailed attempt');self.page.get_by_role('button',name='Clean',exact=True).click();self.finish()
         before=self.read("JSON.stringify(load('app/store.js').store.snapshot().sessions[0])")
         self.page.locator('h1').click()
         for key in ['ArrowUp','Shift+ArrowUp','ArrowDown','Space','n']:
