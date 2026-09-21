@@ -103,12 +103,14 @@ export function masteryFromEvidence(events:PracticeEvidence[],tempo=tempoLevels(
     return 'learn';
   }
   if(latest.result==='not-yet'){
+    if(!establishedFailure(latest,tempo?.working))return state;
     if(state==='maintain'||state==='apply')return state;
     if(state==='retest')return 'stabilize';
     if(state==='stabilize')return 'build';
     return state==='learn'?'learn':'build';
   }
   if(latest.result==='usable'){
+    if(latest.bpm!==undefined&&tempo?.working!==undefined&&latest.bpm>tempo.working)return state;
     if(state==='maintain'||state==='apply'||state==='stabilize')return state;
     if(state==='retest')return 'stabilize';
     return 'build';
@@ -148,8 +150,8 @@ export function nextReviewAt(events:PracticeEvidence[],mastery:MasteryState):str
 export function challengeDirection(events:PracticeEvidence[]):ChallengeDirection {
   const modern=sorted(events.filter(modernResult)),latest=modern.at(-1);
   if(!latest)return 'hold';
-  const tail=modern.slice(-2);
-  if(tail.length===2&&tail.every(e=>e.result==='not-yet'))return 'reduce';
+  const tail=modern.slice(-2),working=tempoLevels(events)?.working;
+  if(tail.length===2&&tail.every(e=>establishedFailure(e,working)))return 'reduce';
   if(tail.length===2&&tail.every(solid)&&time(tail[1]!.timestamp)-time(tail[0]!.timestamp)>=12*HOUR)return 'advance';
   return 'hold';
 }
