@@ -1,5 +1,5 @@
 import type { PracticeEvidence } from './practice-evidence.js';
-import type { MasteryState, PracticeResult, PracticeState } from './practice-state.js';
+import type { MasteryState, PracticeState } from './practice-state.js';
 
 export const MASTERY_ENGINE_VERSION = 2 as const;
 const HOUR = 60*60*1000;
