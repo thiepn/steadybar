@@ -35,7 +35,7 @@ exports.updateSession=async(id,fn)=>{const s=data.sessions.find(x=>x.id===id);if
 exports.finalizeSession=async(id,fn)=>{const s=data.sessions.find(x=>x.id===id);if(!s)throw new Error('Session missing');if(s.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');const n=v.validateSession(fn(structuredClone(s)));if(n.status==='active')throw new Error('Finalizing a session requires an ended session state.');if(n.id!==s.id)throw new Error('A session update cannot change its identity.');n.updatedAt=new Date(Math.max(Date.now(),Date.parse(s.updatedAt)+1)).toISOString();const copy=structuredClone(data);copy.sessions=copy.sessions.map(row=>row.id===id?n:row);copy.practiceStates=rebuild(copy);data=v.validateData(copy);return structuredClone(n);};
 exports.insertActiveSession=async s=>{if(data.sessions.some(s=>s.status==='active'))throw new Error('Active session exists');await exports.put('sessions',s);};
 exports.replaceData=async value=>{data=v.validateData(value);};
-`
+`;
 modules['app/pwa.js']=`exports.pwaState={ready:false,error:'Service-worker verification is unavailable in the in-document test harness.'};exports.registerPwa=async()=>{};exports.applyPwaUpdate=()=>{throw new Error('Service workers must be tested against a real localhost server.');};`;
 const header=`(() => {
 const modules={\n`;
