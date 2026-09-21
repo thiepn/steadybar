@@ -36,7 +36,10 @@ export function rebuildPracticeStates(data:Data):PracticeState[] {
     if(!derivedAt)return [];
     const createdAt=old?.createdAt??earliest(timestamps)??derivedAt;
     const updatedAt=latest([derivedAt,...(old?.updatedAt?[old.updatedAt]:[])])??derivedAt;
-    const tempo=tempoLevels(events),mastery=masteryFromEvidence(events,tempo),review=nextReviewAt(events,mastery);
+    const concrete=target.kind!=='skill';
+    const tempo=concrete?tempoLevels(events):undefined;
+    const mastery=concrete?masteryFromEvidence(events,tempo):(events.length?'unassessed':'discover');
+    const review=concrete?nextReviewAt(events,mastery):undefined;
     return [{
       id:old?.id??stableId(group.profileId,group.targetKey),createdAt,updatedAt,profileId:group.profileId,targetKey:group.targetKey,target,
       mastery,
@@ -47,7 +50,7 @@ export function rebuildPracticeStates(data:Data):PracticeState[] {
       ...(review?{nextReviewAt:review}:{}),
       ...(lastResult?{latestResult:lastResult.result}:{}),
       limitations:latestModern?[...latestModern.limitations]:[],
-      challenge:challengeDirection(events),
+      challenge:concrete?challengeDirection(events):'hold',
       evidenceCount:events.length,
       ...(tempo?{tempo}:{}),
       recent,
