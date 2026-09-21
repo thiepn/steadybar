@@ -137,7 +137,7 @@ test('backup v3 round trip retains learning and rejects tampered known-revision 
 test('v1 and v2 backups remain accepted; future formats stay rejected',()=>{
  const old=createBackup(seedData(at));assert.equal(old.version,1);validateBackup(old);
  const d=dataset();delete d.courseProgress;const v2={format:'music-practice-os',version:2,exportedAt:at,data:d};assert.equal(validateBackup(v2).version,2);
- assert.throws(()=>validateBackup({...v2,version:4}),/unsupported/);
+ assert.throws(()=>validateBackup({...v2,version:5}),/unsupported/);
 });
 test('unknown course revisions are retained but cannot count as current learning',()=>{
  const {data,p,course,lesson}=setup('drums');learn.reviewLesson(data,p.id,course.id,lesson.id,review(lesson),at);const progress=data.courseProgress[0];progress.lessons[0].attempts[0].revision=999;

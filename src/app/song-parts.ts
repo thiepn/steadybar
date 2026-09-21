@@ -42,6 +42,16 @@ export async function changeSongSections(songId: string, partId: string | undefi
     const before = structuredClone(owner.sections);
     owner.sections = change(structuredClone(before)).map((section, order) => ({ ...section, order }));
     const oldSections=new Map(before.map(section=>[section.id,section])),newSections=new Map(owner.sections.map(section=>[section.id,section]));
+    const previousTransitions=[...(owner.transitions??[])],sectionIds=new Set(owner.sections.map(section=>section.id));
+    owner.transitions=previousTransitions.filter(t=>sectionIds.has(t.fromSectionId)&&sectionIds.has(t.toSectionId));
+    const transitionIds=new Set(owner.transitions.map(t=>t.id));
+    const arrangementMatches=(target:{songId:string;partId?:string})=>target.songId===songId&&(target.partId??undefined)===(partId??undefined);
+    data.practiceStates=(data.practiceStates??[]).filter(state=>{
+      const target=state.target;
+      if(target.kind==='song-section'&&arrangementMatches(target))return newSections.has(target.sectionId);
+      if(target.kind==='song-transition'&&arrangementMatches(target))return transitionIds.has(target.transitionId);
+      return true;
+    });
     // Future plan references must not become orphaned. Historic snapshots are independent.
     for (const collection of [data.routines, data.dailyPlans]) for (const plan of collection) {
       let changed=false;
@@ -52,8 +62,13 @@ export async function changeSongSections(songId: string, partId: string | undefi
         if(!current){
           if(block.title===canonical)block.title=song.title;
           block.type='song';block.songSectionId=undefined;
+          if(block.prescription&&(block.prescription.target.kind==='song-section'||block.prescription.target.kind==='song-transition')&&arrangementMatches(block.prescription.target))block.prescription=undefined;
           block.notes=[block.notes,`Earlier section: ${old.name}. ${old.notes}`].filter(Boolean).join('\n');changed=true;
         }else if(old.name!==current.name&&block.title===canonical){block.title=`${song.title} · ${current.name}`;changed=true;}
+      }
+      for(const block of plan.blocks){
+        const target=block.prescription?.target;
+        if(target?.kind==='song-transition'&&arrangementMatches(target)&&!transitionIds.has(target.transitionId)){block.prescription=undefined;changed=true;}
       }
       if(changed)plan.updatedAt=advanceISO(plan.updatedAt);
     }

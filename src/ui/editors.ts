@@ -2,6 +2,7 @@ import { changeSongSections, syncSongTitleReferences } from '../app/song-parts.j
 import { protocolEditor } from './protocol-editor.js';
 import { activeProfile, definition, supportedProtocols, skillLabel } from '../domain/profiles.js';
 import { defaultProtocol, exerciseProtocol, exerciseBpm, protocolPulse } from '../domain/protocols.js';
+import { skillIdForExercise } from '../domain/skill-graph.js';
 import type { Experience, ProtocolKind } from '../domain/practice-types.js';
 import { store } from '../app/store.js';
 import type { Exercise, Goal, Preset, Routine, RoutineBlock, Setlist, Song, SongSection, TrainerConfig } from '../domain/models.js';
@@ -31,7 +32,7 @@ export function editExercise(exercise?:Exercise):void{
     input('tags','Tags, separated by commas',e.tags.join(', '),'text',{maxlength:2000}),textarea('notes','Personal notes',e.notes),
   ],async form=>{
     const protocol=editors.get(kind.querySelector('select')!.value as ProtocolKind)!.read(form),timing=protocolPulse(protocol);
-    let saved=validateExercise({...e,updatedAt:advanceISO(e.updatedAt),name:formText(form,'name'),instrument:definition(profile.instrumentType).label,profileId:profile.id,skillArea:formText(form,'skillArea'),level:formText(form,'level') as Experience,defaultSeconds:Math.round(formNumber(form,'defaultMinutes')*60),protocol,
+    let saved=validateExercise({...e,updatedAt:advanceISO(e.updatedAt),name:formText(form,'name'),instrument:definition(profile.instrumentType).label,profileId:profile.id,skillArea:formText(form,'skillArea'),primarySkillId:skillIdForExercise(profile.instrumentType,formText(form,'skillArea'),e.category),level:formText(form,'level') as Experience,defaultSeconds:Math.round(formNumber(form,'defaultMinutes')*60),protocol,
       description:formText(form,'description'),instructions:formText(form,'instructions'),tags:formText(form,'tags').split(',').map(t=>t.trim()).filter(Boolean),notes:formText(form,'notes'),
       defaultBpm:timing?.bpm,minBpm:undefined,maxBpm:undefined,targetBpm:protocol.kind==='tempo'&&formText(form,'targetBpm')?formNumber(form,'targetBpm'):undefined,meter:timing?{beats:timing.beats,beatUnit:timing.beatUnit}:undefined,subdivision:timing?.subdivision,sticking:protocol.kind==='tempo'?protocol.sticking:undefined,accents:undefined});
     await store.workspace(data=>{
