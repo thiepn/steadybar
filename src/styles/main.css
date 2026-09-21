@@ -554,6 +554,8 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-drawer[open]>summary{color:var(--text)}
 .focus-drawer[open]>summary::after{content:'−'}
 .focus-drawer-body{padding:0 0 16px}
+.focus-drawer:not([open])>.focus-drawer-body{display:none}
+.focus-session-menu:not([open])>.focus-menu-actions{display:none}
 .focus-drawer .rating-buttons{grid-template-columns:repeat(5,minmax(0,1fr))}
 .focus-limitations{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .focus-limitations .practice-limitation{display:flex;align-items:center;gap:6px;min-height:40px;font-size:11px}
