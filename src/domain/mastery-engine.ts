@@ -123,7 +123,7 @@ function addDays(timestamp:string,days:number):string {
 }
 
 function maintenancePasses(events:PracticeEvidence[]):number {
-  const transfer=validTransferEvents(events).at(-1);
+  const transfer=validTransferEvents(events).at(0);
   if(!transfer)return 0;
   return events.filter(e=>modernResult(e)&&solid(e)&&['maintenance','performance'].includes(e.context)&&time(e.timestamp)>time(transfer.timestamp)).length;
 }
