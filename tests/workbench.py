@@ -231,7 +231,8 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.locator('details.focus-attempts > summary').click();self.page.locator('details.focus-tools > summary').click()
         before=self.read("load('practice/controller.js').practice.session.activeBlockIndex")
         self.page.get_by_role('button',name='Solid',exact=True).click()
-        after=self.wait_read("load('practice/controller.js').practice.session.activeBlockIndex",lambda value:value==before+1)
+        self.page.wait_for_function("(expected)=>window.__qa ? __qa.load('practice/controller.js').practice.session.activeBlockIndex===expected : true",arg=before+1) if e2e.OPTIONS.render else self.page.wait_for_function("(expected)=>document.querySelector('.focus-block-index')?.textContent?.includes(String(expected+1))",arg=before+1)
+        after=self.read("load('practice/controller.js').practice.session.activeBlockIndex")
         self.assertEqual(after,before+1);expect(self.page.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
 
 
