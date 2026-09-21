@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.5.0 — Practice Autopilot v1 — 2026-09-21
+
+- Add deterministic Practice Autopilot composition on top of the Phase 3 Mastery Engine and Phase 4 Priority Engine.
+- Support exact 5, 10, 15, 20, 30 and 45 minute sessions with explicit slot roles rather than simply taking the top-ranked targets.
+- Add Balanced, Songs, Timing and Technique session intents; user emphasis constrains primary work when matching material exists while application/retention slots can still preserve useful variety.
+- Compose ramp-in, primary, application, secondary, retention and repertoire blocks with fixed exact-duration templates; the 5-minute rescue session deliberately skips a generic warm-up. Short sessions cap genuinely new material when familiar alternatives exist, with goal/performance exceptions.
+- Generate exercise, whole-song, song-section and persistent-transition blocks with immutable Autopilot PracticePrescription snapshots and structured reason codes.
+- Prevent false learning evidence by using retest/apply/perform contexts only when the chosen target and slot genuinely qualify; ordinary fallback work retains its current mastery intent.
+- Atomically replace Today’s plan and stamp every selected PracticeState with lastScheduledAt, creating evidence-free Discover states only when needed for scheduler bookkeeping.
+- Track Autopilot skips independently from mastery: skipped generated blocks increment consecutiveSkips/lastSkippedAt and completed generated blocks reset the skip streak.
+- Make Today Autopilot-first with a low-friction Start Autopilot path plus a Build plan preview/edit path while retaining saved routines, manual blocks and free practice. Voice profiles retain the existing rest-aware routine builder until a dedicated rest-aware voice composer exists.
+- Preserve Autopilot prescriptions across duration/cue edits but clear them when a user changes the block’s underlying exercise/song/section source, preventing evidence attribution to a stale target; transition labels remain intact for source-preserving edits.
+- Add unit, repository-transaction and Chromium/Firefox/WebKit acceptance coverage for exact budgets, intent constraints, transitions, prescription metadata, scheduling state, skip bookkeeping and the two-click launch flow.
+- Difficulty progression, Set Prep staging, advanced timing modes, MIDI/microphone analysis and AI remain intentionally outside Autopilot v1.
+
 ## 2.4.0 — Priority engine — 2026-09-21
 
 - Add a deterministic, runtime-only Priority Engine that ranks concrete practice targets without persisting or displaying a pseudo-scientific score.

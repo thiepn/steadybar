@@ -187,6 +187,34 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(result['state']['limitations'],['timing']);self.assertEqual(result['state']['engine']['version'],2)
         self.assertIsNotNone(result['state']['nextReviewAt'])
 
+    def test_50_start_autopilot_creates_exact_prescribed_session(self):
+        self.onboard();self.page.get_by_label('Session time',exact=True).select_option('5')
+        self.page.get_by_label('Practice emphasis',exact=True).select_option('balanced')
+        self.page.get_by_role('button',name='Start Autopilot',exact=True).click()
+        expect(self.page.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
+        result=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),plan=d.dailyPlans.find(p=>p.generation?.kind==='autopilot'),session=d.sessions.find(s=>s.status==='active');
+          const targets=session.blocks.map(b=>b.prescriptionSnapshot?.target);
+          return {
+            planGeneration:plan?.generation,
+            planSeconds:plan?.blocks.reduce((n,b)=>n+b.targetSeconds,0),
+            planBlocks:plan?.blocks.length,
+            sessionSeconds:session?.blocks.reduce((n,b)=>n+b.targetSeconds,0),
+            sessionBlocks:session?.blocks.length,
+            sourcePlan:session?.sourceDailyPlanId,
+            generatedBy:session?.blocks.map(b=>b.prescriptionSnapshot?.generatedBy),
+            scheduled:targets.map(target=>d.practiceStates.find(s=>JSON.stringify(s.target)===JSON.stringify(target))?.scheduling.lastScheduledAt),
+          };
+        })()""")
+        self.assertEqual(result['planGeneration']['kind'],'autopilot');self.assertEqual(result['planGeneration']['requestedMinutes'],5)
+        self.assertEqual(result['planGeneration']['sessionIntent'],'balanced');self.assertEqual(result['planGeneration']['engineVersion'],1)
+        self.assertEqual(result['planSeconds'],300);self.assertEqual(result['sessionSeconds'],300)
+        self.assertEqual(result['planBlocks'],2);self.assertEqual(result['sessionBlocks'],2)
+        self.assertEqual(result['sourcePlan'],self.read("load('app/store.js').store.snapshot().dailyPlans.find(p=>p.generation?.kind==='autopilot').id"))
+        self.assertEqual(result['generatedBy'],['autopilot','autopilot'])
+        self.assertTrue(all(result['scheduled']))
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

@@ -207,10 +207,13 @@ export function editBlock(block:RoutineBlock|undefined,onSave:(block:RoutineBloc
     if(type==='exercise'&&!exercise)throw new Error('Choose an exercise.');
     if((type==='song'||type==='song-section')&&!song)throw new Error('Choose a song.');
     if(type==='song-section'&&!section)throw new Error('Choose an existing song section.');
+    const exerciseId=type==='exercise'?exercise?.id:undefined,songId=type==='song'||type==='song-section'?song?.id:undefined;
+    const songPartId=type==='song'||type==='song-section'?songPart?.id:undefined,songSectionId=type==='song-section'?section?.id:undefined;
+    const sameSource=type===b.type&&exerciseId===b.exerciseId&&songId===b.songId&&songPartId===b.songPartId&&songSectionId===b.songSectionId;
+    const preserveTransitionTitle=sameSource&&b.prescription?.target.kind==='song-transition';
     const saved=validateRoutineBlock({...b,profileId:profile.id,type,
-      exerciseId:type==='exercise'?exercise?.id:undefined,songId:type==='song'||type==='song-section'?song?.id:undefined,
-      songPartId:type==='song'||type==='song-section'?songPart?.id:undefined,songSectionId:type==='song-section'?section?.id:undefined,
-      title:type==='free'?formText(form,'title'):exercise?.name||`${song?.title}${section?` · ${section.name}`:''}`,
+      exerciseId,songId,songPartId,songSectionId,prescription:sameSource?b.prescription:undefined,
+      title:type==='free'?formText(form,'title'):preserveTransitionTitle?b.title:exercise?.name||`${song?.title}${section?` · ${section.name}`:''}`,
       targetSeconds:Math.round(formNumber(form,'minutes')*60),bpm:tempo.hidden?undefined:formNumber(form,'bpm'),
       protocol:type==='free'?{kind:'free',focus:formText(form,'notes'),...(tempo.hidden?{}:{pulse:{bpm:formNumber(form,'bpm'),beats:4,beatUnit:4,subdivision:1}})}:undefined,
       tempoTrainer:type==='exercise'&&exercise&&exerciseProtocol(exercise).kind==='tempo'?b.tempoTrainer:undefined,notes:formText(form,'notes')});
