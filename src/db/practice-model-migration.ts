@@ -1,5 +1,6 @@
 import type { Data, Exercise } from '../domain/models.js';
 import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
+import { MASTERY_ENGINE_VERSION } from '../domain/mastery-engine.js';
 import { skillIdForExercise } from '../domain/skill-graph.js';
 
 function withSkill(exercise:Exercise,data:Data):Exercise {
@@ -21,7 +22,7 @@ export function migratePracticeModel(input:Data):Data {
   data.practiceModelVersion=1;
   data.priorityCycles??=[];
   data.exercises=data.exercises.map(exercise=>withSkill(exercise,data));
-  if(alreadyCurrent){data.practiceStates??=[];return data;}
-  data.practiceStates=rebuildPracticeStates({...data,practiceStates:[]});
+  if(alreadyCurrent&&data.practiceStates?.every(state=>state.engine.version===MASTERY_ENGINE_VERSION))return data;
+  data.practiceStates=rebuildPracticeStates({...data,practiceStates:data.practiceStates??[]});
   return data;
 }
