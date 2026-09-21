@@ -91,7 +91,7 @@ export function activePracticePage():Page{
     beats,
     el('div',{class:'practice-main-controls'},start,metro,button('Finish block',()=>practice.finishBlock(),'secondary','check')),
     el('div',{class:'attempt-section'},el('div',{class:'label'},'Record this attempt'),el('div',{class:'rating-buttons'},ratingButtons),attemptText),
-    taskHost,blockSummary,cues,transition,
+    taskHost,cues,transition,blockSummary,
     el('div',{class:'practice-tools'},button('Quick note',note,'ghost','note'),button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress')),
     progressText,notesText,error,next);
   tempo.id='practice-bpm';
