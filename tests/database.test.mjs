@@ -10,6 +10,7 @@ import * as db from '../dist/app/db/database.js';
 import {seedData} from '../dist/app/db/seed.js';
 import {createBackup,restoreBackup} from '../dist/app/db/backup.js';
 import {createSession,pauseSession,finishBlock} from '../dist/app/practice/logic.js';
+import {applyAutopilotPlan,buildAutopilotPlan} from '../dist/app/domain/autopilot.js';
 import {requireActive} from '../dist/app/practice/guards.js';
 import {metadata,uuid} from '../dist/app/domain/utils.js';
 const adapter=transactionAdapter([...db.STORES,'migrationBackups']);
@@ -104,6 +105,22 @@ test('session finalization commits history and mastery state together',async()=>
   const state=(await db.all('practiceStates')).find(s=>s.target.kind==='exercise'&&s.target.exerciseId===exercise.id);
   assert.ok(state);assert.equal(state.mastery,'stabilize');assert.equal(state.engine.version,2);
   assert.equal(state.latestResult,'solid');assert.equal(state.nextReviewAt,'2026-09-22T12:01:00.000Z');
+});
+test('Autopilot finalization persists skip bookkeeping through the real repository transaction',async()=>{
+  await db.initializeDatabase();
+  await db.mutateWorkspace(data=>applyAutopilotPlan(data,buildAutopilotPlan(data,{minutes:5,intent:'balanced',now:'2026-09-21T18:00:00.000Z',today:'2026-09-21'})));
+  const data=await db.readData(),plan=data.dailyPlans.find(p=>p.generation?.kind==='autopilot');
+  const session=createSession(plan.blocks,data,{planId:plan.id});await db.insertActiveSession(session);
+  await db.finalizeSession(session.id,row=>{
+    const stamp='2026-09-21T18:05:00.000Z';row.runtime.phase='paused';row.status='completed';row.endedAt=stamp;row.activeBlockIndex=1;
+    row.blocks[0].skipped=true;row.blocks[0].completed=false;row.blocks[0].endedAt=stamp;
+    row.blocks[1].startedAt='2026-09-21T18:03:00.000Z';row.blocks[1].actualActiveSeconds=120;row.blocks[1].completed=true;row.blocks[1].endedAt=stamp;
+    return row;
+  });
+  const saved=await db.readData(),first=plan.blocks[0].prescription.target,second=plan.blocks[1].prescription.target;
+  const a=saved.practiceStates.find(s=>JSON.stringify(s.target)===JSON.stringify(first)),b=saved.practiceStates.find(s=>JSON.stringify(s.target)===JSON.stringify(second));
+  assert.equal(a.scheduling.consecutiveSkips,1);assert.equal(a.scheduling.lastSkippedAt,'2026-09-21T18:05:00.000Z');
+  assert.equal(b.scheduling.consecutiveSkips,0);assert.equal(b.scheduling.lastScheduledAt,'2026-09-21T18:00:00.000Z');
 });
 test('failed session finalization rolls back both history and mastery state',async()=>{
   await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
