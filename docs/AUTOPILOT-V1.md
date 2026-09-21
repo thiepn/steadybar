@@ -82,7 +82,7 @@ Selection considers:
 - repertoire/application suitability;
 - due retention work.
 
-Exact duplicate targets are avoided whenever unused alternatives exist.
+Exact duplicate targets are avoided whenever unused alternatives exist. For 5–20 minute sessions, Autopilot normally introduces at most one genuinely new non-ramp target when familiar alternatives exist; 30–45 minute sessions normally allow at most two. Active goals and imminent performance material may override this cap.
 
 ## Practice intents and evidence safety
 
@@ -142,9 +142,9 @@ Generates Today’s plan transactionally and immediately launches it.
 
 Generates the same plan but leaves it visible for inspection/editing before starting.
 
-Existing saved routines, manual plan editing and free practice remain available.
+Existing saved routines, manual plan editing and free practice remain available. Generated rows display an **Autopilot · intent** badge so the plan is visibly distinguishable from manual material.
 
-## Plan metadata
+## Voice safety\n\nAutopilot v1 deliberately does not generate voice sessions. Voice profiles keep the existing rest-aware starter-routine path so listening/recovery blocks and bounded vocal practice are not accidentally replaced by a generic multi-block scheduler. A future voice-aware composer must model planned rest before Autopilot is enabled for voice.\n\n## Plan metadata
 
 Generated DailyPlans contain:
 
@@ -180,7 +180,7 @@ Skipping never changes mastery.
 
 Autopilot plans remain ordinary editable DailyPlans.
 
-If the user edits only duration/cue details and leaves the source target unchanged, the prescription remains valid.
+If the user edits only duration/cue details and leaves the source target unchanged, the prescription remains valid. Persistent transition blocks also keep their transition-specific title during these edits.
 
 If the underlying exercise/song/part/section changes, Steadybar clears the old prescription so future session evidence cannot be attributed to the wrong Autopilot target.
 

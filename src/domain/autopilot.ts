@@ -77,6 +77,12 @@ function warmupCandidate(data:Data,candidate:PriorityCandidate):boolean {
   const exercise=data.exercises.find(e=>e.id===target.exerciseId);
   return exercise?.category==='warmup'||exercise?.skillArea==='warmup'||exercise?.tags.includes('warmup')||false;
 }
+function newMaterial(candidate:PriorityCandidate):boolean {
+  return !candidate.state||candidate.state.evidenceCount===0;
+}
+function urgentNewMaterial(candidate:PriorityCandidate):boolean {
+  return candidate.reasons.includes('upcoming-performance')||candidate.reasons.includes('active-goal');
+}
 function overlap(a:PriorityCandidate,b:PriorityCandidate|undefined):boolean {
   if(!b)return false;
   return a.skillIds.some(id=>b.skillIds.includes(id));
@@ -119,12 +125,16 @@ function diversityPenalty(candidate:PriorityCandidate,selected:PriorityCandidate
   }
   return penalty;
 }
-function choose(data:Data,candidates:PriorityCandidate[],role:SlotRole,intent:AutopilotSessionIntent,selected:PriorityCandidate[],primary?:PriorityCandidate):PriorityCandidate|undefined {
+function choose(data:Data,candidates:PriorityCandidate[],role:SlotRole,intent:AutopilotSessionIntent,selected:PriorityCandidate[],primary?:PriorityCandidate,allowNew=true):PriorityCandidate|undefined {
   let pool=candidates;
   if((role==='primary'||role==='secondary')&&intent!=='balanced'){
     const preferred=candidates.filter(candidate=>matchesIntent(candidate,intent));if(preferred.length)pool=preferred;
   }else if((role==='application'||role==='repertoire')&&intent==='songs'){
     const preferred=candidates.filter(repertoire);if(preferred.length)pool=preferred;
+  }
+  if(!allowNew){
+    const familiar=pool.filter(candidate=>!newMaterial(candidate)||urgentNewMaterial(candidate));
+    if(familiar.length)pool=familiar;
   }
   const scored=pool.map((candidate,index)=>({candidate,index,fit:candidate.score+roleBonus(data,candidate,role,intent,primary)+diversityPenalty(candidate,selected,intent)}))
     .sort((a,b)=>b.fit-a.fit||a.index-b.index||a.candidate.targetKey.localeCompare(b.candidate.targetKey));
@@ -206,16 +216,19 @@ function sameTarget(a:PriorityCandidate,b:PriorityCandidate):boolean{return a.ta
 function selectSlots(data:Data,candidates:PriorityCandidate[],pattern:{role:SlotRole;seconds:number}[],intent:AutopilotSessionIntent):AutopilotSelection[] {
   if(!candidates.length)throw new Error('Add at least one available exercise or song before using Autopilot.');
   const selected:PriorityCandidate[]=[],result:AutopilotSelection[]=[];
+  const maxNew=pattern.length<=4?1:2;let newCount=0;
   let primary:PriorityCandidate|undefined;
   for(const slot of pattern){
-    const picked=choose(data,candidates,slot.role,intent,selected,primary);
+    const allowNew=slot.role==='ramp-in'||newCount<maxNew;
+    const picked=choose(data,candidates,slot.role,intent,selected,primary,allowNew);
     if(!picked)continue;
     let candidate:PriorityCandidate=picked;
     if(slot.role==='primary')primary=candidate;
     if(selected.some(item=>sameTarget(item,candidate))){
-      const alternate=candidates.find(item=>!selected.some(used=>sameTarget(used,item)));
+      const alternate=candidates.find(item=>!selected.some(used=>sameTarget(used,item))&&(allowNew||!newMaterial(item)||urgentNewMaterial(item)));
       if(alternate)candidate=alternate;
     }
+    if(slot.role!=='ramp-in'&&newMaterial(candidate)&&!urgentNewMaterial(candidate))newCount++;
     selected.push(candidate);
     result.push({role:slot.role,candidate,block:candidateBlock(data,candidate,slot.seconds,slot.role,intent)});
   }
@@ -226,6 +239,8 @@ function selectSlots(data:Data,candidates:PriorityCandidate[],pattern:{role:Slot
 export function buildAutopilotPlan(data:Data,options:AutopilotOptions):AutopilotBuild {
   if(data.schemaVersion!==2)throw new Error('Finish workspace migration before using Autopilot.');
   const minutes=validMinutes(options.minutes),profileId=options.profileId??activeProfile(data).id,intent=options.intent??'balanced';
+  const profile=data.profiles?.find(p=>p.id===profileId);
+  if(profile?.instrumentType==='voice')throw new Error('Autopilot v1 does not schedule voice practice yet. Use a voice routine with planned rest and listening.');
   const generatedAt=iso(options.now),today=options.today??localDate(new Date(time(options.now)));
   const candidates=rankPracticeTargets(data,profileId,{now:generatedAt,today});
   const selections=selectSlots(data,candidates,PATTERNS[minutes],intent);

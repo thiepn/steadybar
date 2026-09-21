@@ -23,6 +23,20 @@ function song(){
   ],transitions:[{id:'v-c',fromSectionId:'verse',toSectionId:'chorus',name:'Lift',notes:'Do not rush the fill.'}]};
 }
 
+test('voice stays on the existing rest-aware routine path in Autopilot v1',()=>{
+  const legacy=seedData(at);legacy.settings.instrument='Vocals';
+  const voice=migratePracticeModel(migratePracticeData(legacy));
+  assert.throws(()=>buildAutopilotPlan(voice,{minutes:15,intent:'balanced',now:at,today}),/does not schedule voice practice yet/i);
+});
+
+test('short sessions cap genuinely new non-ramp material when familiar alternatives exist',()=>{
+  const d=modern(),p=d.settings.activeProfileId,familiar=d.exercises.slice(0,3);
+  d.practiceStates=familiar.map((exercise,i)=>stateFor({kind:'exercise',exerciseId:exercise.id},p,{id:'familiar-'+i,evidenceCount:2,mastery:'stabilize',latestResult:'solid',lastPracticedAt:'2026-09-15T18:00:00.000Z'}));
+  const build=buildAutopilotPlan(d,{minutes:15,intent:'balanced',now:at,today});
+  const newNonRamp=build.selections.filter(s=>s.role!=='ramp-in'&&(!s.candidate.state||s.candidate.state.evidenceCount===0));
+  assert.ok(newNonRamp.length<=1,newNonRamp.map(s=>s.candidate.label).join(', '));
+});
+
 test('all canonical Autopilot budgets allocate exact time with stable slot counts',()=>{
   const d=modern(),expected=new Map([[5,2],[10,3],[15,4],[20,4],[30,5],[45,6]]);
   for(const minutes of AUTOPILOT_MINUTES){

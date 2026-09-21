@@ -1,5 +1,6 @@
 import { learningSummary } from '../ui/learning.js';
 import { activeProfile, profileName } from '../domain/profiles.js';
+import { prepareStarterPlan } from '../app/profiles.js';
 import { confirmAction, notify, select } from '../ui/components.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
@@ -25,20 +26,30 @@ export function todayPage(): Page {
   const savePlan = async (blocks: RoutineBlock[]) => store.save('dailyPlans', { ...(plan || metadata()), profileId:profile.id,date: localDate(), blocks });
   const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`));
   page.append(learningSummary());
-  const allowed=[5,10,15,20,30,45],defaultMinutes=allowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
-  const budget=select('timeBudget','Session time',allowed.map(value=>[String(value),value+' min'] as [string,string]),String(defaultMinutes));
-  const intent=select('autopilotIntent','Practice emphasis',[['balanced','Balanced'],['songs','Songs'],['timing','Timing'],['technique','Technique']],'balanced');
-  const generate=async(startNow:boolean)=>{
-    if(startNow&&await store.activeSession()){await launchPractice([]);return;}
-    if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Autopilot will rebuild today from your current priorities, review schedule and repertoire. Practice history is unchanged.',startNow?'Replace & start':'Build plan'))return;
-    const minutes=Number(budget.querySelector('select')!.value),sessionIntent=intent.querySelector('select')!.value as AutopilotSessionIntent;
-    const generated=await prepareAutopilotPlan(minutes,sessionIntent);
-    if(startNow)await launchPractice(generated.blocks,{planId:generated.id});
-    else notify('Autopilot plan ready.');
-  };
-  const startAutopilot=button('Start Autopilot',()=>generate(true),'primary','play');
-  const prepare=button('Build plan',()=>generate(false),'secondary');
-  page.append(el('div',{class:'plan-builder'},budget,intent,startAutopilot,prepare,el('p',{class:'field-hint'},'Autopilot uses goals, current priorities, due reviews, recent practice and repertoire urgency. You can still edit every generated block.')));
+  if(profile.instrumentType==='voice'){
+    const voiceAllowed=[15,30,45,60],defaultMinutes=voiceAllowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
+    const budget=select('timeBudget','Session time',voiceAllowed.map(value=>[String(value),value+' min'] as [string,string]),String(defaultMinutes));
+    const prepare=button('Build voice plan',async()=>{
+      if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a voice routine that preserves planned rest and listening. Practice history is unchanged.','Build voice plan'))return;
+      await prepareStarterPlan(Number(budget.querySelector('select')!.value));notify('Voice plan ready.');
+    },'secondary');
+    page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},'Autopilot v1 is not used for voice yet. This keeps the existing rest-aware voice routine with listening and recovery time.')));
+  }else{
+    const allowed=[5,10,15,20,30,45],defaultMinutes=allowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
+    const budget=select('timeBudget','Session time',allowed.map(value=>[String(value),value+' min'] as [string,string]),String(defaultMinutes));
+    const intent=select('autopilotIntent','Practice emphasis',[['balanced','Balanced'],['songs','Songs'],['timing','Timing'],['technique','Technique']],'balanced');
+    const generate=async(startNow:boolean)=>{
+      if(startNow&&await store.activeSession()){await launchPractice([]);return;}
+      if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Autopilot will rebuild today from your current priorities, review schedule and repertoire. Practice history is unchanged.',startNow?'Replace & start':'Build plan'))return;
+      const minutes=Number(budget.querySelector('select')!.value),sessionIntent=intent.querySelector('select')!.value as AutopilotSessionIntent;
+      const generated=await prepareAutopilotPlan(minutes,sessionIntent);
+      if(startNow)await launchPractice(generated.blocks,{planId:generated.id});
+      else notify('Autopilot plan ready.');
+    };
+    const startAutopilot=button('Start Autopilot',()=>generate(true),'primary','play');
+    const prepare=button('Build plan',()=>generate(false),'secondary');
+    page.append(el('div',{class:'plan-builder'},budget,intent,startAutopilot,prepare,el('p',{class:'field-hint'},'Autopilot uses goals, current priorities, due reviews, recent practice and repertoire urgency. You can still edit every generated block.')));
+  }
   if (active) page.append(el('div', { class: 'recovery-banner' }, el('div', {},
     el('strong', {}, `Unfinished ${profileName(snapshot,active.profileId)} session`), el('span', {}, active.blocks[active.activeBlockIndex]?.titleSnapshot || 'Saved practice')),
     link('Resume session', '/practice/active', 'button primary', 'play')));
