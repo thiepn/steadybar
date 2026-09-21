@@ -98,7 +98,7 @@ class Courses(e2e.MusicPracticeTests):
         expect(self.page.locator('.active-title')).to_be_visible()
         for i in range(2):
             self.start();self.page.wait_for_timeout(16000)
-            self.page.get_by_role('button',name='Finish block',exact=True).click()
+            self.open_focus_drawer('Tools & block options');self.page.get_by_role('button',name='Finish block',exact=True).click()
             if i==0:expect(self.page.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
         expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
         self.page.get_by_role('link',name='Return to lesson: '+self.lesson['title'],exact=True).click()
