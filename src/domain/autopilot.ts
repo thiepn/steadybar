@@ -124,7 +124,13 @@ function diversityPenalty(candidate:PriorityCandidate,selected:PriorityCandidate
   return penalty;
 }
 function choose(data:Data,candidates:PriorityCandidate[],role:SlotRole,intent:AutopilotSessionIntent,selected:PriorityCandidate[],primary?:PriorityCandidate):PriorityCandidate|undefined {
-  const scored=candidates.map((candidate,index)=>({candidate,index,fit:candidate.score+roleBonus(data,candidate,role,intent,primary)+diversityPenalty(candidate,selected,intent)}))
+  let pool=candidates;
+  if((role==='primary'||role==='secondary')&&intent!=='balanced'){
+    const preferred=candidates.filter(candidate=>matchesIntent(candidate,intent));if(preferred.length)pool=preferred;
+  }else if((role==='application'||role==='repertoire')&&intent==='songs'){
+    const preferred=candidates.filter(repertoire);if(preferred.length)pool=preferred;
+  }
+  const scored=pool.map((candidate,index)=>({candidate,index,fit:candidate.score+roleBonus(data,candidate,role,intent,primary)+diversityPenalty(candidate,selected,intent)}))
     .sort((a,b)=>b.fit-a.fit||a.index-b.index||a.candidate.targetKey.localeCompare(b.candidate.targetKey));
   const unused=scored.find(row=>!selected.some(item=>item.targetKey===row.candidate.targetKey));
   return unused?.candidate??scored[0]?.candidate;
@@ -151,12 +157,16 @@ function stateIntent(candidate:PriorityCandidate):PracticeIntent {
 }
 function intentFor(role:SlotRole,candidate:PriorityCandidate):PracticeIntent {
   if(role==='ramp-in')return 'ramp-in';
-  if((role==='application'||role==='repertoire')&&candidate.reasons.includes('upcoming-performance')&&repertoire(candidate))return 'perform';
-  if(role==='application'||role==='repertoire')return 'apply';
+  if(role==='application'||role==='repertoire'){
+    if(candidate.reasons.includes('upcoming-performance')&&repertoire(candidate))return 'perform';
+    if(repertoire(candidate)||candidate.state?.mastery==='apply'||candidate.reasons.includes('musical-transfer'))return 'apply';
+    return stateIntent(candidate);
+  }
   if(role==='retention'){
     if(candidate.state?.mastery==='maintain')return 'maintain';
     if(candidate.state?.mastery==='apply')return 'apply';
-    return 'retest';
+    if(candidate.state?.mastery==='retest'||candidate.reasons.includes('retention-due'))return 'retest';
+    return stateIntent(candidate);
   }
   return stateIntent(candidate);
 }
