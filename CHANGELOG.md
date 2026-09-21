@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 — Unified practice-state foundation — 2026-09-21
+
+- Add the Phase 2 practice-model foundation without changing Steadybar into an automatic coach yet: canonical practice targets, Not Yet / Usable / Solid evaluations, practice prescriptions, mastery-state vocabulary and deterministic target identities.
+- Add static instrument skill graphs, including the nine canonical drum domains, while keeping legacy categories and existing multi-instrument practice protocols compatible.
+- Add rebuildable normalized evidence over immutable sessions, tempo attempts, protocol outcomes and lesson reviews; historical evidence can establish known facts such as peak clean tempo without fabricating working tempo, cold tempo, retention or mastery.
+- Add persistent `practiceStates` and `priorityCycles` in IndexedDB schema 5, plus deterministic state rebuilding that preserves manual scheduling overrides.
+- Add backup envelope v4 while retaining v1–v3 imports and keeping the original `music-practice-os` storage identifier.
+- Add persistent song-transition identities and cleanup of derived state when current source content is removed, while leaving historical session snapshots intact.
+- Preserve the existing PracticeController, Web Audio engine, Learn system, routines, songs, setlists and session history; priority scoring, mastery transition rules and Autopilot remain intentionally deferred to later phases.
+- Extend Node and native Chromium/Firefox/WebKit migration, backup and practice-state regression coverage.
+
 ## 2.1.1 — Post-release integrity audit — 2026-09-09
 
 - Scope remembered lesson tempo to the lesson that supplied it, preventing a custom tempo from silently leaking into another lesson while retaining safe duration and vocal-range convenience.
