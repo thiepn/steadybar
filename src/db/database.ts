@@ -190,6 +190,7 @@ export async function updateSession(id:string,fn:(session:PracticeSession)=>Prac
     if(!current)throw new Error('This practice session no longer exists.');
     if(current.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');
     const next=validateSession(fn(structuredClone(current)));
+    if(next.status!=='active')throw new Error('Use session finalization to end practice so mastery state is committed atomically.');
     if(next.id!==current.id||next.profileId!==current.profileId)throw new Error('A session update cannot change its identity.');
     for(const old of current.blocks){const block=next.blocks.find(b=>b.id===old.id);if(block&&block.profileId!==old.profileId)throw new Error('A practice block cannot change its profile.');}
     // Ensure commands in the same millisecond still have an ordered revision timestamp.
