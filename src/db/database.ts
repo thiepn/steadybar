@@ -6,6 +6,7 @@ import type { PracticeProfile } from '../domain/practice-types.js';
 import { migratePracticeData, normalizeProfileSelection } from './profile-migration.js';
 import { migratePracticeModel } from './practice-model-migration.js';
 import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
+import { applyAutopilotSessionScheduling } from '../domain/autopilot.js';
 import type { Data, DailyPlan, Exercise, Goal, PracticeSession, Preset, Routine, Setlist, Settings, Song } from '../domain/models.js';
 import type { PracticeState, PriorityCycle } from '../domain/practice-state.js';
 import { DEFAULT_SETTINGS } from '../domain/models.js';
@@ -211,6 +212,7 @@ export async function finalizeSession(id:string,fn:(session:PracticeSession)=>Pr
     const data=await referenceSnapshot(tx),before=data.practiceStates??[];
     data.sessions=data.sessions.map(session=>session.id===next.id?next:session);
     data.practiceStates=rebuildPracticeStates(data);
+    data.practiceStates=applyAutopilotSessionScheduling(data.practiceStates,next);
     validateData(data);
     tx.objectStore('sessions').put(next);syncPracticeStates(tx,before,data.practiceStates);
     return next;
