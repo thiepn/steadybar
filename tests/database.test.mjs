@@ -134,6 +134,20 @@ test('complete backup restore preserves all entity types, attempts and historica
   await db.replaceData(seedData());await restoreBackup(exported);
   assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[]}));
 });
+test('backup restore rebuilds derived mastery from evidence while preserving manual scheduling overrides',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
+  const block={id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:exercise.profileId,title:exercise.name,targetSeconds:60,bpm:80,notes:'',order:0};
+  let s=createSession([block],data);s.blocks[0].startedAt='2026-09-20T12:00:00.000Z';s.blocks[0].actualActiveSeconds=60;
+  s.blocks[0].evaluation={id:'restore-solid',timestamp:'2026-09-20T12:01:00.000Z',result:'solid',context:'normal',limitations:[],note:''};
+  s=finishBlock(s,false,Date.parse('2026-09-20T12:02:00.000Z'));data.sessions=[s];
+  data.practiceStates=(await import('../dist/app/domain/practice-state-rebuild.js')).rebuildPracticeStates(data);
+  const state=data.practiceStates.find(row=>row.target.kind==='exercise'&&row.target.exerciseId===exercise.id);
+  state.mastery='maintain';state.engine.version=1;state.scheduling.manualPriority=2;state.scheduling.snoozedUntil='2026-10-01T12:00:00.000Z';
+  const backup=createBackup(validateData(data));await restoreBackup(backup);const restored=await db.readData();
+  const next=restored.practiceStates.find(row=>row.target.kind==='exercise'&&row.target.exerciseId===exercise.id);
+  assert.equal(next.mastery,'stabilize');assert.equal(next.engine.version,2);assert.equal(next.latestResult,'solid');
+  assert.equal(next.scheduling.manualPriority,2);assert.equal(next.scheduling.snoozedUntil,'2026-10-01T12:00:00.000Z');
+});
 test('restore pauses a running checkpoint immediately, before any page reload',async()=>{
   const data=seedData(),s=active();s.runtime.phase='running';s.runtime.runStartedAt='2026-09-01T10:00:00.000Z';s.blocks[0].actualActiveSeconds=32;data.sessions=[s];
   await restoreBackup(createBackup(data));const restored=await db.get('sessions',s.id);
