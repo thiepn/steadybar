@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.0 — Priority engine — 2026-09-21
+
+- Add a deterministic, runtime-only Priority Engine that ranks concrete practice targets without persisting or displaying a pseudo-scientific score.
+- Combine active goals, medium-term PriorityCycles, due retention, recent weakness, neglect, musical usefulness, recent domain balance and upcoming dated setlists into inspectable signed factors.
+- Add conservative penalties for very recent repetition, recent scheduling, repeated skips, missing prerequisite evidence, exercise-level mismatch and stable maintenance work that is not due.
+- Make future snoozed targets ineligible while keeping them inspectable for debugging; manual priority overrides remain independent from musical mastery.
+- Rank exercises, songs, song sections and persistent transitions while keeping broad skill nodes and Learn lessons out of the schedulable candidate pool for now.
+- Propagate song goals and setlist urgency to the song's sections/transitions so the later Autopilot can isolate concrete repertoire work.
+- Use active PriorityCycles instead of older profile-focus weighting when a cycle exists, while retaining profile focus as a fallback for workspaces without an active cycle.
+- Keep prerequisites as a soft penalty rather than a gate, preserving music-first practice while reducing accidental advanced-material dominance.
+- Route the existing Suggested exercises panel through the new engine and surface its strongest structured explanation.
+- Add deterministic regression coverage for goals, priority cycles, retention due dates, weakness, repetition, repertoire urgency, snoozes, skips, prerequisites, domain balance, legacy workspaces and non-mutation.
+- Session composition, time budgeting, diversity/fatigue constraints and automatic scheduler bookkeeping remain intentionally deferred to Phase 5.
+
 ## 2.3.0 — Mastery & retention engine — 2026-09-21
 
 - Turn the Phase 2 practice-state foundation into a deterministic mastery engine with Discover → Learn → Build → Stabilize → Retest → Apply → Maintain progression for concrete practice targets.
