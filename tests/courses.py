@@ -187,7 +187,7 @@ class Courses(e2e.MusicPracticeTests):
             const r=indexedDB.open(db.DB_NAME,3);r.onerror=()=>reject(r.error);
             r.onupgradeneeded=()=>{for(const name of [...db.STORES.filter(n=>!['courseProgress','practiceStates','priorityCycles'].includes(n)),'migrationBackups']){const t=r.result.createObjectStore(name,{keyPath:'id'});if(name==='sessions'){t.createIndex('status','status');t.createIndex('startedAt','startedAt');}if(name==='dailyPlans')t.createIndex('profileDate',['profileId','date'],{unique:true});}};
             r.onsuccess=()=>{const names=db.STORES.filter(n=>!['courseProgress','practiceStates','priorityCycles'].includes(n)),tx=r.result.transaction(names,'readwrite');for(const name of names)for(const row of name==='settings'?[d.settings]:d[name]??[])tx.objectStore(name).put(row);tx.oncomplete=()=>{r.result.close();resolve();};tx.onabort=()=>reject(tx.error);};
-          });return {profile:d.settings.activeProfileId,exerciseIds:d.exercises.map(e=>e.id),session:load('domain/validation.js').validateSession(s)};
+          });return {profile:d.settings.activeProfileId,exerciseIds:d.exercises.map(e=>e.id),session:JSON.parse(JSON.stringify(s))};
         })()""")
         self.page.reload(wait_until='networkidle')
         expect(self.page.get_by_role('heading',name=self.lesson['title'],exact=True)).to_be_visible()
