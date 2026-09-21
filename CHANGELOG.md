@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.6.0 — Focus Player rebuild — 2026-09-22
+
+- Rebuild active practice as a single-column Focus Player centered on the current block instead of a permanent workspace plus queue sidebar.
+- Keep the always-visible layer to the information needed while playing: block identity/intent, active time, tempo/beat feedback, protocol task controls, Start/Pause, Metronome, and Not Yet / Usable / Solid.
+- Make Not Yet / Usable / Solid the primary block-completion controls; saving a result advances to the next block without automatically starting it.
+- Move detailed five-level tempo attempts into a collapsible Detailed attempt drawer while preserving all historical attempt semantics and best-clean tracking.
+- Move practice cues, limitation tags, Quick note, Tempo trainer, Restart, Skip, unrated Finish block, and the full session queue into explicit secondary drawers rather than removing them.
+- Add a compact sticky session header with Save & leave plus a Session menu for Appearance, fullscreen and Finish session.
+- Add a mobile/music-stand sticky result dock and responsive one-screen contract; core controls remain at least 44px and within the viewport down to 320×568.
+- Keep protocol-specific practice controls, vocal safety/recovery, session recovery, keyboard shortcuts, audio timing, persistence, immutable history and Autopilot prescriptions unchanged.
+- Make closed disclosure content explicitly hidden in author CSS so Firefox, Chromium and WebKit agree on drawer geometry.
+- Retire the obsolete “Open sessions in Focus Mode” setting from the UI because all sessions now use Focus Player; retain its stored compatibility field without migration.
+- Add cross-engine regression coverage for primary-surface geometry, closed drawers, legacy tool accessibility and result-driven block advancement.
+- Phase 6 changes presentation and interaction hierarchy only; mastery, retention, priority ranking and Autopilot composition rules remain unchanged.
+
 ## 2.5.0 — Practice Autopilot v1 — 2026-09-21
 
 - Add deterministic Practice Autopilot composition on top of the Phase 3 Mastery Engine and Phase 4 Priority Engine.
