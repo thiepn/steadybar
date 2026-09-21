@@ -124,6 +124,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.page.set_viewport_size({'width':1440,'height':900})
 
     def finish(self):
+        self.open_focus_drawer('Session')
         self.page.get_by_role('button',name='Finish session',exact=True).click()
         self.confirm('Finish session')
         expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
