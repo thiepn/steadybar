@@ -3,6 +3,7 @@ import type { ProtocolOutcome } from './practice-types.js';
 const finishedSessions=(sessions:PracticeSession[])=>sessions.filter(s=>s.status!=='active');
 import { NOTE_NAMES } from './protocols.js';
 import { activeProfile } from './profiles.js';
+import { priorityReasonText, rankExerciseTargets } from './priority-engine.js';
 export function protocolResults(sessions:PracticeSession[],exerciseId?:string):ProtocolOutcome[]{
   return finishedSessions(sessions).flatMap(s=>s.blocks.filter(b=>!exerciseId||b.sourceExerciseId===exerciseId).flatMap(b=>b.outcomes??[]));
 }
@@ -38,17 +39,11 @@ export function outcomeSummary(r:ProtocolOutcome):string{
     case 'reflection':return `Reflection ${r.rating}/5${r.note?' · '+r.note:''}`;
   }
 }
-const focusTokens=(value:string):Set<string>=>new Set(value.toLowerCase().replace(/&/g,' ').replace(/[^a-z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean).map(word=>word.length>3&&word.endsWith('s')?word.slice(0,-1):word));
-const matchedFocus=(skill:string|undefined,focusAreas:string[]):string|undefined=>{
-  const skillSet=focusTokens(skill??'');if(!skillSet.size)return undefined;
-  return focusAreas.find(focus=>{const focusSet=focusTokens(focus);return [...skillSet].every(token=>focusSet.has(token))||[...focusSet].every(token=>skillSet.has(token));});
-};
 export function suggestedExercises(data:Data):{id:string;reason:string}[]{
   if(data.schemaVersion!==2)return [];
   const p=activeProfile(data);
-  const last=new Map<string,string>();for(const s of finishedSessions(data.sessions))for(const b of s.blocks)if(b.sourceExerciseId&&(!last.has(b.sourceExerciseId)||last.get(b.sourceExerciseId)!<s.startedAt))last.set(b.sourceExerciseId,s.startedAt);
-  const selected=data.exercises.filter(e=>e.profileId===p.id&&!e.archived),matches=new Map(selected.map(e=>[e.id,matchedFocus(e.skillArea,p.focusAreas)]));
-  const score=(e:Data['exercises'][number])=>data.goals.some(g=>g.exerciseId===e.id&&!g.completed)?2:matches.get(e.id)?1:0;
-  const level=(e:Data['exercises'][number])=>e.level===p.level?1:0;
-  return selected.sort((a,b)=>score(b)-score(a)||level(b)-level(a)||(last.get(a.id)??'').localeCompare(last.get(b.id)??'')||a.id.localeCompare(b.id)).slice(0,3).map(e=>({id:e.id,reason:score(e)===2?'Linked to an active goal':matches.get(e.id)?`Matches ${matches.get(e.id)}`:last.has(e.id)?'Earlier practice to revisit':'Not practiced yet'}));
+  return rankExerciseTargets(data,p.id).slice(0,3).map(candidate=>({
+    id:candidate.target.kind==='exercise'?candidate.target.exerciseId:'',
+    reason:priorityReasonText(candidate),
+  })).filter(item=>item.id);
 }
