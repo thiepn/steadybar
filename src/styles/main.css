@@ -593,7 +593,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .focus-result-heading{font-size:10px}.focus-result-heading .small{display:none}
   .button.focus-result{min-height:48px;font-size:11px;padding-inline:4px}
   .focus-next.next-block{padding:9px 0;font-size:10px}.focus-next strong{font-size:10px}
-  .focus-drawer>summary{min-height:44px;font-size:11px}.focus-drawer-body{padding-bottom:12px}
+  .focus-secondary{padding-bottom:72px}.focus-drawer>summary{min-height:44px;font-size:11px}.focus-drawer-body{padding-bottom:12px}
   .focus-drawer .rating-buttons{gap:4px}.focus-drawer .button.rating-button{min-height:42px;font-size:10px}
   .focus-limitations{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}
   .focus-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.focus-tool-grid>.button{font-size:10px}
@@ -605,7 +605,4 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .focus-readouts .time-readout,.focus-readouts .tempo-readout{padding:10px 7px}
   .focus-readouts .active-time,.focus-readouts input.active-bpm{font-size:38px}
   .focus-result-panel{margin-inline:0}.button.focus-result{font-size:10px}
-}
-@media (min-width:641px){
-  .focus-result-panel{position:sticky;bottom:14px;z-index:10}
 }
