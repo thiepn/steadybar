@@ -5,6 +5,7 @@ import { isPracticeProfile } from '../domain/profiles.js';
 import type { PracticeProfile } from '../domain/practice-types.js';
 import { migratePracticeData, normalizeProfileSelection } from './profile-migration.js';
 import { migratePracticeModel } from './practice-model-migration.js';
+import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
 import type { Data, DailyPlan, Exercise, Goal, PracticeSession, Preset, Routine, Setlist, Settings, Song } from '../domain/models.js';
 import type { PracticeState, PriorityCycle } from '../domain/practice-state.js';
 import { DEFAULT_SETTINGS } from '../domain/models.js';
@@ -121,6 +122,11 @@ async function referenceSnapshot(tx:IDBTransaction):Promise<Data>{
   const data=Object.fromEntries(REFERENCE_STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]])) as unknown as Data;
   if(data.profiles?.length){data.schemaVersion=2;data.practiceModelVersion=1;data.practiceStates??=[];data.priorityCycles??=[];}return data;
 }
+function syncPracticeStates(tx:IDBTransaction,before:PracticeState[],after:PracticeState[]):void {
+  const table=tx.objectStore('practiceStates'),nextIds=new Set(after.map(state=>state.id)),old=new Map(before.map(state=>[state.id,state]));
+  for(const state of before)if(!nextIds.has(state.id))table.delete(state.id);
+  for(const state of after)if(JSON.stringify(old.get(state.id))!==JSON.stringify(state))table.put(state);
+}
 export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promise<void> {
   const validated=validators[name](value);
   await write([...new Set([...REFERENCE_STORES,name])],async tx=>{
@@ -130,6 +136,11 @@ export async function put<K extends StoreName>(name:K,value:StoreTypes[K]):Promi
       const current=await request(tx.objectStore('sessions').getAll()) as PracticeSession[],session=validateSession(validated as PracticeSession);
       if(current.some(row=>row.id===session.id))throw new Error('Use the guarded session commands to update an existing practice session.');
       data.sessions=[...current,session];
+      if(session.status!=='active'){
+        const before=data.practiceStates??[];
+        data.practiceStates=rebuildPracticeStates(data);
+        syncPracticeStates(tx,before,data.practiceStates);
+      }
     }else {
       const rows=data[name as Exclude<StoreName,'settings'|'sessions'>]??[];
       // A discriminated store-name selects the already runtime-validated row.
@@ -156,7 +167,9 @@ export async function remove(name:StoreName,id:string):Promise<void> {
   if(name==='sessions'){
     await write([...STORES],async tx=>{
       const data=await referenceSnapshot(tx),sessions=await request(tx.objectStore('sessions').getAll()) as PracticeSession[];
-      data.sessions=sessions.filter(session=>session.id!==id);if(data.schemaVersion===2)validateData(data);tx.objectStore(name).delete(id);
+      data.sessions=sessions.filter(session=>session.id!==id);
+      const before=data.practiceStates??[];data.practiceStates=rebuildPracticeStates(data);
+      if(data.schemaVersion===2)validateData(data);tx.objectStore(name).delete(id);syncPracticeStates(tx,before,data.practiceStates);
     });return;
   }
   await write([...REFERENCE_STORES],async tx=>{
@@ -182,6 +195,24 @@ export async function updateSession(id:string,fn:(session:PracticeSession)=>Prac
     // Ensure commands in the same millisecond still have an ordered revision timestamp.
     next.updatedAt=new Date(Math.max(Date.now(),Date.parse(current.updatedAt)+1)).toISOString();
     tx.objectStore('sessions').put(next);return next;
+  });
+}
+export async function finalizeSession(id:string,fn:(session:PracticeSession)=>PracticeSession):Promise<PracticeSession> {
+  return await write([...STORES],async tx=>{
+    const current=await request(tx.objectStore('sessions').get(id)) as PracticeSession|undefined;
+    if(!current)throw new Error('This practice session no longer exists.');
+    if(current.status!=='active')throw new Error('This practice session already ended. Ended practice history is immutable; edit only its reflection through History.');
+    const next=validateSession(fn(structuredClone(current)));
+    if(next.status==='active')throw new Error('Finalizing a session requires an ended session state.');
+    if(next.id!==current.id||next.profileId!==current.profileId)throw new Error('A session update cannot change its identity.');
+    for(const old of current.blocks){const block=next.blocks.find(b=>b.id===old.id);if(block&&block.profileId!==old.profileId)throw new Error('A practice block cannot change its profile.');}
+    next.updatedAt=new Date(Math.max(Date.now(),Date.parse(current.updatedAt)+1)).toISOString();
+    const data=await referenceSnapshot(tx),before=data.practiceStates??[];
+    data.sessions=data.sessions.map(session=>session.id===next.id?next:session);
+    data.practiceStates=rebuildPracticeStates(data);
+    validateData(data);
+    tx.objectStore('sessions').put(next);syncPracticeStates(tx,before,data.practiceStates);
+    return next;
   });
 }
 export async function insertActiveSession(session:PracticeSession):Promise<void> {
