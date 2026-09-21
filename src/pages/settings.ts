@@ -33,17 +33,17 @@ export function settingsPage():Page{
   const subdivision=select('subdivision','Default subdivision',[['1','Beat · 1 click'],['2','Eighths · 2 clicks'],['3','Triplets · 3 clicks'],['4','Sixteenths · 4 clicks']],String(settings.metronome.subdivision));
   const countIn=select('countIn','Count-in',[['0','None'],['1','1 bar'],['2','2 bars'],['4','4 bars']],String(settings.metronome.countIn));
   const volume=el('input',{name:'volume',type:'range',min:0,max:1,step:0.05,value:settings.metronome.volume});
-  const wake=checkbox('wake','Keep the screen awake during practice, when supported',settings.wakeLock),focus=checkbox('focus','Open sessions in Focus Mode',settings.defaultFocus),hidden=checkbox('hidden','Pause when the app moves into the background',settings.pauseWhenHidden);
+  const wake=checkbox('wake','Keep the screen awake during practice, when supported',settings.wakeLock),hidden=checkbox('hidden','Pause when the app moves into the background',settings.pauseWhenHidden);
 
   const error=el('p',{class:'form-error',role:'alert'}),save=el('button',{type:'submit',class:'button primary'},'Save preferences');
-  prefs.append(el('div',{class:'form-grid'},bpm,meter,subdivision,countIn),field('Metronome volume',volume),el('div',{class:'settings-toggles'},wake,focus,hidden),el('p',{class:'field-hint'},'Foreground practice is recommended. Mobile browsers can suspend background audio. Count-in and paused time never count as active practice.'),error,save);
+  prefs.append(el('div',{class:'form-grid'},bpm,meter,subdivision,countIn),field('Metronome volume',volume),el('div',{class:'settings-toggles'},wake,hidden),el('p',{class:'field-hint'},'Practice sessions now always use the distraction-free Focus Player. Foreground practice is recommended; mobile browsers can suspend background audio. Count-in and paused time never count as active practice.'),error,save);
   prefs.addEventListener('input',()=>{dirty=true;});prefs.addEventListener('change',()=>{dirty=true;});
   const unload=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',unload);
   prefs.addEventListener('submit',async event=>{
     event.preventDefault();if(!prefs.reportValidity())return;save.disabled=true;error.textContent='';
     try{
       const form=new FormData(prefs),[beats,unit]=formText(form,'meter').split('/').map(Number);
-      const validated=validateSettings({...store.snapshot().settings,wakeLock:form.has('wake'),defaultFocus:form.has('focus'),pauseWhenHidden:form.has('hidden'),metronome:{...settings.metronome,bpm:Number(form.get('bpm')),meter:{beats:beats||4,beatUnit:unit===8?8:4},accents:beats===settings.metronome.meter.beats && unit===settings.metronome.meter.beatUnit ? [...settings.metronome.accents] : defaultAccents(beats||4,unit||4),subdivision:Number(form.get('subdivision')) as Subdivision,countIn:Number(form.get('countIn')),volume:Number(form.get('volume'))}});
+      const validated=validateSettings({...store.snapshot().settings,wakeLock:form.has('wake'),defaultFocus:settings.defaultFocus,pauseWhenHidden:form.has('hidden'),metronome:{...settings.metronome,bpm:Number(form.get('bpm')),meter:{beats:beats||4,beatUnit:unit===8?8:4},accents:beats===settings.metronome.meter.beats && unit===settings.metronome.meter.beatUnit ? [...settings.metronome.accents] : defaultAccents(beats||4,unit||4),subdivision:Number(form.get('subdivision')) as Subdivision,countIn:Number(form.get('countIn')),volume:Number(form.get('volume'))}});
       dirty=false;await store.save('settings',validated);notify('Practice preferences saved.');
     }catch(e){dirty=true;error.textContent=e instanceof Error?e.message:'Preferences could not be saved.';}finally{save.disabled=false;}
   });
@@ -75,7 +75,7 @@ export function settingsPage():Page{
   refreshOffline();window.addEventListener('pwa-state',refreshOffline);
   const offline=el('section',{class:'panel'},sectionHeader('Offline & installation'),offlineStatus,offlineError,el('p',{class:'muted small'},'Use your browser’s Install app / Add to Home Screen command where available. The first load needs a connection; after caching, the core application, starter content, and metronome work locally.'),badge('No microphone access required'));
   const shortcuts=el('section',{class:'panel'},sectionHeader('Keyboard shortcuts'),el('dl',{class:'shortcut-list'},[
-    ['Ctrl / Cmd + K','Search & commands'],['Space','Start / pause practice or metronome'],['↑ / ↓','BPM +1 / −1'],['Shift + ↑ / ↓','BPM +5 / −5'],['N','Quick note in practice'],['Esc','Close a dialog / exit Focus Mode'],
+    ['Ctrl / Cmd + K','Search & commands'],['Space','Start / pause practice or metronome'],['↑ / ↓','BPM +1 / −1'],['Shift + ↑ / ↓','BPM +5 / −5'],['N','Quick note in practice'],['Esc','Close a dialog / exit fullscreen'],
   ].map(([key,label])=>el('div',{},el('dt',{},el('kbd',{},key)),el('dd',{},label)))),el('p',{class:'field-hint'},'Practice shortcuts do not override typing in fields or the normal Space action on a focused button.'));
   const reset=()=>formDialog('Reset Steadybar',[
     el('p',{},'This removes all practice data from this browser and restores only the built-in exercises and routine templates. A safety backup will be downloaded first.'),input('confirm','Type RESET to confirm','','text',{required:true,pattern:'RESET',autocomplete:'off'}),
