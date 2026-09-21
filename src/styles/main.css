@@ -501,3 +501,111 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 @media(max-width:960px){.lesson-layout{display:flex;flex-direction:column}.lesson-layout>aside{position:static;order:-1;width:100%}.lesson-outline>.course-lesson-list{max-height:250px;overflow-y:auto;padding:0 6px}.lesson-outline{border:1px solid var(--border);padding:0 14px}.lesson-body{max-width:100%}.learning-summary{align-items:flex-start;flex-direction:column}.learning-summary>.actions{width:100%}}
 @media(max-width:560px){.learning-summary{padding:16px;gap:10px}.learning-summary h2{font-size:17px}.learning-summary .actions{align-items:stretch}.learning-summary .button{flex:1 1 130px}.course-card{padding:18px}.lesson-example,.lesson-assessment{padding:14px}.lesson-body p{font-size:15px}.lesson-body h2{font-size:19px}.lesson-score{font-size:12px}.lesson-guided>.actions{flex-direction:column;align-items:stretch}.lesson-chord th,.lesson-chord td{padding:7px 5px}.lesson-outline>.course-lesson-list{max-height:200px}.lesson-pagination{flex-wrap:wrap}.lesson-pagination>.button{flex:1}.lesson-key{font-size:10px}}
 @media print{.lesson-layout{display:block}.lesson-layout>aside,.lesson-pagination,.lesson-body .actions,.lesson-body button{display:none}.lesson-body{max-width:none}.lesson-score{white-space:pre-wrap}}
+
+
+/* Focus Player v2 — one current task, secondary detail on demand. */
+.focus-player.active-page{max-width:none;min-height:100dvh;margin:0;padding:0;background:var(--bg)}
+.focus-topbar{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;min-height:58px;padding:8px max(18px,calc((100vw - 860px)/2));border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(12px)}
+.focus-topbar>.button,.focus-session-menu>summary{min-height:42px;font-size:12px}
+.focus-topbar-center{display:flex;align-items:center;justify-content:center;gap:10px;min-width:0;font-size:12px}
+.focus-block-index{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.focus-session-menu{position:relative}
+.focus-session-menu>summary{display:flex;align-items:center;justify-content:center;cursor:pointer;list-style:none;padding:8px 12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--text);font-weight:500}
+.focus-session-menu>summary::-webkit-details-marker{display:none}
+.focus-session-menu[open]>summary{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text)}
+.focus-menu-actions{position:absolute;right:0;top:calc(100% + 6px);z-index:40;width:190px;display:grid;gap:4px;padding:6px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);box-shadow:var(--shadow)}
+.focus-menu-actions>.button{justify-content:flex-start;min-height:44px}
+.focus-stage{width:min(100%,820px);margin:0 auto;padding:30px 24px 72px}
+.focus-workspace{display:grid;gap:18px;min-width:0}
+.focus-identity{margin:0;text-align:center}
+.focus-meta{display:flex;justify-content:center;min-height:24px;margin-bottom:6px}
+.focus-intent{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:capitalize;color:var(--muted)}
+.focus-player .active-title{font-size:clamp(28px,5vw,42px);line-height:1.1;letter-spacing:-1.2px;text-wrap:balance}
+.focus-player .active-sticking{margin-top:9px;font-size:17px;line-height:1.5}
+.focus-readouts.practice-readouts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;padding:0;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;background:var(--surface)}
+.focus-readouts .time-readout,.focus-readouts .tempo-readout{min-width:0;padding:18px 22px}
+.focus-readouts .time-readout{border-right:1px solid var(--border)}
+.focus-readouts .label{font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.focus-readouts .active-timer{margin:7px 0 12px}
+.focus-readouts .active-time{font-size:clamp(50px,9vw,72px);line-height:1;letter-spacing:-4px}
+.focus-readouts input.active-bpm{height:76px;font-size:clamp(50px,9vw,72px);line-height:1;text-align:center}
+.focus-readouts .tempo-readout>.label{display:block;text-align:center}
+.focus-readouts .active-tempo-controls{margin-top:4px}
+.focus-player .practice-beats{margin:0;min-height:12px;gap:5px}
+.focus-player .practice-beat{height:12px;line-height:12px;color:transparent;border-radius:4px}
+.focus-task:empty{display:none}
+.focus-task .protocol-task{margin:0;padding:16px 0;border-block:1px solid var(--border)}
+.focus-transport.practice-main-controls{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:8px;margin:0}
+.focus-transport>.button{min-height:54px}
+.focus-start{font-size:15px}
+.focus-result-panel{display:grid;gap:8px;padding:14px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface)}
+.focus-result-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.focus-result-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.button.focus-result{min-height:50px;border:1px solid var(--border-strong);background:var(--surface);font-size:13px}
+.button.result-usable{background:var(--surface-soft)}
+.button.result-solid{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-text);font-weight:650}
+.focus-player .trainer-status:not(:empty),.focus-player .active-note-preview:not(:empty){margin:0;padding:10px 12px;border-left:2px solid var(--border-strong);background:var(--surface-soft)}
+.focus-next.next-block{margin:0;padding:12px 0;border-block:1px solid var(--border);font-size:12px}
+.focus-secondary{display:grid;gap:0;border-top:1px solid var(--border)}
+.focus-drawer{border-bottom:1px solid var(--border)}
+.focus-drawer>summary{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:10px 2px;cursor:pointer;list-style:none;font-size:12px;font-weight:550;color:var(--muted)}
+.focus-drawer>summary::-webkit-details-marker{display:none}
+.focus-drawer>summary::after{content:'+';font-family:var(--mono);font-size:16px;font-weight:400}
+.focus-drawer[open]>summary{color:var(--text)}
+.focus-drawer[open]>summary::after{content:'−'}
+.focus-drawer-body{padding:0 0 16px}
+.focus-drawer .rating-buttons{grid-template-columns:repeat(5,minmax(0,1fr))}
+.focus-limitations{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.focus-limitations .practice-limitation{display:flex;align-items:center;gap:6px;min-height:40px;font-size:11px}
+.focus-tool-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.focus-tool-grid>.button{min-height:44px;padding-inline:6px;font-size:11px}
+.focus-queue{display:grid;gap:0}
+.focus-queue .queue-block{padding-inline:4px}
+.focus-queue .queue-block.current{background:var(--accent-soft);border-left:2px solid var(--accent)}
+.focus-player .session-recovery{margin:0 0 18px}
+.focus-player .practice-error:not(:empty){margin:0}
+.focus-player.without-tempo .focus-readouts{grid-template-columns:minmax(0,1fr)}
+.focus-player.without-tempo .focus-readouts .time-readout{border-right:0}
+.focus-player.protocol-practice .focus-readouts{max-width:430px;width:100%;margin-inline:auto}
+.focus-player.protocol-practice .focus-identity{margin-bottom:2px}
+@media (max-width:640px){
+  .focus-topbar{grid-template-columns:auto minmax(0,1fr) auto;padding:6px 10px;min-height:52px}
+  .focus-topbar>.button,.focus-session-menu>summary{min-height:40px;padding:6px 8px;font-size:11px}
+  .focus-topbar .button>svg{display:none}
+  .focus-topbar-center{gap:6px;font-size:10px}.focus-block-index{font-size:10px}.focus-topbar .status-label{font-size:10px}
+  .focus-menu-actions{position:fixed;top:56px;right:10px;width:min(220px,calc(100vw - 20px))}
+  .focus-stage{padding:18px 12px calc(18px + env(safe-area-inset-bottom));width:100%}
+  .focus-workspace{gap:12px}
+  .focus-player .active-title{font-size:clamp(23px,7.4vw,31px);letter-spacing:-.7px}
+  .focus-player .active-sticking{font-size:14px;margin-top:5px}
+  .focus-meta{min-height:20px;margin-bottom:4px}.focus-intent{min-height:20px;font-size:9px;padding:2px 7px}
+  .focus-readouts.practice-readouts{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .focus-readouts .time-readout,.focus-readouts .tempo-readout{padding:12px 10px}
+  .focus-readouts .active-time{font-size:clamp(41px,13vw,56px);letter-spacing:-3px}
+  .focus-readouts input.active-bpm{font-size:clamp(41px,13vw,56px);height:58px;letter-spacing:-2px}
+  .focus-readouts .timer-target{font-size:10px}.focus-readouts .active-tempo-controls{gap:3px}.focus-readouts .active-tempo-controls .tempo-step{min-height:34px;font-size:10px}
+  .focus-player .practice-beats{margin:0}.focus-player .practice-beat{height:9px;line-height:9px}
+  .focus-task .protocol-task{padding:10px 0}.focus-task .task-heading{font-size:11px}.focus-task .task-cue{font-size:18px}.focus-task .task-actions{margin:10px 0 4px;gap:5px}.focus-task .task-actions>.button{min-height:42px;font-size:11px}
+  .focus-transport.practice-main-controls{position:static;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:6px;padding:0;border:0;background:transparent;margin:0}
+  .practice-route .focus-transport.practice-main-controls{position:static}
+  .focus-transport>.button{min-height:50px;font-size:12px;padding:8px 6px}.focus-transport .button>svg{display:none}
+  .focus-result-panel{position:sticky;bottom:0;z-index:18;margin-inline:-4px;padding:9px 8px calc(9px + env(safe-area-inset-bottom));border-radius:7px;background:color-mix(in srgb,var(--surface) 96%,transparent);box-shadow:0 -8px 24px color-mix(in srgb,var(--text) 6%,transparent);backdrop-filter:blur(10px)}
+  .focus-result-heading{font-size:10px}.focus-result-heading .small{display:none}
+  .button.focus-result{min-height:48px;font-size:11px;padding-inline:4px}
+  .focus-next.next-block{padding:9px 0;font-size:10px}.focus-next strong{font-size:10px}
+  .focus-drawer>summary{min-height:44px;font-size:11px}.focus-drawer-body{padding-bottom:12px}
+  .focus-drawer .rating-buttons{gap:4px}.focus-drawer .button.rating-button{min-height:42px;font-size:10px}
+  .focus-limitations{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}
+  .focus-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.focus-tool-grid>.button{font-size:10px}
+  .focus-player.active-page{padding-bottom:0}
+  .practice-route .notifications{bottom:calc(78px + env(safe-area-inset-bottom))}
+}
+@media (max-width:359px){
+  .focus-stage{padding-inline:8px}.focus-topbar{padding-inline:8px}
+  .focus-readouts .time-readout,.focus-readouts .tempo-readout{padding:10px 7px}
+  .focus-readouts .active-time,.focus-readouts input.active-bpm{font-size:38px}
+  .focus-result-panel{margin-inline:0}.button.focus-result{font-size:10px}
+}
+@media (min-width:641px){
+  .focus-result-panel{position:sticky;bottom:14px;z-index:10}
+}
