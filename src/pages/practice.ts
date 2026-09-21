@@ -114,7 +114,7 @@ export function activePracticePage():Page{
     summaryFeedback);
   const secondary=el('section',{class:'focus-secondary'},attempts,cues,limitations,tools,queueDrawer);
 
-  const main=el('section',{class:'practice-workspace focus-workspace'},identity,readouts,beats,taskHost,transport,resultDock,progressText,notesText,error,next,secondary);
+  const main=el('section',{class:'practice-workspace focus-workspace'},identity,readouts,beats,transport,taskHost,resultDock,progressText,notesText,error,next,secondary);
   const recovery=el('section',{class:'session-recovery',hidden:!practice.recovered},
     el('strong',{},'Saved session recovered.'),
     el('p',{},'Your saved time, attempts, and notes are intact. Time while the app was closed is not counted.'),
