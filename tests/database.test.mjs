@@ -86,8 +86,34 @@ test('session updates serialize against the newest committed record',async()=>{
   await Promise.all([db.updateSession(s.id,row=>{row.runtime.bpm+=1;return row;}),db.updateSession(s.id,row=>{row.runtime.bpm+=1;return row;})]);
   const persisted=await db.get('sessions',s.id);assert.equal(persisted.runtime.bpm,82);assert.ok(persisted.updatedAt>s.updatedAt);
 });
+test('ordinary session updates cannot end practice without atomic mastery finalization',async()=>{
+  await db.initializeDatabase();const s=active();await db.insertActiveSession(s);
+  await assert.rejects(db.updateSession(s.id,row=>finishBlock(row)),/session finalization|mastery state/i);
+  assert.equal((await db.get('sessions',s.id)).status,'active');
+});
+test('session finalization commits history and mastery state together',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
+  const block={id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:exercise.profileId,title:exercise.name,targetSeconds:60,bpm:80,notes:'',order:0};
+  const session=createSession([block],data);await db.insertActiveSession(session);
+  const ended=await db.finalizeSession(session.id,row=>{
+    const b=row.blocks[0];b.startedAt='2026-09-20T12:00:00.000Z';b.actualActiveSeconds=60;
+    b.evaluation={id:'summary-solid',timestamp:'2026-09-20T12:01:00.000Z',result:'solid',context:'normal',limitations:[],note:''};
+    return finishBlock(row,false,Date.parse('2026-09-20T12:02:00.000Z'));
+  });
+  assert.equal(ended.status,'completed');
+  const state=(await db.all('practiceStates')).find(s=>s.target.kind==='exercise'&&s.target.exerciseId===exercise.id);
+  assert.ok(state);assert.equal(state.mastery,'stabilize');assert.equal(state.engine.version,2);
+  assert.equal(state.latestResult,'solid');assert.equal(state.nextReviewAt,'2026-09-22T12:01:00.000Z');
+});
+test('failed session finalization rolls back both history and mastery state',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
+  const block={id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:exercise.profileId,title:exercise.name,targetSeconds:60,bpm:80,notes:'',order:0};
+  const session=createSession([block],data);await db.insertActiveSession(session);adapter.state.failCommit=new DOMException('Finalization quota failure','QuotaExceededError');
+  await assert.rejects(db.finalizeSession(session.id,row=>{const b=row.blocks[0];b.startedAt='2026-09-20T12:00:00.000Z';b.actualActiveSeconds=60;b.evaluation={id:'summary-solid',timestamp:'2026-09-20T12:01:00.000Z',result:'solid',context:'normal',limitations:[],note:''};return finishBlock(row,false,Date.parse('2026-09-20T12:02:00.000Z'));}),/Finalization quota failure/);
+  assert.equal((await db.get('sessions',session.id)).status,'active');assert.equal((await db.all('practiceStates')).length,0);
+});
 test('stale commands after completion abort without rewriting saved history',async()=>{
-  await db.initializeDatabase();const s=active();await db.insertActiveSession(s);await db.updateSession(s.id,row=>finishBlock(row));
+  await db.initializeDatabase();const s=active();await db.insertActiveSession(s);await db.finalizeSession(s.id,row=>finishBlock(row));
   const before=await db.get('sessions',s.id);
   await assert.rejects(db.updateSession(s.id,row=>{requireActive(row,s.blocks[0].id);row.runtime.bpm=200;return row;}),/already ended/);
   assert.deepEqual(await db.get('sessions',s.id),before);
