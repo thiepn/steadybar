@@ -193,13 +193,13 @@ export class PracticeController {
   async note(text:string):Promise<void>{await this.mutate(s=>{s.blocks[s.activeBlockIndex]!.notes=text;return s;});}
   async evaluate(result:PracticeResult,context?:PracticeContext,limitations:LimitationTag[]=[],note=''):Promise<void>{
     if(new Set(limitations).size!==limitations.length)throw new Error('Practice limitations must be unique.');
-    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');const resolved=context??contextForIntent(block.prescriptionSnapshot?.intent);block.evaluation={id:uuid(),timestamp:nowISO(),result,context:resolved,limitations:[...limitations],note:note.trim()};return s;});
+    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');const resolved=context??(block.prescriptionSnapshot?contextForIntent(block.prescriptionSnapshot.intent):'normal');block.evaluation={id:uuid(),timestamp:nowISO(),result,context:resolved,limitations:[...limitations],note:note.trim()};return s;});
   }
   async completeBlock(result:PracticeResult,limitations:LimitationTag[]=[],note=''):Promise<void>{
     if(new Set(limitations).size!==limitations.length)throw new Error('Practice limitations must be unique.');
     const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;
     this.generation++;reference.stop();audio.stop();this.stopTimers();
-    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');block.evaluation={id:uuid(),timestamp:nowISO(),result,context:contextForIntent(block.prescriptionSnapshot?.intent),limitations:[...limitations],note:note.trim()};return finishBlock(s,false);},ending);
+    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');block.evaluation={id:uuid(),timestamp:nowISO(),result,context:block.prescriptionSnapshot?contextForIntent(block.prescriptionSnapshot.intent):'normal',limitations:[...limitations],note:note.trim()};return finishBlock(s,false);},ending);
     this.beat=undefined;this.emit();
   }
   async trainer(config:TrainerConfig | undefined):Promise<void>{
