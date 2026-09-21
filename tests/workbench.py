@@ -194,7 +194,7 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
         result=self.read("""(()=>{
           const d=load('app/store.js').store.snapshot(),plan=d.dailyPlans.find(p=>p.generation?.kind==='autopilot'),session=d.sessions.find(s=>s.status==='active');
-          const keys=session.blocks.map(b=>b.prescriptionSnapshot&&load('domain/practice-state.js').practiceTargetKey(b.prescriptionSnapshot.target));
+          const targets=session.blocks.map(b=>b.prescriptionSnapshot?.target);
           return {
             planGeneration:plan?.generation,
             planSeconds:plan?.blocks.reduce((n,b)=>n+b.targetSeconds,0),
@@ -203,7 +203,7 @@ class Workbench(e2e.MusicPracticeTests):
             sessionBlocks:session?.blocks.length,
             sourcePlan:session?.sourceDailyPlanId,
             generatedBy:session?.blocks.map(b=>b.prescriptionSnapshot?.generatedBy),
-            scheduled:keys.map(key=>d.practiceStates.find(s=>s.targetKey===key)?.scheduling.lastScheduledAt),
+            scheduled:targets.map(target=>d.practiceStates.find(s=>JSON.stringify(s.target)===JSON.stringify(target))?.scheduling.lastScheduledAt),
           };
         })()""")
         self.assertEqual(result['planGeneration']['kind'],'autopilot');self.assertEqual(result['planGeneration']['requestedMinutes'],5)
