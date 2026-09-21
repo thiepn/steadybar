@@ -103,6 +103,17 @@ test('practice state rebuild is deterministic and preserves manual scheduling ov
   assert.deepEqual(rebuildPracticeStates({...migrated,practiceStates:second}),second);
 });
 
+test('Phase 3 rebuild upgrades engine-v1 states without losing manual scheduling overrides',()=>{
+  const data=modern(),exercise=data.exercises[0],session=exerciseSession(data,exercise);
+  session.blocks[0].evaluation={id:'phase3-eval',timestamp:'2026-09-20T12:04:00.000Z',result:'solid',context:'normal',limitations:[],note:''};
+  data.sessions=[session];
+  const current=migratePracticeModel(data),state=current.practiceStates.find(s=>s.target.kind==='exercise'&&s.target.exerciseId===exercise.id);
+  state.engine.version=1;state.scheduling.manualPriority=2;state.scheduling.snoozedUntil='2026-09-30T12:00:00.000Z';delete state.challenge;
+  const upgraded=migratePracticeModel(current),next=upgraded.practiceStates.find(s=>s.target.kind==='exercise'&&s.target.exerciseId===exercise.id);
+  assert.equal(next.engine.version,2);assert.equal(next.mastery,'stabilize');assert.equal(next.challenge,'hold');
+  assert.equal(next.scheduling.manualPriority,2);assert.equal(next.scheduling.snoozedUntil,'2026-09-30T12:00:00.000Z');
+});
+
 test('practice prescriptions survive immutable session snapshots',()=>{
   const data=migratePracticeModel(modern()),exercise=data.exercises[0];
   const target={kind:'exercise',exerciseId:exercise.id};
