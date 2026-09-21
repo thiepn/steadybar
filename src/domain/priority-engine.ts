@@ -254,35 +254,35 @@ function levelFactor(seed:CandidateSeed,data:Data,profileId:string):PriorityFact
   return profile&&seed.exercise.level!==profile.level?factor('level-mismatch',-4,'Exercise level · '+seed.exercise.level):undefined;
 }
 
-export function buildPriorityCandidates(data:Data,profileId=activeProfile(data).id,options:PriorityOptions={}):PriorityCandidate[] {
+export function buildPriorityCandidates(data:Data,profileId?:string,options:PriorityOptions={}):PriorityCandidate[] {
   if(data.schemaVersion!==2)return [];
-  const now=toMillis(options.now),today=options.today??localDate(new Date(now)),states=new Map((data.practiceStates??[]).filter(s=>s.profileId===profileId).map(s=>[s.targetKey,s]));
-  const recent=recentSkillSeconds(data,profileId,now),activeGoals=data.goals.filter(g=>!g.completed&&(!g.profileId||g.profileId===profileId)),candidates:PriorityCandidate[]=[];
-  for(const seed of candidateSeeds(data,profileId)){
+  const pid=profileId??activeProfile(data).id,now=toMillis(options.now),today=options.today??localDate(new Date(now)),states=new Map((data.practiceStates??[]).filter(s=>s.profileId===pid).map(s=>[s.targetKey,s]));
+  const recent=recentSkillSeconds(data,pid,now),activeGoals=data.goals.filter(g=>!g.completed&&(!g.profileId||g.profileId===pid)),candidates:PriorityCandidate[]=[];
+  for(const seed of candidateSeeds(data,pid)){
     const targetKey=practiceTargetKey(seed.target),state=states.get(targetKey),factors:PriorityFactor[]=[];
     factors.push(...stateFactorSet(state,now));
-    const cycle=priorityCycleFactor(data,profileId,seed.skillIds);if(cycle)factors.push(cycle);
-    const focus=profileFocusFactor(data,profileId,seed.skillIds);if(focus)factors.push(focus);
+    const cycle=priorityCycleFactor(data,pid,seed.skillIds);if(cycle)factors.push(cycle);
+    const focus=profileFocusFactor(data,pid,seed.skillIds);if(focus)factors.push(focus);
     const importance=importanceFactor(seed.skillIds);if(importance)factors.push(importance);
     const balance=balanceFactor(recent,seed.skillIds);if(balance)factors.push(balance);
-    const level=levelFactor(seed,data,profileId);if(level)factors.push(level);
-    factors.push(...prerequisiteFactors(data,profileId,seed.skillIds));
+    const level=levelFactor(seed,data,pid);if(level)factors.push(level);
+    factors.push(...prerequisiteFactors(data,pid,seed.skillIds));
     if(activeGoals.some(goal=>goalMatches(goal,seed.target)))factors.push(factor('active-goal',20,'Linked to an active goal','active-goal'));
     const performance=performanceFactor(data,seed.target,today);if(performance)factors.push(performance);
     const repertoireStatus=repertoireStatusFactor(seed.songStatus);if(repertoireStatus)factors.push(repertoireStatus);
     const eligible=!factors.some(f=>f.code==='snoozed'),score=factors.reduce((sum,item)=>sum+item.points,0);
     const reasons=[...new Set(factors.filter(f=>f.points>0&&f.prescriptionReason).sort((a,b)=>b.points-a.points||a.code.localeCompare(b.code)).map(f=>f.prescriptionReason!))];
-    candidates.push({target:seed.target,targetKey,profileId,label:seed.label,skillIds:[...seed.skillIds],score,eligible,factors,reasons,state});
+    candidates.push({target:seed.target,targetKey,profileId:pid,label:seed.label,skillIds:[...seed.skillIds],score,eligible,factors,reasons,state});
   }
   return candidates.sort((a,b)=>Number(b.eligible)-Number(a.eligible)||b.score-a.score||a.targetKey.localeCompare(b.targetKey));
 }
 
-export function rankPracticeTargets(data:Data,profileId=activeProfile(data).id,options:PriorityOptions={}):PriorityCandidate[] {
+export function rankPracticeTargets(data:Data,profileId?:string,options:PriorityOptions={}):PriorityCandidate[] {
   const candidates=buildPriorityCandidates(data,profileId,options);
   return options.includeIneligible?candidates:candidates.filter(c=>c.eligible);
 }
 
-export function rankExerciseTargets(data:Data,profileId=activeProfile(data).id,options:PriorityOptions={}):PriorityCandidate[] {
+export function rankExerciseTargets(data:Data,profileId?:string,options:PriorityOptions={}):PriorityCandidate[] {
   return rankPracticeTargets(data,profileId,options).filter(c=>c.target.kind==='exercise');
 }
 
