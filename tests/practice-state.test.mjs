@@ -103,6 +103,14 @@ test('practice state rebuild is deterministic and preserves manual scheduling ov
   assert.deepEqual(rebuildPracticeStates({...migrated,practiceStates:second}),second);
 });
 
+test('broad skill states keep coverage without inventing domain mastery or BPM',()=>{
+  const data=modern(),exercise=data.exercises[0],session=exerciseSession(data,exercise);
+  session.blocks[0].evaluation={id:'skill-eval',timestamp:'2026-09-20T12:04:00.000Z',result:'solid',context:'normal',limitations:[],note:''};
+  session.blocks[0].finalBpm=120;data.sessions=[session];
+  const migrated=migratePracticeModel(data),skill=migrated.practiceStates.find(s=>s.target.kind==='skill'&&s.target.skillId===migrated.exercises.find(e=>e.id===exercise.id).primarySkillId);
+  assert.ok(skill);assert.equal(skill.mastery,'unassessed');assert.equal(skill.tempo,undefined);assert.equal(skill.nextReviewAt,undefined);assert.equal(skill.challenge,'hold');
+});
+
 test('Phase 3 rebuild upgrades engine-v1 states without losing manual scheduling overrides',()=>{
   const data=modern(),exercise=data.exercises[0],session=exerciseSession(data,exercise);
   session.blocks[0].evaluation={id:'phase3-eval',timestamp:'2026-09-20T12:04:00.000Z',result:'solid',context:'normal',limitations:[],note:''};
