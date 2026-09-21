@@ -4,7 +4,8 @@ import { validateProtocol, validateOutcome, assertOutcomeMatches, assertProtocol
 import { protocolPulse, patternFits, fretPrompt } from '../domain/protocols.js';
 import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TrainerConfig } from '../domain/models.js';
 import type { LimitationTag, PracticeContext, PracticeResult } from '../domain/practice-state.js';
-import { get, insertActiveSession, updateSession } from '../db/database.js';
+import { contextForIntent } from '../domain/practice-state.js';
+import { finalizeSession, get, insertActiveSession, updateSession } from '../db/database.js';
 import { store } from '../app/store.js';
 import { audio } from '../audio/engine.js';
 import { defaultAccents, type BeatEvent } from '../audio/scheduler.js';
@@ -50,14 +51,15 @@ export class PracticeController {
     const session=createSession(blocks,store.snapshot(),source);await insertActiveSession(session);this.session=session;this.error='';this.external=false;this.recovered=false;
     await store.refresh();store.broadcast();this.emit();
   }
-  private mutate(fn:(s:PracticeSession)=>PracticeSession):Promise<void>{
+  private mutate(fn:(s:PracticeSession)=>PracticeSession,ending=false):Promise<void>{
     const id=this.session?.id,blockId=this.session?.blocks[this.session.activeBlockIndex]?.id;
     if(!id)return Promise.reject(new Error('No active session.'));
     if(this.external)return Promise.reject(new Error('Pause the session in the other tab before editing it here.'));
     const task=this.queue.then(async()=>{
       await this.lock();
       try {
-        const next=await updateSession(id,current=>{requireActive(current,blockId);return fn(current);});
+        const command=(current:PracticeSession)=>{requireActive(current,blockId);return fn(current);};
+        const next=await (ending?finalizeSession(id,command):updateSession(id,command));
         this.session=next;await store.refresh(false);store.broadcast();this.emit();
       }catch(error){
         // A rejected stale command must show the committed state, never revive its old UI copy.
@@ -189,21 +191,28 @@ export class PracticeController {
     });
   }
   async note(text:string):Promise<void>{await this.mutate(s=>{s.blocks[s.activeBlockIndex]!.notes=text;return s;});}
-  async evaluate(result:PracticeResult,context:PracticeContext='normal',limitations:LimitationTag[]=[],note=''):Promise<void>{
+  async evaluate(result:PracticeResult,context?:PracticeContext,limitations:LimitationTag[]=[],note=''):Promise<void>{
     if(new Set(limitations).size!==limitations.length)throw new Error('Practice limitations must be unique.');
-    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;block.evaluation={id:uuid(),timestamp:nowISO(),result,context,limitations:[...limitations],note:note.trim()};return s;});
+    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');const resolved=context??contextForIntent(block.prescriptionSnapshot?.intent);block.evaluation={id:uuid(),timestamp:nowISO(),result,context:resolved,limitations:[...limitations],note:note.trim()};return s;});
+  }
+  async completeBlock(result:PracticeResult,limitations:LimitationTag[]=[],note=''):Promise<void>{
+    if(new Set(limitations).size!==limitations.length)throw new Error('Practice limitations must be unique.');
+    const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;
+    this.generation++;reference.stop();audio.stop();this.stopTimers();
+    await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');block.evaluation={id:uuid(),timestamp:nowISO(),result,context:contextForIntent(block.prescriptionSnapshot?.intent),limitations:[...limitations],note:note.trim()};return finishBlock(s,false);},ending);
+    this.beat=undefined;this.emit();
   }
   async trainer(config:TrainerConfig | undefined):Promise<void>{
     await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;if(config.mode==='endurance')block.targetSeconds=Math.ceil(block.actualActiveSeconds)+config.seconds;}return s;});
   }
-  async finishBlock(skip=false):Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.mutate(s=>finishBlock(s,skip));this.beat=undefined;this.emit();}
+  async finishBlock(skip=false):Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;await this.mutate(s=>finishBlock(s,skip),ending);this.beat=undefined;this.emit();}
   async restart():Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.mutate(restartBlock);this.beat=undefined;this.emit();}
   async finish(abandon=false):Promise<void>{
     this.generation++;this.recovered=false;reference.stop();audio.stop();this.stopTimers();await this.mutate(s=>{
       s=pauseSession(s);const now=nowISO();
       s.blocks.forEach((b,i)=>{if(i===s.activeBlockIndex){b.completed=!abandon;b.endedAt=now;if(!b.protocolSnapshot||protocolPulse(b.protocolSnapshot))b.finalBpm=s.runtime.bpm;}else if(i>s.activeBlockIndex){b.skipped=true;b.endedAt=now;}});
       s.status=abandon?'abandoned':'completed';s.endedAt=now;return s;
-    });
+    },true);
   }
   async discard():Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.lock();try{if(this.session){await store.delete('sessions',this.session.id);this.session=undefined;this.recovered=false;this.emit();}}finally{this.unlock();}}
   async onVisibility():Promise<void>{
