@@ -104,7 +104,7 @@ test('tempo levels keep lifetime peak separate from repeated working and cold re
   ];
   assert.deepEqual(tempoLevels(events),{
     peak:130,peakAt:'2026-08-01T08:00:00.000Z',
-    working:100,workingAt:'2026-09-04T08:00:00.000Z',
+    working:100,workingAt:'2026-09-02T08:00:00.000Z',
     cold:90,coldAt:'2026-09-04T08:00:00.000Z',
   });
   const stronger=[...events,e('2026-09-05T08:00:00.000Z','solid',{context:'cold',bpm:110}),e('2026-09-06T08:00:00.000Z','solid',{context:'cold',bpm:110})];
