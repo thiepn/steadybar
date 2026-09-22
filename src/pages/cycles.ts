@@ -70,7 +70,6 @@ function planDialog(plan?:TrainingPlan):void{
     const goalIds=data.goals.filter(goal=>form.has('goal-'+goal.id)).map(goal=>goal.id),setlistIds=data.setlists.filter(setlist=>form.has('setlist-'+setlist.id)).map(setlist=>setlist.id);
     const options={profileId:activeProfile(store.snapshot()).id,name:formText(form,'name'),startOn,endOn,baselineWeeklyMinutes:formNumber(form,'baselineWeeklyMinutes'),goalIds,setlistIds,notes:formText(form,'notes')};
     if(plan){
-      if(!await confirmAction('Replace the generated phase schedule?','Any edits made inside this plan’s phases will be replaced by a new periodization template. The plan history and status remain.','Regenerate phases'))return;
       await rebuildTrainingPlan(plan.id,options);notify('Training cycle regenerated.');
     }else{
       const created=await createTrainingPlan(options);notify('Training cycle created as a draft.');navigate('/cycles/'+created.id);
