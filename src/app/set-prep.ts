@@ -1,5 +1,6 @@
 import type { DailyPlan, Setlist } from '../domain/models.js';
-import { applySetPrepPlan, buildSetPrepPlan, type SetPrepMode } from '../domain/set-prep.js';
+import { applySetPrepPlan, buildSetPrepPlan } from '../domain/set-prep.js';
+import type { SetPrepMode } from '../domain/practice-state.js';
 import { activeProfile } from '../domain/profiles.js';
 import { store } from './store.js';
 
