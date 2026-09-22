@@ -30,7 +30,8 @@ export function recordingTargetKey(recording:Pick<PracticeRecording,'sourceType'
 export async function savePracticeRecording(capture:RecordingCapture,context:RecordingContext):Promise<PracticeRecording>{
   const base=metadata(),existing=(store.snapshot().recordings??[]);
   const probe={sourceType:context.sourceType,sourceExerciseId:context.sourceExerciseId,sourceSongId:context.sourceSongId,sourceSongSectionId:context.sourceSongSectionId,title:context.title};
-  const attemptNumber=existing.filter(row=>recordingTargetKey(row)===recordingTargetKey(probe)).length+1;
+  const key=recordingTargetKey(probe);
+  const attemptNumber=Math.max(0,...existing.filter(row=>recordingTargetKey(row)===key).map(row=>row.attemptNumber))+1;
   const recording:PracticeRecording={
     ...base,recordingVersion:1,profileId:context.profileId,assetId:base.id,title:context.title,
     durationSeconds:capture.durationSeconds,mimeType:capture.mimeType,sizeBytes:capture.blob.size,
