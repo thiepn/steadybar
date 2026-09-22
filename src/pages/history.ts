@@ -62,6 +62,7 @@ export function sessionPage(id:string,review=false):Page{
       el('div',{class:'review-metrics'},el('strong',{},duration(block.actualActiveSeconds)),el('span',{class:'muted'},block.initialBpm===undefined?'No tempo target':`${block.initialBpm} → ${block.finalBpm??block.initialBpm} BPM`),el('span',{class:'muted'},`Planned ${duration(block.targetSeconds)}`)),
       best!==undefined?el('div',{class:'clean-highlight'},best>(previous||0)&&review?`New best clean tempo: ${best} BPM`:`Best clean in this block: ${best} BPM`):null,
       block.tempoAttempts.length?el('div',{class:'attempt-tags'},block.tempoAttempts.map(a=>badge(`${a.bpm} BPM · ${titleCase(a.rating)}`,a.rating==='clean'||a.rating==='effortless'?'accent':'neutral'))):null,
+      block.progressionSnapshot?el('div',{class:'progression-review'},badge(block.progressionSnapshot.dimension.replaceAll('-',' '),block.progressionSnapshot.direction==='advance'?'accent':'neutral'),el('strong',{},block.progressionSnapshot.summary),el('p',{class:'muted small'},block.progressionSnapshot.cue)):null,
       block.protocolSnapshot?el('p',{class:'muted small'},protocolSummary(block.protocolSnapshot)):null,block.profileNameSnapshot?el('p',{class:'muted small'},block.profileNameSnapshot):null,
       block.outcomes?.length?el('ol',{class:'outcome-history'},block.outcomes.map(outcome=>el('li',{},el('span',{},outcomeSummary(outcome)),outcome.note?el('p',{class:'muted small'},outcome.note):null))):null,
       block.notes?el('p',{class:'pre-line'},block.notes):null));
