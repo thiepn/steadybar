@@ -523,10 +523,11 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.get_by_role('button',name='Apply week',exact=True).click()
         expect(self.page.get_by_text('Weekly schedule applied.',exact=True)).to_be_visible()
         applied=self.read("""(()=>{
-          const d=load('app/store.js').store.snapshot(),s=d.weeklySchedules.find(w=>w.status==='applied'),day=s.days.find(x=>x.date==="""+fixture['today']+"""");
-          return {status:s.status,target:s.targetMinutes,day,plans:d.dailyPlans.filter(p=>p.date==="""+fixture['today']+"""").length};
+          const d=load('app/store.js').store.snapshot(),s=d.weeklySchedules.find(w=>w.status==='applied');
+          return {status:s?.status,target:s?.targetMinutes,days:s?.days??[],planDates:d.dailyPlans.map(p=>p.date)};
         })()""")
-        self.assertEqual(applied['status'],'applied');self.assertEqual(applied['day']['kind'],'practice');self.assertEqual(applied['day']['plannedMinutes'],25);self.assertEqual(applied['day']['intent'],'timing');self.assertEqual(applied['plans'],0)
+        day=next(row for row in applied['days'] if row['date']==fixture['today'])
+        self.assertEqual(applied['status'],'applied');self.assertEqual(day['kind'],'practice');self.assertEqual(day['plannedMinutes'],25);self.assertEqual(day['intent'],'timing');self.assertNotIn(fixture['today'],applied['planDates'])
 
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
