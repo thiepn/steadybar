@@ -85,6 +85,16 @@ test('dynamic weakness on percussion can reduce to an explicit accent-pattern re
   assert.match(plan.summary,/accent/i);assert.equal(plan.bpm,100);assert.equal(plan.timingClick.mode,'standard');
 });
 
+test('newer manual practice conditions override an older generated challenge',()=>{
+  const d=modern(),exercise=tempoExercise(d);
+  const oldGap={mode:'gap',sparseEvery:2,gapClickBars:1,gapSilentBars:3},standard={mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1};
+  addProgressionHistory(d,exercise,{engineVersion:1,direction:'advance',dimension:'gap-click',level:3,summary:'Gap click',cue:'Keep playing.',timingClick:oldGap,targetSeconds:300,bpm:100},{timingClick:oldGap,seconds:300,when:'2026-09-20T08:00:00.000Z'});
+  addProgressionHistory(d,exercise,undefined,{timingClick:standard,seconds:420,when:'2026-09-21T08:00:00.000Z'});
+  d.practiceStates=[exerciseState(exercise,{challenge:'reduce',latestResult:'not-yet',limitations:['too-fast']})];
+  const plan=buildExerciseProgression(d,exercise);
+  assert.equal(plan.dimension,'tempo');assert.deepEqual(plan.timingClick,standard);assert.equal(plan.targetSeconds,420);
+});
+
 test('too-fast weakness lowers proven tempo while preserving the current click conditions',()=>{
   const d=modern(),exercise=tempoExercise(d),timing={mode:'gap',sparseEvery:2,gapClickBars:2,gapSilentBars:2};
   addProgressionHistory(d,exercise,undefined,{finalBpm:140,timingClick:timing});
