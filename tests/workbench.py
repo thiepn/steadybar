@@ -328,6 +328,51 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.locator('.focus-set-prep')).to_be_visible();self.assert_bounds(820)
 
 
+    def test_55_progress_diagnostics_are_explainable_and_responsive(self):
+        self.onboard()
+        self.read("""(async()=>{
+          const d=structuredClone(load('app/store.js').store.snapshot()),e=d.exercises.find(x=>x.id==='rudiment-2')||d.exercises[0],now=new Date();
+          const day=(offset)=>{const x=new Date(now);x.setDate(x.getDate()+offset);x.setHours(12,0,0,0);return x.toISOString();};
+          const make=(id,offset,result,limitations=[],generatedBy='autopilot',progression=false)=>{
+            const at=day(offset),s=load('practice/logic.js').createSession([{id:'plan-'+id,type:'exercise',exerciseId:e.id,profileId:e.profileId,title:e.name,targetSeconds:300,bpm:80,notes:'',order:0}],d);
+            s.id=id;s.status='completed';s.createdAt=at;s.updatedAt=at;s.startedAt=at;s.endedAt=at;s.runtime.phase='paused';
+            const b=s.blocks[0];b.actualActiveSeconds=300;b.completed=true;b.startedAt=at;b.endedAt=at;
+            b.evaluation={id:'eval-'+id,timestamp:at,result,context:'normal',limitations,note:''};
+            b.prescriptionSnapshot={target:{kind:'exercise',exerciseId:e.id},intent:'build',reasons:['active-priority'],generatedBy,engineVersion:1};
+            if(progression)b.progressionSnapshot={engineVersion:1,direction:'advance',dimension:'click-density',level:1,summary:'Click on 2 & 4',cue:'Keep time.',bpm:80,targetSeconds:300,subdivision:1,timingClick:{mode:'two-four',sparseEvery:2,gapClickBars:3,gapSilentBars:1}};
+            return s;
+          };
+          d.sessions=[
+            make('qa-prev-1',-10,'not-yet',['timing']),
+            make('qa-prev-2',-9,'usable',[]),
+            make('qa-cur-1',-5,'not-yet',['timing'],'autopilot',true),
+            make('qa-cur-2',-4,'not-yet',['timing'],'autopilot',true),
+            make('qa-cur-3',-3,'usable',['timing'],'set-prep',true),
+            make('qa-cur-4',-2,'solid',[],'set-prep',false),
+          ];
+          const target={kind:'exercise',exerciseId:e.id},key=load('domain/practice-state.js').practiceTargetKey(target);
+          d.practiceStates=[{id:'qa-state',createdAt:day(-20),updatedAt:day(-1),profileId:e.profileId,targetKey:key,target,mastery:'maintain',lastPracticedAt:day(-2),lastEvaluatedAt:day(-2),lastAppliedAt:day(-8),nextReviewAt:day(-1),latestResult:'solid',limitations:['timing'],challenge:'hold',evidenceCount:8,tempo:{peak:130,peakAt:day(-15),working:110,workingAt:day(-8),cold:95,coldAt:day(-7)},recent:{solid:3,usable:2,notYet:2},scheduling:{consecutiveSkips:0,manualPriority:0},engine:{version:2,derivedAt:day(-1)}}];
+          await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
+        })()""")
+        self.route('/progress')
+        expect(self.page.get_by_role('heading',name='Trend comparison',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Diagnostics',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Current mastery state',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Retention & tempo reliability',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Recurring limitations',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Progression outcomes',exact=True)).to_be_visible()
+        expect(self.page.get_by_text(re.compile('timing keeps recurring'),exact=False)).to_be_visible()
+        expect(self.page.get_by_text(re.compile('Peak tempo is ahead'),exact=False)).to_be_visible()
+        expect(self.page.get_by_text(re.compile('click density progression is meeting resistance'),exact=False)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Generated practice follow-through',exact=True)).to_be_visible()
+        details=self.page.get_by_text(re.compile('Inspect current evidence state'),exact=False);expect(details).to_be_visible()
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+        self.page.get_by_label('Progress date range',exact=True).select_option('7')
+        expect(self.page.get_by_text('Previous',exact=False).first).to_be_visible()
+        self.assert_bounds(1440)
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
