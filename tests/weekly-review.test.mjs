@@ -31,7 +31,7 @@ test('current priority-cycle weight does not self-reinforce next-week focus gene
   const d=modern(),p=activeProfile(d),withSkills=d.exercises.filter(row=>row.primarySkillId);
   const a=withSkills[0];assert.ok(a?.primarySkillId);const b=withSkills.find(row=>row.primarySkillId!==a.primarySkillId);assert.ok(b?.primarySkillId);
   d.priorityCycles=[{id:'cycle',createdAt:at,updatedAt:at,profileId:p.id,name:'Existing',status:'active',startedOn:'2026-09-15',items:[{id:'item',skillId:a.primarySkillId,weight:3,note:'Old focus'}]}];
-  d.goals=[{id:'goal',createdAt:at,updatedAt:at,profileId:p.id,type:'bpm',title:'Current goal',description:'',exerciseId:b.id,targetValue:b.targetBpm??120,unit:'BPM',completed:false}];
+  d.goals=[{id:'goal',createdAt:at,updatedAt:at,profileId:p.id,type:'custom',title:'Current goal',description:'',exerciseId:b.id,targetValue:1,unit:'focus',completed:false}];
   const review=buildWeeklyReview(d,{profileId:p.id,now:at,today});
   assert.equal(review.focus[0]?.skillId,b.primarySkillId);
   assert.ok(review.focus[0]?.reasons.some(reason=>/active goal/i.test(reason)));
