@@ -158,12 +158,6 @@ function assessSong(data:Data,setPosition:number,song:Song,profileId:string,stat
 
 export function assessSetlist(data:Data,setlist:Setlist,profileId:string=activeProfile(data).id,options:{now?:Date|string|number;today?:string}={}):SetPrepAssessment {
   const now=toMillis(options.now),today=options.today??localDate(new Date(now)),window=setPrepWindow(setlist,today),states=stateMap(data,profileId);
-  const items=setlist.songIds.map((songId,setPosition)=>data.songs.find(song=>song.id===songId)).filter((song):song is Song=>!!song).map((song,index)=>{
-    // Preserve the true set position even when an unavailable song was skipped above.
-    const setPosition=setlist.songIds.indexOf(song.id,index?itemsPlaceholder(setlist.songIds,song.id,index):0);
-    return assessSong(data,setPosition,song,profileId,states,now);
-  });
-  // The mapping above cannot safely use an accumulating helper inside Array.map without state.
   const ordered:SetPrepSongAssessment[]=[];
   setlist.songIds.forEach((songId,setPosition)=>{const song=data.songs.find(row=>row.id===songId);if(song)ordered.push(assessSong(data,setPosition,song,profileId,states,now));});
   const counts={ready:0,usable:0,needsWork:0,unassessed:0};
@@ -177,8 +171,6 @@ export function assessSetlist(data:Data,setlist:Setlist,profileId:string=activeP
   return {setlistId:setlist.id,setlistName:setlist.name,profileId,...(setlist.date?{performanceDate:setlist.date}:{}),...(window.daysUntil!==undefined?{daysUntil:window.daysUntil}:{}),window:window.window,readiness,counts,items:ordered};
 }
 
-// Only exists so TypeScript catches accidental reliance on Array#indexOf for repeated songs.
-function itemsPlaceholder(_ids:string[],_songId:string,_index:number):number{return 0;}
 
 function validMinutes(value:number):SetPrepMinutes {
   if(!SET_PREP_MINUTES.includes(value as SetPrepMinutes))throw new Error('Choose 10, 15, 20, 30, 45, or 60 minutes.');
@@ -223,7 +215,7 @@ function setPrepSnapshot(setlist:Setlist,stage:SetPrepStage,mode:SetPrepMode,rol
 function targetBlock(data:Data,setlist:Setlist,profileId:string,target:PracticeTargetRef,seconds:number,stage:SetPrepStage,mode:SetPrepMode,role:SetPrepRole,readiness:SetPrepReadiness,setPosition:number,states:Map<string,PracticeState>):RoutineBlock {
   if(target.kind!=='song'&&target.kind!=='song-section'&&target.kind!=='song-transition')throw new Error('Set preparation requires repertoire targets.');
   const song=data.songs.find(row=>row.id===target.songId);if(!song)throw new Error('A setlist song is unavailable.');
-  const info=arrangement(song,profileId),part=target.partId?info.part:info.part,sections=part?.sections??song.sections,transitions=part?.transitions??song.transitions??[];
+  const info=arrangement(song,profileId),part=info.part,sections=part?.sections??song.sections,transitions=part?.transitions??song.transitions??[];
   let type:RoutineBlock['type']='song',section:SongSection|undefined,title=song.title,notes=part?.notes??song.notes;
   if(target.kind==='song-section'){
     section=sections.find(row=>row.id===target.sectionId);if(!section)throw new Error('A set-prep section is unavailable.');
