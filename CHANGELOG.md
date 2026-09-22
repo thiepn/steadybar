@@ -7,7 +7,7 @@
 - Add practical gap-click progressions: 3 click / 1 silent, 2 / 2, 1 / 3, plus configurable audible and silent bar counts.
 - Add sparse click density at every 2, 3, or 4 beats and one-click-per-bar practice so timing difficulty can rise without forcing BPM upward.
 - Add a standalone automatic tempo ramp with start BPM, step, interval, and ceiling controls; ramp time begins after count-in rather than during it.
-- Add a compact Timing click control to the Focus Player without changing block evidence, mastery, retention, Priority, or Autopilot semantics.
+- Add a compact Timing click control to the Focus Player; the effective click difficulty is stored as optional immutable block evidence without changing mastery, retention, Priority, or Autopilot rules.
 - Suppress visual beat highlighting when the selected timing mode is silent so gap practice cannot be bypassed by watching the screen.
 - Persist timing-click configuration in metronome settings and presets while keeping the new field optional for older backups and saved data.
 - Add unit coverage for legacy compatibility, subdivisions/accents, 2 & 4, sparse clicks, one-click-per-bar, gap cycles, audible count-ins, bar-boundary updates, and validation.
