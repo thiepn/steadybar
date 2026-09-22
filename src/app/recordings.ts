@@ -1,4 +1,5 @@
 import type { PracticeRecording, PracticeRecordingSourceType } from '../domain/models.js';
+import { nextRecordingAttempt, recordingTargetKey } from '../domain/recordings.js';
 import { metadata, nowISO } from '../domain/utils.js';
 import { saveRecordingAsset, deleteRecordingAsset, getRecordingAsset } from '../db/media.js';
 import { store } from './store.js';
@@ -18,18 +19,6 @@ export interface RecordingCapture {
   blob:Blob;
   mimeType:string;
   durationSeconds:number;
-}
-
-export function recordingTargetKey(recording:Pick<PracticeRecording,'sourceType'|'sourceExerciseId'|'sourceSongId'|'sourceSongSectionId'|'title'>):string{
-  if(recording.sourceType==='exercise'&&recording.sourceExerciseId)return 'exercise:'+recording.sourceExerciseId;
-  if(recording.sourceType==='song-section'&&recording.sourceSongId&&recording.sourceSongSectionId)return 'song-section:'+recording.sourceSongId+':'+recording.sourceSongSectionId;
-  if(recording.sourceType==='song'&&recording.sourceSongId)return 'song:'+recording.sourceSongId;
-  return recording.sourceType+':'+recording.title.toLowerCase();
-}
-
-export function nextRecordingAttempt(existing:readonly PracticeRecording[],recording:Pick<PracticeRecording,'sourceType'|'sourceExerciseId'|'sourceSongId'|'sourceSongSectionId'|'title'>):number{
-  const key=recordingTargetKey(recording);
-  return Math.max(0,...existing.filter(row=>recordingTargetKey(row)===key).map(row=>row.attemptNumber))+1;
 }
 
 export async function savePracticeRecording(capture:RecordingCapture,context:RecordingContext):Promise<PracticeRecording>{
