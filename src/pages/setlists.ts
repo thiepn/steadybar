@@ -121,7 +121,7 @@ export function setlistPage(id:string):Page{
       stat('Unassessed',String(assessment.counts.unassessed))),
     el('p',{class:'pre-line'},stageGuidance(assessment)),
     el('p',{class:'field-hint'},'Readiness is evidence-based and profile-specific. It is not a performance guarantee, and manually marking a song performance-ready does not manufacture evaluated evidence.'),
-    el('div',{class:'actions wrap'},button('Generate editable routine',()=>prepareRoutine(setlist),'ghost','routine')));
+    el('div',{class:'actions wrap'},button('Generate practice routine',()=>prepareRoutine(setlist),'ghost','routine')));
   if(assessment.window==='past')prep.append(el('div',{class:'info-banner'},'This performance date has passed. Update the date before generating new Set Prep.'));
   const panel=el('section',{class:'panel'},sectionHeader('Running order',`${setlist.songIds.length} songs · ${readinessSummary(assessment)}`,[button('Add song',()=>selectSongDialog(async song=>{await store.save('setlists',{...setlist,songIds:[...setlist.songIds,song.id]});},setlist.songIds),'secondary','plus')]));
   if(!setlist.songIds.length)panel.append(empty('Add the first song.','Songs remain in your library when removed from a setlist.',button('Choose a song',()=>selectSongDialog(async song=>{await store.save('setlists',{...setlist,songIds:[song.id]});}),'ghost','plus'),'song'));
