@@ -524,7 +524,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-stage{width:min(100%,820px);margin:0 auto;padding:30px 24px 72px}
 .focus-workspace{display:grid;gap:18px;min-width:0}
 .focus-identity{margin:0;text-align:center}
-.focus-meta{display:flex;justify-content:center;min-height:24px;margin-bottom:6px}
+.focus-meta{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;min-height:24px;margin-bottom:6px}
 .focus-intent{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:capitalize;color:var(--muted)}
 .focus-player .active-title{font-size:clamp(28px,5vw,42px);line-height:1.1;letter-spacing:-1.2px;text-wrap:balance}
 .focus-player .active-sticking{margin-top:9px;font-size:17px;line-height:1.5}
