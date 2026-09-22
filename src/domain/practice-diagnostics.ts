@@ -272,16 +272,18 @@ function progressionRows(sessions:PracticeSession[]):ProgressionOutcomeRow[]{
   return [...map.values()].sort((a,b)=>b.blocks-a.blocks||b.notYet-a.notYet||a.dimension.localeCompare(b.dimension));
 }
 function stateRows(data:Data,states:PracticeState[],now:number):PracticeStateRow[]{
-  const attention=(state:PracticeState):number=>
-    (state.nextReviewAt&&reviewDue(state,now)?100:0)+(state.latestResult==='not-yet'?50:state.latestResult==='usable'?20:0)+(['learn','build'].includes(state.mastery)?10:0);
-  return states.map(state=>({
-    targetKey:state.targetKey,label:targetLabel(data,state.target),mastery:state.mastery,...(state.latestResult?{latestResult:state.latestResult}:{}),evidenceCount:state.evidenceCount,
-    ...(state.lastPracticedAt?{lastPracticedAt:state.lastPracticedAt}:{}),...(state.nextReviewAt?{nextReviewAt:state.nextReviewAt}:{}),reviewDue:!!state.nextReviewAt&&reviewDue(state,now),
-    limitations:[...state.limitations],...(state.tempo?.peak!==undefined?{peak:state.tempo.peak}:{}),...(state.tempo?.working!==undefined?{working:state.tempo.working}:{}),...(state.tempo?.cold!==undefined?{cold:state.tempo.cold}:{}),
-  })).sort((a,b)=>{
-    const sa=states.find(s=>s.targetKey===a.targetKey)!,sb=states.find(s=>s.targetKey===b.targetKey)!;
-    return attention(sb)-attention(sa)||(b.lastPracticedAt??'').localeCompare(a.lastPracticedAt??'')||a.label.localeCompare(b.label);
+  const rows=states.map(state=>{
+    const due=!!state.nextReviewAt&&reviewDue(state,now);
+    const attention=(due?100:0)+(state.latestResult==='not-yet'?50:state.latestResult==='usable'?20:0)+(['learn','build'].includes(state.mastery)?10:0);
+    const row:PracticeStateRow={
+      targetKey:state.targetKey,label:targetLabel(data,state.target),mastery:state.mastery,...(state.latestResult?{latestResult:state.latestResult}:{}),evidenceCount:state.evidenceCount,
+      ...(state.lastPracticedAt?{lastPracticedAt:state.lastPracticedAt}:{}),...(state.nextReviewAt?{nextReviewAt:state.nextReviewAt}:{}),reviewDue:due,
+      limitations:[...state.limitations],...(state.tempo?.peak!==undefined?{peak:state.tempo.peak}:{}),...(state.tempo?.working!==undefined?{working:state.tempo.working}:{}),...(state.tempo?.cold!==undefined?{cold:state.tempo.cold}:{}),
+    };
+    return {row,attention};
   });
+  rows.sort((a,b)=>b.attention-a.attention||(b.row.lastPracticedAt??'').localeCompare(a.row.lastPracticedAt??'')||a.row.label.localeCompare(b.row.label));
+  return rows.map(item=>item.row);
 }
 function insightRows(comparison:WindowComparison,limitations:LimitationFrequency[],due:DueReviewRow[],tempo:TempoGapRow[],progression:ProgressionOutcomeRow[]):DiagnosticInsight[]{
   const rows:DiagnosticInsight[]=[],current=comparison.current,previous=comparison.previous;
