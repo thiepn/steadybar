@@ -626,3 +626,14 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .focus-readouts .active-time,.focus-readouts input.active-bpm{font-size:38px}
   .focus-result-panel{left:8px;right:8px}.button.focus-result{font-size:10px}
 }
+
+
+/* Phase 14 — local practice recording evidence. */
+.recording-status{grid-column:1/-1;margin:4px 0 0;padding:8px 10px;border-left:2px solid var(--accent);background:var(--surface-soft)}
+.button.recording-active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-text);font-weight:650}
+.recording-player{display:grid;gap:12px}.recording-audio{width:100%;min-height:48px}
+.recording-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;padding:16px 0;border-bottom:1px solid var(--border)}
+.recording-card:last-child{border-bottom:0}.recording-card-main{display:grid;gap:8px;min-width:0}.recording-card h3{margin:2px 0 0;font-size:17px}
+.recording-history-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)}
+.recording-history-row:last-child{border-bottom:0}.recording-history-row>div:first-child{display:grid;gap:3px;min-width:0}
+@media(max-width:640px){.recording-card{grid-template-columns:1fr;gap:10px}.recording-card>.actions{justify-content:flex-start}.recording-history-row{display:grid;gap:8px}}
