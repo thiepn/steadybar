@@ -171,11 +171,11 @@ export function activePracticePage():Page{
       text(status,phase==='running'?'Practicing':phase==='countin'?'Count-in':phase==='paused'?'Paused':'Ready');
       text(start.querySelector('span')!,phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start');
       start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
-      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));text(timingButton.querySelector('span')!,`Timing click · ${timingClickLabel({...store.snapshot().settings.metronome,timing:block.timingClickSnapshot})}`);
+      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));const clickBase=store.snapshot().settings.metronome,clickTiming=block.timingClickSnapshot??resolvedTiming(clickBase);text(timingButton.querySelector('span')!,`Timing click · ${timingClickLabel({...clickBase,timing:clickTiming})}`);
       const hasTempo=!block.protocolSnapshot||!!protocolPulse(block.protocolSnapshot),tempoRating=!block.protocolSnapshot||block.protocolSnapshot.kind==='tempo';
       main.classList.toggle('without-tempo',!hasTempo);page.classList.toggle('protocol-practice',!!block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo');
       mount(tempoReadout,readouts,null,hasTempo);mount(beats,main,taskHost,hasTempo);mount(metro,controls,null,hasTempo);
-      attempts.hidden=!tempoRating;trainerButton.hidden=!tempoRating;
+      attempts.hidden=!tempoRating;trainerButton.hidden=!tempoRating;timingButton.hidden=!hasTempo;
       ratingButtons.forEach(b=>b.disabled=phase==='ready'||phase==='countin');
       summaryButtons.forEach(b=>b.disabled=phase==='ready'||phase==='countin');
       error.hidden=!practice.error;text(error,practice.error);
