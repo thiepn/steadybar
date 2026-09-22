@@ -14,10 +14,11 @@ import { launchPractice, routineToday } from '../practice/launch.js';
 import { prepareAutopilotPlan } from '../app/autopilot.js';
 import type { AutopilotSessionIntent } from '../domain/autopilot.js';
 import type { RoutineBlock } from '../domain/models.js';
+import { appliedScheduleDay } from '../domain/weekly-schedule.js';
 
 export function todayPage(): Page {
   const snapshot=store.snapshot(),data=store.view(),profile=activeProfile(snapshot);
-  const plan = data.dailyPlans.find(p => p.date === localDate());
+  const today=localDate(),plan = data.dailyPlans.find(p => p.date === today),scheduled=appliedScheduleDay(snapshot,profile.id,today);
   const active = snapshot.sessions.find(s => s.status === 'active');
   const date = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   const weekStart = isoWeekStart(), weekEnd = new Date(weekStart);
@@ -27,10 +28,17 @@ export function todayPage(): Page {
     const keepSetPrep=plan?.generation?.kind!=='set-prep'||(blocks.length>0&&blocks.every(block=>block.setPrep&&block.setPrep.setlistId===plan.generation?.setlistId&&block.setPrep.stage===plan.generation?.setPrepStage&&block.setPrep.mode===plan.generation?.setPrepMode));
     await store.save('dailyPlans',{...(plan||metadata()),profileId:profile.id,date:localDate(),blocks,...(!keepSetPrep?{generation:undefined}:{})});
   };
-  const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`));
+  const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`,[link('Calendar','/calendar','button secondary','today')]));
   page.append(learningSummary());
+  if(scheduled){
+    const {schedule,day}=scheduled,calendar='/calendar/'+schedule.weekStart;
+    page.append(el('section',{class:`panel today-schedule today-schedule-${day.kind}`},sectionHeader('Calendar',day.kind==='rest'?'Rest day':day.kind==='optional'?'Optional practice':`Planned practice · ${day.plannedMinutes} min`,[link('Open week',calendar,'text-link','arrow')]),
+      day.kind==='rest'?el('p',{class:'muted'},'No practice time is planned today. The practice controls below remain available if you choose to practice anyway.'):el('p',{},`${day.plannedMinutes} min · ${day.intent.replace(/^./,c=>c.toUpperCase())} emphasis. Today’s builder is prefilled from this applied schedule, but you can change it before building.`),
+      day.note?el('p',{class:'muted small pre-line'},day.note):null));
+  }
   if(profile.instrumentType==='voice'){
-    const voiceAllowed=[15,30,45,60],defaultMinutes=voiceAllowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
+    const scheduledMinutes=scheduled&&scheduled.day.kind!=='rest'?scheduled.day.plannedMinutes:undefined;
+    const voiceAllowed=[...new Set([15,30,45,60,...(scheduledMinutes?[scheduledMinutes]:[])])].sort((a,b)=>a-b),defaultMinutes=scheduledMinutes??voiceAllowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
     const budget=select('timeBudget','Session time',voiceAllowed.map(value=>[String(value),value+' min'] as [string,string]),String(defaultMinutes));
     const prepare=button('Build voice plan',async()=>{
       if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a voice routine that preserves planned rest and listening. Practice history is unchanged.','Build voice plan'))return;
@@ -38,9 +46,10 @@ export function todayPage(): Page {
     },'secondary');
     page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},'Autopilot v1 is not used for voice yet. This keeps the existing rest-aware voice routine with listening and recovery time.')));
   }else{
-    const allowed=[5,10,15,20,30,45],defaultMinutes=allowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
+    const scheduledMinutes=scheduled&&scheduled.day.kind!=='rest'?scheduled.day.plannedMinutes:undefined;
+    const allowed=[...new Set([5,10,15,20,30,45,60,...(scheduledMinutes?[scheduledMinutes]:[])])].sort((a,b)=>a-b),defaultMinutes=scheduledMinutes??allowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
     const budget=select('timeBudget','Session time',allowed.map(value=>[String(value),value+' min'] as [string,string]),String(defaultMinutes));
-    const intent=select('autopilotIntent','Practice emphasis',[['balanced','Balanced'],['songs','Songs'],['timing','Timing'],['technique','Technique']],'balanced');
+    const intent=select('autopilotIntent','Practice emphasis',[['balanced','Balanced'],['songs','Songs'],['timing','Timing'],['technique','Technique']],scheduled&&scheduled.day.kind!=='rest'?scheduled.day.intent:'balanced');
     const generate=async(startNow:boolean)=>{
       if(startNow&&await store.activeSession()){await launchPractice([]);return;}
       if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Autopilot will rebuild today from your current priorities, review schedule and repertoire. Practice history is unchanged.',startNow?'Replace & start':'Build plan'))return;
