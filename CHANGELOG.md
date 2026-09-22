@@ -3,7 +3,7 @@
 ## 2.8.0 — Exercise Progression Engine — 2026-09-22
 
 - Add a deterministic Exercise Progression Engine on top of the existing Mastery/Retention `reduce / hold / advance` signal instead of inventing a second mastery model.
-- Progress exercises across one challenge dimension at a time: tempo, duration, metronome subdivision support, click density, gap click, accent pattern, dynamics, percussion orchestration, memory demand, and musical context.
+- Progress exercises across one challenge dimension at a time while preserving the other effective conditions: tempo, duration, metronome subdivision support, click density, gap click, accent pattern, dynamics, percussion orchestration, memory demand, and musical context.
 - Keep progression conservative: unseen/early-learning material establishes or holds a baseline; advancement requires the existing separated solid evidence; repeated established failure reduces difficulty.
 - Base tempo changes on proven Working/Peak evidence before authored or historical fallback values, so failed high-speed experiments cannot become the next prescribed tempo.
 - Inherit Phase 7 timing evidence, including sparse, one-click-per-bar and gap-click difficulty, when deciding what to progress next.
