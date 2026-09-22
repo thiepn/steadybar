@@ -57,7 +57,7 @@ export function todayPage(): Page {
   const start = button('Start full session', () => launchPractice(plan?.blocks || [], { planId: plan?.id }), 'primary', 'play');
   const total = routineDuration(plan?.blocks || []);
   const planPanel = el('section', { class: 'panel plan-panel', 'aria-label': 'Today’s practice plan' },
-    sectionHeader('Today’s plan', plan?.blocks.length ? `${duration(total)} · ${plan.blocks.length} blocks${plan.generation?.kind==='autopilot'?' · Autopilot':''}` : 'Not planned',
+    sectionHeader('Today’s plan', plan?.blocks.length ? `${duration(total)} · ${plan.blocks.length} blocks${plan.generation?.kind==='autopilot'?' · Autopilot':plan.generation?.kind==='set-prep'?` · Set prep · ${plan.generation.setPrepStage?.replaceAll('-',' ')??'prep'}`:''}` : 'Not planned',
       plan?.blocks.length ? [start] : []));
   if (plan?.blocks.length) {
     planPanel.append(blockList(plan.blocks, savePlan, block => launchPractice([block], { planId: plan.id })),
