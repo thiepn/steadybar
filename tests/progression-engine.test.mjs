@@ -56,7 +56,7 @@ test('advance changes one axis at a time and stable timing work first reduces cl
   const plan=buildExerciseProgression(d,exercise);
   assert.equal(plan.direction,'advance');assert.equal(plan.dimension,'click-density');assert.equal(plan.level,1);
   assert.equal(plan.timingClick.mode,'two-four');
-  assert.equal(plan.bpm,undefined);assert.equal(plan.targetSeconds,undefined);assert.equal(plan.subdivision,undefined);
+  assert.equal(plan.bpm,100);assert.equal(plan.targetSeconds,exercise.defaultSeconds??300);assert.equal(plan.subdivision,1);
 });
 
 test('hold repeats the latest explicit challenge without silently stacking another variable',()=>{
@@ -82,15 +82,16 @@ test('dynamic weakness on percussion can reduce to an explicit accent-pattern re
   d.practiceStates=[exerciseState(exercise,{challenge:'reduce',latestResult:'not-yet',limitations:['dynamics']})];
   const plan=buildExerciseProgression(d,exercise);
   assert.equal(plan.dimension,'accent-pattern');assert.equal(plan.direction,'reduce');assert.equal(plan.level,0);
-  assert.match(plan.summary,/accent/i);assert.equal(plan.bpm,undefined);assert.equal(plan.timingClick,undefined);
+  assert.match(plan.summary,/accent/i);assert.equal(plan.bpm,100);assert.equal(plan.timingClick.mode,'standard');
 });
 
-test('too-fast weakness lowers proven tempo rather than chasing the latest failed experiment',()=>{
-  const d=modern(),exercise=tempoExercise(d);
-  addProgressionHistory(d,exercise,undefined,{finalBpm:140});
+test('too-fast weakness lowers proven tempo while preserving the current click conditions',()=>{
+  const d=modern(),exercise=tempoExercise(d),timing={mode:'gap',sparseEvery:2,gapClickBars:2,gapSilentBars:2};
+  addProgressionHistory(d,exercise,undefined,{finalBpm:140,timingClick:timing});
   d.practiceStates=[exerciseState(exercise,{challenge:'reduce',latestResult:'not-yet',limitations:['too-fast'],tempo:{peak:100,peakAt:at}})];
   const plan=buildExerciseProgression(d,exercise);
   assert.equal(plan.dimension,'tempo');assert.equal(plan.direction,'reduce');assert.equal(plan.bpm,96);
+  assert.deepEqual(plan.timingClick,timing);assert.equal(plan.targetSeconds,300);
 });
 
 test('Phase 7 one-click-per-bar evidence is inherited instead of being mistaken for standard click',()=>{
@@ -108,7 +109,7 @@ test('Autopilot-style strict budgets never expand duration',()=>{
   d.exercises.push(exercise);
   d.practiceStates=[exerciseState(exercise,{mastery:'stabilize',tempo:undefined})];
   const plan=buildExerciseProgression(d,exercise,{seconds:240,strictDuration:true});
-  assert.equal(plan.targetSeconds,undefined);
+  assert.equal(plan.targetSeconds,240);
   const block=applyExerciseProgression({id:'b',type:'exercise',exerciseId:exercise.id,profileId:exercise.profileId,title:exercise.name,targetSeconds:240,notes:'',order:0},plan);
   assert.equal(block.targetSeconds,240);
 });
