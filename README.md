@@ -24,7 +24,7 @@ The downloadable release ZIP includes `dist/`; that copy can run `npm run previe
 
 ## Exercise progression — 2.8.0
 
-Exercise practice can now use a **Next challenge** recommendation driven by Steadybar’s existing mastery/retention evidence. The progression engine changes **one variable at a time** rather than treating BPM as the only form of difficulty or stacking several changes together.
+Exercise practice can now use a **Next challenge** recommendation driven by Steadybar’s existing mastery/retention evidence. The progression engine changes **one variable at a time** rather than treating BPM as the only form of difficulty or stacking several changes together. Proven/current tempo, duration, subdivision support and click conditions are carried forward so changing one axis does not silently reset another.
 
 Depending on the exercise and evidence, the next challenge may adjust tempo, controlled duration, metronome subdivision support, click density, gap/silent measures, accent pattern, dynamics, percussion orchestration, memory demand, or musical context. Phase 7 sparse/gap-click evidence is carried forward instead of being treated as ordinary standard-click practice. A generated challenge is saved with the practice block so History can show the conditions that were actually attempted.
 
