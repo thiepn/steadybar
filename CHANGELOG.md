@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.12.0 — Long-Term Goals, Training Cycles & Periodization — 2026-09-22
+
+- Add persistent profile-scoped **Training Cycles** for explicit multi-week planning above Weekly Review and one-week Priority Cycles.
+- Add a durable `trainingPlans` IndexedDB store and schema version 6 migration. Existing workspaces upgrade with an empty plan collection.
+- Keep the backup envelope at version 4: modern backups include `trainingPlans`, while older v4 backups without the field remain valid and restore with an empty collection.
+- Generate draft-first cycles from 2 weeks up to 1 year with contiguous dated phases that exactly cover the plan window.
+- Add Foundation, Build, Reduced-load consolidation, Integrate, Simulate, Taper, Consolidate, and Custom phase types.
+- Add explicit phase weekly-minute targets, Autopilot emphasis, Primary / Secondary / Support skill focuses, and notes.
+- Use linked goals, setlists, instrument skill relationships, profile focus and repertoire context to seed phase focuses without changing the linked goals or their deadlines.
+- Performance-linked cycles end with Simulate and Taper phases and shift late-cycle focus toward repertoire.
+- Longer non-performance cycles can include a reduced-load consolidation phase; this is presented as a planning template, not a medical or physiological prescription.
+- Let users edit phase load, emphasis, skill focuses and notes while preserving contiguous date boundaries. Regenerating the whole cycle is required to change phase boundaries.
+- Add explicit Draft / Active / Paused / Completed / Archived lifecycle. Activating a plan pauses the previous active plan for that profile instead of deleting or overwriting it.
+- Allow only one active Training Cycle per profile and validate that phase focuses belong to the plan profile's instrument.
+- Add an explainable `training-phase` Priority factor at lower weight than the existing Weekly Review Priority Cycle, preserving short-term user choice and urgent goals/retention/performance signals.
+- Surface active Training Cycle context inside Weekly Review and mark linked goals with an Active cycle badge.
+- Add `/cycles` navigation, cycle index/detail views, milestone context, calendar progress, current-week active minutes, responsive phase timeline and per-phase editing.
+- Add domain, storage, backup, Priority, Weekly Review and browser coverage for periodization, activation history, migration, restore and responsive UI.
+
 ## 2.11.0 — Weekly Review & Adaptive Practice Planning — 2026-09-22
 
 - Add a dedicated **Weekly Review** workspace using a rolling seven-day window and the immediately preceding seven days for context.
