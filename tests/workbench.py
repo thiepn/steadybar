@@ -261,7 +261,8 @@ class Workbench(e2e.MusicPracticeTests):
         dialog.get_by_label('Click mode',exact=True).select_option('one-per-bar')
         dialog.get_by_role('button',name='Use click pattern',exact=True).click()
         expect(dialog).to_have_count(0)
-        self.assertEqual(self.read("load('app/store.js').store.snapshot().settings.metronome.timing.mode"),'one-per-bar')
+        evidence=self.read("({global:load('app/store.js').store.snapshot().settings.metronome.timing.mode,snapshot:load('practice/controller.js').practice.session.blocks[load('practice/controller.js').practice.session.activeBlockIndex].timingClickSnapshot.mode})")
+        self.assertEqual(evidence,{'global':'one-per-bar','snapshot':'one-per-bar'})
         expect(self.page.get_by_role('button',name='Timing click · 1 click / bar',exact=True)).to_be_visible()
 
 
