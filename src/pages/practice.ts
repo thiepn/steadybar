@@ -171,7 +171,7 @@ export function activePracticePage():Page{
       next.replaceChildren(el('span',{class:'label'},upcoming?'Up next':'Final block'),el('strong',{},upcoming?`${upcoming.titleSnapshot} · ${duration(upcoming.targetSeconds)}`:'Rate this block to finish the session.'));
       beats.replaceChildren(...Array.from({length:block.meterSnapshot.beats},(_,i)=>el('span',{class:'practice-beat'},String(i+1))));
       queue.replaceChildren(...session.blocks.map((b,i)=>el('div',{class:`queue-block ${i===session.activeBlockIndex?'current':''}`},el('span',{class:'queue-number'},b.completed?'✓':b.skipped?'—':String(i+1).padStart(2,'0')),el('div',{},el('strong',{},b.titleSnapshot),el('span',{class:'muted small'},`${duration(b.targetSeconds)}${b.initialBpm===undefined?'':` · ${b.initialBpm} BPM`}`)))));
-      stage.scrollTo?.({top:0,behavior:'smooth'});
+      window.scrollTo({top:0,behavior:'smooth'});
     }
     Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',!!practice.beat&&practice.beat.beat===i&&(phase==='running'||phase==='countin')));
     tick();
