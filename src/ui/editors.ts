@@ -212,7 +212,7 @@ export function editBlock(block:RoutineBlock|undefined,onSave:(block:RoutineBloc
     const sameSource=type===b.type&&exerciseId===b.exerciseId&&songId===b.songId&&songPartId===b.songPartId&&songSectionId===b.songSectionId;
     const preserveTransitionTitle=sameSource&&b.prescription?.target.kind==='song-transition';
     const saved=validateRoutineBlock({...b,profileId:profile.id,type,
-      exerciseId,songId,songPartId,songSectionId,prescription:sameSource?b.prescription:undefined,
+      exerciseId,songId,songPartId,songSectionId,prescription:sameSource?b.prescription:undefined,progression:undefined,
       title:type==='free'?formText(form,'title'):preserveTransitionTitle?b.title:exercise?.name||`${song?.title}${section?` · ${section.name}`:''}`,
       targetSeconds:Math.round(formNumber(form,'minutes')*60),bpm:tempo.hidden?undefined:formNumber(form,'bpm'),
       protocol:type==='free'?{kind:'free',focus:formText(form,'notes'),...(tempo.hidden?{}:{pulse:{bpm:formNumber(form,'bpm'),beats:4,beatUnit:4,subdivision:1}})}:undefined,
