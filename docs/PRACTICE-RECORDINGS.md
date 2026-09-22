@@ -57,6 +57,7 @@ Marking one recording as **Current best** clears that label from previous record
 
 - recording count, recorded duration and approximate local audio size;
 - on-demand playback;
+- per-recording local audio export with a format-matching extension;
 - note/self-rating editing;
 - Favorite, Milestone and Current best labels;
 - explicit destructive deletion.
