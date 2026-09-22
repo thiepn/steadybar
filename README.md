@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Set Prep & performance readiness — 2.9.0
+
+Dated setlists now have an evidence-based **Set Prep** workspace. Steadybar does not assign a pseudo-precise readiness percentage; each song is classified as **Unassessed**, **Needs work**, **Usable**, or **Ready evidence** from the selected profile/part’s current practice evidence.
+
+The prep window changes as the performance approaches: **Build** focuses on weak sections and transitions, **Integrate** reconnects those details into complete songs, **Simulate** favors continuous performance-context work, **Taper** keeps changes smaller, and **Performance day** prioritizes running order and confidence. A manual `performance-ready` song label remains useful organization, but it cannot manufacture a Ready evidence state.
+
+**Focused prep** uses current weak/unassessed repertoire to build an exact-duration Today plan. **Run-through** keeps the exact set order and records `perform` context; successful run-through evaluations can therefore support later performance-readiness evidence. Every generated block keeps an immutable snapshot of the setlist, prep stage, mode, role, and set position.
+
+Set Prep remains optional. The older **Generate preparation routine** action is still available for users who want a normal editable routine without Set Prep semantics.
+
 ## Exercise progression — 2.8.0
 
 Exercise practice can now use a **Next challenge** recommendation driven by Steadybar’s existing mastery/retention evidence. The progression engine changes **one variable at a time** rather than treating BPM as the only form of difficulty or stacking several changes together. Proven/current tempo, duration, subdivision support and click conditions are carried forward so changing one axis does not silently reset another.
