@@ -8,7 +8,7 @@ import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPr
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
-import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan, TrainingPlan } from './models.js';
+import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
 export { ValidationError, dateOnly, type Validator } from './schema.js';
@@ -176,10 +176,45 @@ export const validateTrainingPlan:Validator<TrainingPlan>=(v,p='Training plan')=
   }
   return plan;
 };
+const weeklyScheduleDay=obj({
+  id,date:dateOnly,kind:one('practice','optional','rest'),
+  plannedMinutes:num(0,180,true),intent:one('balanced','songs','timing','technique'),note:text(),
+});
+const weeklyScheduleSource=obj({
+  engineVersion:one(1),
+  trainingPlanId:optional(id),trainingPlanName:optional(name),
+  trainingPhaseIds:arr(id,24),trainingPhaseNames:arr(name,24),
+  priorityCycleId:optional(id),priorityCycleName:optional(name),
+});
+const rawWeeklySchedule=obj({
+  ...entity,profileId:id,weekStart:dateOnly,status:one('draft','applied'),
+  targetMinutes:num(0,1260,true),source:weeklyScheduleSource,days:arr(weeklyScheduleDay,7),
+});
+const weekdayUTC=(value:string)=>new Date(value+'T12:00:00Z').getUTCDay();
+export const validateWeeklySchedule:Validator<WeeklySchedule>=(v,p='Weekly schedule')=>{
+  const schedule=rawWeeklySchedule(v,p);
+  if(weekdayUTC(schedule.weekStart)!==1)fail(p,'week must start on Monday');
+  if(schedule.days.length!==7)fail(p,'a weekly schedule needs exactly seven days');
+  uniqueIds(schedule.days,`${p}.days`);
+  const dates=schedule.days.map(day=>day.date);
+  if(new Set(dates).size!==7)fail(p,'scheduled dates must be unique');
+  for(let i=0;i<7;i++){
+    const day=schedule.days[i]!,expected=new Date(Date.parse(schedule.weekStart+'T00:00:00Z')+i*86400000).toISOString().slice(0,10);
+    if(day.date!==expected)fail(p,'scheduled days must be ordered Monday through Sunday');
+    if(day.kind==='rest'&&day.plannedMinutes!==0)fail(p,'rest days must have zero planned minutes');
+    if(day.kind!=='rest'&&day.plannedMinutes<5)fail(p,'practice and optional days need at least five minutes');
+  }
+  const target=schedule.days.filter(day=>day.kind==='practice').reduce((sum,day)=>sum+day.plannedMinutes,0);
+  if(target!==schedule.targetMinutes)fail(p,'weekly target must equal the sum of planned practice days');
+  if(schedule.source.trainingPhaseIds.length!==schedule.source.trainingPhaseNames.length)fail(p,'training phase source labels must match source IDs');
+  if(new Set(schedule.source.trainingPhaseIds).size!==schedule.source.trainingPhaseIds.length)fail(p,'training phase sources must be unique');
+  return schedule;
+};
+
 
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
 export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
@@ -245,6 +280,9 @@ export function validateData(input:unknown):Data {
     }
     for(const setlist of d.setlists)for(const id of setlist.songIds)if(!songs.has(id))fail('Setlist','song does not exist');
     const goals=new Map(d.goals.map(goal=>[goal.id,goal])),setlists=new Map(d.setlists.map(setlist=>[setlist.id,setlist]));
+    const weeklySchedules=d.weeklySchedules??[];
+    if(new Set(weeklySchedules.map(schedule=>schedule.profileId+'/'+schedule.weekStart)).size!==weeklySchedules.length)fail('Weekly schedules','one schedule per profile and week is allowed');
+    for(const schedule of weeklySchedules)requireProfile(schedule.profileId);
     const trainingPlans=d.trainingPlans??[],activeTrainingPlans=trainingPlans.filter(plan=>plan.status==='active');
     if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');
     for(const plan of trainingPlans){
