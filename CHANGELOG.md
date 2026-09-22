@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.13.0 — Weekly Schedule & Practice Calendar Orchestration — 2026-09-22
+
+- Add persistent Monday–Sunday **Practice Calendar** scheduling between Weekly Review and Today.
+- Add a durable `weeklySchedules` IndexedDB store and database schema version 7 migration. Existing profile workspaces receive an empty schedule collection.
+- Keep backup envelope version 4: new modern backups include `weeklySchedules`, while older v4 backups without the field remain valid and restore with an empty collection.
+- Enforce one Weekly Schedule per profile and week, with exactly seven ordered Monday–Sunday day records.
+- Add Draft → Applied workflow so generated weeks influence nothing until explicitly applied.
+- Add **Practice**, **Optional**, and **Rest** day types. Rest days store zero planned minutes; Optional minutes are visible context but are excluded from the weekly practice target.
+- Generate exact weekly practice minutes from the active Training Cycle when its phases overlap the week, then fall back to active weekly-minute goals and profile defaults.
+- Use an active weekly-session goal to inform scheduled practice-day count when present, while validating that planned minutes fit the chosen number of days.
+- Snapshot the Training Cycle/phase names and active Priority Cycle used during generation so later upstream changes do not silently rewrite a saved week.
+- Map the active one-week Priority Cycle to day emphasis ahead of the long-term Training Phase when it clearly represents Timing, Technique/Coordination, or Repertoire.
+- Add editable day duration, emphasis, note, and day type without touching historical sessions or existing DailyPlans.
+- Add Calendar source context, setlist performance-date markers, DailyPlan presence, and recorded active-time summaries without an adherence or consistency score.
+- Applied Calendar entries prefill Today’s session duration and emphasis but never lock controls, auto-start practice, or prebuild future DailyPlans.
+- Preserve the voice rest-aware routine path while allowing an applied Calendar entry to prefill any supported 5–180 minute voice routine fit.
+- Preserve all canonical Autopilot layouts and add an exact scheduled-duration path for whole-number sessions from 5–180 minutes; 60 minutes is now a canonical preset.
+- Add `/calendar` and `/calendar/:weekStart` navigation plus previous/current/next week browsing and responsive day cards.
+- Link Weekly Review and Today to Calendar while keeping Weekly Review and Today as explicit decision/execution gates.
+- Add domain, storage, backup, Autopilot, browser and responsive coverage for generation, editing, applying, source snapshots and Today prefill.
+
 ## 2.12.0 — Long-Term Goals, Training Cycles & Periodization — 2026-09-22
 
 - Add persistent profile-scoped **Training Cycles** for explicit multi-week planning above Weekly Review and one-week Priority Cycles.

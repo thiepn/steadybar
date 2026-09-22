@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/library','/routines','/songs','/setlists','/goals','/cycles','/review','/progress','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/library','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -481,6 +481,63 @@ class Workbench(e2e.MusicPracticeTests):
         self.route('/goals')
         expect(self.page.get_by_text('Active cycle',exact=True)).to_be_visible()
         expect(self.page.get_by_role('link',name='Training Cycles',exact=True)).to_be_visible()
+
+
+    def test_58_calendar_draft_edit_apply_and_today_prefill(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const d=structuredClone(load('app/store.js').store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId),timing=d.exercises.find(e=>e.profileId===profile.id&&e.primarySkillId?.endsWith('.timing')),now=new Date().toISOString(),today=load('domain/utils.js').localDate();
+          d.goals=[
+            {id:'qa-week-minutes',createdAt:now,updatedAt:now,profileId:profile.id,type:'weekly-minutes',title:'QA weekly minutes',description:'',targetValue:100,unit:'minutes',completed:false},
+            {id:'qa-week-sessions',createdAt:now,updatedAt:now,profileId:profile.id,type:'weekly-sessions',title:'QA weekly sessions',description:'',targetValue:4,unit:'sessions',completed:false},
+          ];
+          d.priorityCycles=[{id:'qa-calendar-priority',createdAt:now,updatedAt:now,profileId:profile.id,name:'QA Timing Week',status:'active',startedOn:today,items:[{id:'qa-calendar-item',skillId:timing.primarySkillId,weight:3,note:'Timing first'}]}];
+          d.weeklySchedules=[];d.dailyPlans=d.dailyPlans.filter(p=>p.date!==today);
+          d.setlists=[...d.setlists,{id:'qa-calendar-event',createdAt:now,updatedAt:now,name:'QA Performance',date:today,songIds:[],notes:''}];
+          await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
+          return {today,profileId:profile.id};
+        })()""")
+        self.route('/calendar')
+        expect(self.page.get_by_role('heading',name='Practice Calendar',exact=True)).to_be_visible()
+        self.page.get_by_role('button',name='Generate week',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value('100')
+        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value('4')
+        dialog.get_by_role('button',name='Generate schedule',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Weekly schedule created as a draft.',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Draft · not yet used by Today',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.calendar-day').count(),7)
+        expect(self.page.get_by_text('Weekly focus · QA Timing Week',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Performance · QA Performance',exact=True)).to_be_visible()
+
+        today_card=self.page.locator('.calendar-day.today')
+        expect(today_card).to_be_visible();today_card.get_by_role('button',name='Edit day',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Day type',exact=True).select_option('practice')
+        dialog.get_by_label('Planned minutes',exact=True).fill('25')
+        dialog.get_by_label('Practice emphasis',exact=True).select_option('timing')
+        dialog.get_by_label('Day note',exact=True).fill('Calendar-selected timing session.')
+        dialog.get_by_role('button',name='Save day',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Scheduled day updated.',exact=True)).to_be_visible()
+
+        self.page.get_by_role('button',name='Apply week',exact=True).click()
+        expect(self.page.get_by_text('Weekly schedule applied.',exact=True)).to_be_visible()
+        applied=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),s=d.weeklySchedules.find(w=>w.status==='applied');
+          return {status:s?.status,target:s?.targetMinutes,days:s?.days??[],planDates:d.dailyPlans.map(p=>p.date)};
+        })()""")
+        day=next(row for row in applied['days'] if row['date']==fixture['today'])
+        self.assertEqual(applied['status'],'applied');self.assertEqual(day['kind'],'practice');self.assertEqual(day['plannedMinutes'],25);self.assertEqual(day['intent'],'timing');self.assertNotIn(fixture['today'],applied['planDates'])
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+        self.route('/')
+        expect(self.page.get_by_role('heading',name='Calendar',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Planned practice · 25 min',exact=True)).to_be_visible()
+        expect(self.page.get_by_label('Session time',exact=True)).to_have_value('25')
+        expect(self.page.get_by_label('Practice emphasis',exact=True)).to_have_value('timing')
+        expect(self.page.get_by_text('Calendar-selected timing session.',exact=True)).to_be_visible()
 
 
 

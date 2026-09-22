@@ -24,7 +24,7 @@ function cycleItems(cycle:PriorityCycle):HTMLElement[]{
 export function weeklyReviewPage():Page{
   const data=store.view(),profile=activeProfile(store.snapshot()),review=buildWeeklyReview(data,{profileId:profile.id}),training=activeTrainingContext(store.snapshot(),profile.id),current=review.diagnostics.comparison.current,previous=review.diagnostics.comparison.previous;
   const page=el('div',{class:'page weekly-review-page'},pageHeader('7-day review','Weekly Review',`${formatDate(review.window.from)} → ${formatDate(review.window.to)} · Review evidence first, then choose what should shape the next seven days.`,[
-    link('Training Cycles','/cycles','button secondary','routine'),link('Full Progress','/progress','button secondary','progress'),
+    link('Calendar','/calendar','button secondary','today'),link('Training Cycles','/cycles','button secondary','routine'),link('Full Progress','/progress','button secondary','progress'),
   ]));
 
   const summary=el('section',{class:'panel weekly-summary'},sectionHeader('This week','Rolling seven-day window'),

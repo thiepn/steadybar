@@ -9,7 +9,7 @@ import { activeProfile } from './profiles.js';
 import { advanceISO, localDate, uuid } from './utils.js';
 
 export const AUTOPILOT_ENGINE_VERSION=1 as const;
-export const AUTOPILOT_MINUTES=[5,10,15,20,30,45] as const;
+export const AUTOPILOT_MINUTES=[5,10,15,20,30,45,60] as const;
 export type AutopilotMinutes=(typeof AUTOPILOT_MINUTES)[number];
 export type AutopilotSessionIntent='balanced'|'songs'|'timing'|'technique';
 type SlotRole='ramp-in'|'primary'|'application'|'secondary'|'retention'|'repertoire';
@@ -44,11 +44,21 @@ const PATTERNS:Record<AutopilotMinutes,{role:SlotRole;seconds:number}[]>={
   20:[{role:'ramp-in',seconds:180},{role:'primary',seconds:420},{role:'application',seconds:300},{role:'secondary',seconds:300}],
   30:[{role:'ramp-in',seconds:180},{role:'primary',seconds:480},{role:'secondary',seconds:360},{role:'application',seconds:420},{role:'retention',seconds:360}],
   45:[{role:'ramp-in',seconds:300},{role:'primary',seconds:600},{role:'secondary',seconds:480},{role:'application',seconds:480},{role:'retention',seconds:480},{role:'repertoire',seconds:360}],
+  60:[{role:'ramp-in',seconds:300},{role:'primary',seconds:900},{role:'secondary',seconds:720},{role:'application',seconds:720},{role:'retention',seconds:480},{role:'repertoire',seconds:480}],
 };
 
-function validMinutes(value:number):AutopilotMinutes {
-  if(!AUTOPILOT_MINUTES.includes(value as AutopilotMinutes))throw new Error('Choose 5, 10, 15, 20, 30, or 45 minutes.');
-  return value as AutopilotMinutes;
+function validMinutes(value:number):number {
+  if(!Number.isInteger(value)||value<5||value>180)throw new Error('Choose a whole-number session duration from 5 to 180 minutes.');
+  return value;
+}
+function patternForMinutes(minutes:number):{role:SlotRole;seconds:number}[] {
+  const canonical=PATTERNS[minutes as AutopilotMinutes];if(canonical)return canonical.map(slot=>({...slot}));
+  const baseMinutes=[...AUTOPILOT_MINUTES].filter(value=>value<minutes).at(-1)??AUTOPILOT_MINUTES[0],base=PATTERNS[baseMinutes]!,total=minutes*60,baseTotal=base.reduce((sum,slot)=>sum+slot.seconds,0);
+  let remaining=total;
+  return base.map((slot,index)=>{
+    const seconds=index===base.length-1?remaining:Math.max(1,Math.floor(total*slot.seconds/baseTotal));
+    remaining-=seconds;return {...slot,seconds};
+  });
 }
 
 function skillDomains(candidate:PriorityCandidate):Set<string>{
@@ -248,7 +258,7 @@ export function buildAutopilotPlan(data:Data,options:AutopilotOptions):Autopilot
   if(profile?.instrumentType==='voice')throw new Error('Autopilot v1 does not schedule voice practice yet. Use a voice routine with planned rest and listening.');
   const generatedAt=iso(options.now),today=options.today??localDate(new Date(time(options.now)));
   const candidates=rankPracticeTargets(data,profileId,{now:generatedAt,today});
-  const selections=selectSlots(data,candidates,PATTERNS[minutes],intent);
+  const selections=selectSlots(data,candidates,patternForMinutes(minutes),intent);
   const blocks=selections.map(item=>item.block),totalSeconds=blocks.reduce((sum,block)=>sum+block.targetSeconds,0);
   if(totalSeconds!==minutes*60)throw new Error('Autopilot could not allocate the requested session time exactly.');
   const existing=data.dailyPlans.find(plan=>plan.profileId===profileId&&plan.date===today);

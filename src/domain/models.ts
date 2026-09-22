@@ -120,6 +120,21 @@ export interface TrainingPlan extends Entity {
   startOn: string; endOn: string; baselineWeeklyMinutes: number;
   goalIds: string[]; setlistIds: string[]; notes: string; phases: TrainingPhase[];
 }
+export type WeeklyScheduleDayKind = 'practice' | 'optional' | 'rest';
+export interface WeeklyScheduleDay {
+  id: string; date: string; kind: WeeklyScheduleDayKind;
+  plannedMinutes: number; intent: TrainingEmphasis; note: string;
+}
+export interface WeeklyScheduleSource {
+  engineVersion: 1;
+  trainingPlanId?: string; trainingPlanName?: string;
+  trainingPhaseIds: string[]; trainingPhaseNames: string[];
+  priorityCycleId?: string; priorityCycleName?: string;
+}
+export interface WeeklySchedule extends Entity {
+  profileId: string; weekStart: string; status: 'draft' | 'applied';
+  targetMinutes: number; source: WeeklyScheduleSource; days: WeeklyScheduleDay[];
+}
 export interface Setlist extends Entity { name: string; date?: string; songIds: string[]; notes: string }
 export interface Preset extends Entity { name: string; config: MetronomeConfig }
 export interface Settings {
@@ -131,7 +146,7 @@ export interface Settings {
 export interface Data {
   schemaVersion?: 2; practiceModelVersion?: 1; profiles?: PracticeProfile[]; courseProgress?: CourseProgress[];
   exercises: Exercise[]; songs: Song[]; routines: Routine[]; dailyPlans: DailyPlan[];
-  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
+  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
   settings: Settings;
 }
 export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3 | 4; exportedAt: string; data: Data }
