@@ -43,14 +43,14 @@ function latestProgression(blocks:PracticeBlock[]):ExerciseProgression|undefined
 function latestBlock(blocks:PracticeBlock[]):PracticeBlock|undefined{return blocks.at(-1);}
 
 function effectiveConditions(data:Data,exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],options:ProgressionOptions):EffectiveConditions {
-  const pulse=protocolPulse(exerciseProtocol(exercise)),last=latestBlock(blocks),lastProgression=latestProgression(blocks);
+  const pulse=protocolPulse(exerciseProtocol(exercise)),last=latestBlock(blocks);
   const bpm=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??last?.finalBpm??last?.initialBpm;
   const targetSeconds=options.strictDuration&&options.seconds!==undefined
     ? options.seconds
-    : lastProgression?.targetSeconds??last?.targetSeconds??options.seconds??exercise.defaultSeconds??300;
-  const subdivision=pulse ? lastProgression?.subdivision??last?.subdivisionSnapshot??pulse.subdivision : undefined;
+    : last?.targetSeconds??options.seconds??exercise.defaultSeconds??300;
+  const subdivision=pulse ? last?.subdivisionSnapshot??pulse.subdivision : undefined;
   const timingClick=pulse
-    ? structuredClone(lastProgression?.timingClick??last?.timingClickSnapshot??data.settings.metronome.timing??DEFAULT_TIMING_CLICK)
+    ? structuredClone(last?.timingClickSnapshot??data.settings.metronome.timing??DEFAULT_TIMING_CLICK)
     : undefined;
   return {
     ...(bpm!==undefined?{bpm}:{}),
