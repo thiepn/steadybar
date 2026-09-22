@@ -40,7 +40,7 @@ function tempoExercise(data){return data.exercises.find(e=>exerciseBpm(e)!==unde
 
 test('progression engine exposes the complete Phase 8 challenge-axis vocabulary',()=>{
   assert.equal(PROGRESSION_ENGINE_VERSION,1);
-  assert.deepEqual(progressionDimensions(),['tempo','duration','subdivision','click-density','gap-click','dynamics','orchestration','memory','musical-context']);
+  assert.deepEqual(progressionDimensions(),['tempo','duration','subdivision','click-density','gap-click','accent-pattern','dynamics','orchestration','memory','musical-context']);
 });
 
 test('unassessed exercise establishes a baseline instead of fabricating advancement',()=>{
@@ -75,6 +75,14 @@ test('reduce steps back the same challenge axis that just failed',()=>{
   const plan=buildExerciseProgression(d,exercise);
   assert.equal(plan.direction,'reduce');assert.equal(plan.dimension,'gap-click');assert.equal(plan.level,1);
   assert.deepEqual(plan.timingClick,{mode:'gap',sparseEvery:2,gapClickBars:3,gapSilentBars:1});
+});
+
+test('dynamic weakness on percussion can reduce to an explicit accent-pattern reset without changing tempo',()=>{
+  const d=modern(),exercise=tempoExercise(d);
+  d.practiceStates=[exerciseState(exercise,{challenge:'reduce',latestResult:'not-yet',limitations:['dynamics']})];
+  const plan=buildExerciseProgression(d,exercise);
+  assert.equal(plan.dimension,'accent-pattern');assert.equal(plan.direction,'reduce');assert.equal(plan.level,0);
+  assert.match(plan.summary,/accent/i);assert.equal(plan.bpm,undefined);assert.equal(plan.timingClick,undefined);
 });
 
 test('too-fast weakness lowers proven tempo rather than chasing the latest failed experiment',()=>{
