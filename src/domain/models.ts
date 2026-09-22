@@ -8,10 +8,17 @@ export type Rating = 'failed' | 'messy' | 'acceptable' | 'clean' | 'effortless';
 export const RATINGS: Rating[] = ['failed', 'messy', 'acceptable', 'clean', 'effortless'];
 export type Subdivision = 1 | 2 | 3 | 4;
 export type Accent = 0 | 1 | 2;
+export type ClickMode = 'standard' | 'two-four' | 'sparse' | 'one-per-bar' | 'gap';
+export interface TimingClickConfig {
+  mode: ClickMode;
+  sparseEvery: 2 | 3 | 4;
+  gapClickBars: number;
+  gapSilentBars: number;
+}
 export interface Meter { beats: number; beatUnit: 4 | 8 }
 export interface MetronomeConfig {
   bpm: number; meter: Meter; subdivision: Subdivision; accents: Accent[];
-  countIn: 0 | 1 | 2 | 4; volume: number;
+  countIn: 0 | 1 | 2 | 4; volume: number; timing?: TimingClickConfig;
 }
 export type TrainerConfig =
   | { mode: 'progressive'; start: number; step: number; seconds: number; max: number }
@@ -88,5 +95,6 @@ export interface Data {
   settings: Settings;
 }
 export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3 | 4; exportedAt: string; data: Data }
-export const DEFAULT_METRONOME: MetronomeConfig = { bpm: 80, meter: { beats: 4, beatUnit: 4 }, subdivision: 1, accents: [2,1,1,1], countIn: 0, volume: 0.65 };
+export const DEFAULT_TIMING_CLICK: TimingClickConfig = { mode: 'standard', sparseEvery: 2, gapClickBars: 3, gapSilentBars: 1 };
+export const DEFAULT_METRONOME: MetronomeConfig = { bpm: 80, meter: { beats: 4, beatUnit: 4 }, subdivision: 1, accents: [2,1,1,1], countIn: 0, volume: 0.65, timing: DEFAULT_TIMING_CLICK };
 export const DEFAULT_SETTINGS: Settings = { id: 'preferences', theme: 'system', accent: 'graphite', surfaceTheme: 'neutral', instrument: 'Drums', aim: 'Technique', onboardingDone: false, metronome: DEFAULT_METRONOME, wakeLock: true, defaultFocus: true, pauseWhenHidden: true, seedVersion: 1 };
