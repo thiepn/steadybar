@@ -113,6 +113,16 @@ test('Phase 7 one-click-per-bar evidence is inherited instead of being mistaken 
   assert.equal(plan.level,1);
 });
 
+test('Autopilot slot length does not become the next manual duration baseline',()=>{
+  const d=modern(),exercise=tempoExercise(d),timing={mode:'two-four',sparseEvery:2,gapClickBars:3,gapSilentBars:1};
+  const saved=addProgressionHistory(d,exercise,{engineVersion:1,direction:'advance',dimension:'click-density',level:1,summary:'Click on 2 & 4',cue:'Keep time.',timingClick:timing,targetSeconds:120,bpm:100},{timingClick:timing,seconds:120});
+  saved.prescriptionSnapshot={generatedBy:'autopilot'};
+  d.practiceStates=[exerciseState(exercise,{challenge:'hold'})];
+  const plan=buildExerciseProgression(d,exercise);
+  assert.equal(plan.dimension,'click-density');assert.equal(plan.targetSeconds,exercise.defaultSeconds??300);
+  assert.deepEqual(plan.timingClick,timing);
+});
+
 test('Autopilot-style strict budgets never expand duration',()=>{
   const d=modern(),base=d.exercises[0];
   const exercise={...structuredClone(base),id:'strict-duration-fixture',name:'Strict duration fixture',protocol:{kind:'fretboard',tuning:[40,45,50,55,59,64],strings:[1,2],minFret:0,maxFret:5,target:12},defaultSeconds:300};
