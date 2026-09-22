@@ -21,6 +21,18 @@ const timingClick = obj({
   gapClickBars: num(1,16,true),
   gapSilentBars: num(1,16,true),
 });
+const progression = obj({
+  engineVersion: one(1),
+  direction: one('reduce','hold','advance'),
+  dimension: one('baseline','tempo','duration','subdivision','click-density','gap-click','dynamics','orchestration','memory','musical-context'),
+  level: one(0,1,2,3),
+  summary: text(300,1),
+  cue: text(1000,1),
+  bpm: optional(bpm),
+  targetSeconds: optional(num(1,86400,true)),
+  subdivision: optional(subdivision),
+  timingClick: optional(timingClick),
+});
 const baseMetronome = obj({ bpm, meter, subdivision, accents:arr(one(0,1,2),16), countIn:one(0,1,2,4), volume:num(0,1), timing:optional(timingClick) });
 export const validateMetronome: Validator<MetronomeConfig> = (v,p = 'Metronome') => {
   const config = baseMetronome(v,p);
@@ -59,7 +71,7 @@ const rawSong = obj({ ...entity, title:name, artist:text(200), bpm, meter, key:t
 export const validateSong: Validator<Song> = (v,p='Song') => {
   const song=rawSong(v,p);uniqueIds(song.sections,`${p}.sections`);if(song.parts)uniqueIds(song.parts,`${p}.parts`);if(song.transitions){uniqueIds(song.transitions,`${p}.transitions`);const ids=new Set(song.sections.map(s=>s.id));for(const t of song.transitions){if(t.fromSectionId===t.toSectionId)fail(p,'a transition must connect two different sections');if(!ids.has(t.fromSectionId)||!ids.has(t.toSectionId))fail(p,'transition references an unavailable section');}}return song;
 };
-const rawRoutineBlock = obj({ id, lessonSource:optional(validateLessonSource), profileId:optional(id), songPartId:optional(id), protocol:optional(validateProtocol), type:one('exercise','song','song-section','free'), exerciseId:optional(id), songId:optional(id), songSectionId:optional(id), title:name, targetSeconds:num(1,86400,true), bpm:optional(bpm), notes:text(), tempoTrainer:optional(validateTrainer), prescription:optional(validatePracticePrescription), order });
+const rawRoutineBlock = obj({ id, lessonSource:optional(validateLessonSource), profileId:optional(id), songPartId:optional(id), protocol:optional(validateProtocol), type:one('exercise','song','song-section','free'), exerciseId:optional(id), songId:optional(id), songSectionId:optional(id), title:name, targetSeconds:num(1,86400,true), bpm:optional(bpm), notes:text(), tempoTrainer:optional(validateTrainer), prescription:optional(validatePracticePrescription), progression:optional(progression), order });
 export const validateRoutineBlock: Validator<RoutineBlock> = (v,p='Block') => {
   const block=rawRoutineBlock(v,p);
   if(block.type==='exercise' && !block.exerciseId)fail(p,'an exercise block needs an exercise ID');
@@ -78,7 +90,7 @@ export const validatePlan: Validator<DailyPlan> = (v,p='Daily plan') => {
   const plan=rawPlan(v,p);uniqueIds(plan.blocks,`${p}.blocks`);return plan;
 };
 const attempt = obj({ id, bpm, rating:one('failed','messy','acceptable','clean','effortless'), timestamp:iso, durationSeconds:optional(num(0,31536000)), note:text() });
-const practiceBlock = obj({ id, lessonSource:optional(validateLessonSource), profileId:optional(id), profileNameSnapshot:optional(name), protocolSnapshot:optional(validateProtocol), instructionsSnapshot:optional(text()), outcomes:optional(arr(validateOutcome,10000)), protocolState:optional(validateProtocolState), sourceSongPartId:optional(id), type:one('exercise','song','song-section','free'), sourceExerciseId:optional(id), sourceSongId:optional(id), sourceSongSectionId:optional(id), titleSnapshot:name, categorySnapshot:text(100), stickingSnapshot:text(1000), meterSnapshot:meter, subdivisionSnapshot:subdivision, timingClickSnapshot:optional(timingClick), targetSeconds:num(1,86400,true), actualActiveSeconds:num(0,31536000), initialBpm:optional(bpm), finalBpm:optional(bpm), tempoAttempts:arr(attempt,10000), notes:text(), startedAt:optional(iso), endedAt:optional(iso), completed:bool, skipped:bool, tempoTrainer:optional(validateTrainer), prescriptionSnapshot:optional(validatePracticePrescription), evaluation:optional(validatePracticeEvaluation) });
+const practiceBlock = obj({ id, lessonSource:optional(validateLessonSource), profileId:optional(id), profileNameSnapshot:optional(name), protocolSnapshot:optional(validateProtocol), instructionsSnapshot:optional(text()), outcomes:optional(arr(validateOutcome,10000)), protocolState:optional(validateProtocolState), sourceSongPartId:optional(id), type:one('exercise','song','song-section','free'), sourceExerciseId:optional(id), sourceSongId:optional(id), sourceSongSectionId:optional(id), titleSnapshot:name, categorySnapshot:text(100), stickingSnapshot:text(1000), meterSnapshot:meter, subdivisionSnapshot:subdivision, timingClickSnapshot:optional(timingClick), progressionSnapshot:optional(progression), targetSeconds:num(1,86400,true), actualActiveSeconds:num(0,31536000), initialBpm:optional(bpm), finalBpm:optional(bpm), tempoAttempts:arr(attempt,10000), notes:text(), startedAt:optional(iso), endedAt:optional(iso), completed:bool, skipped:bool, tempoTrainer:optional(validateTrainer), prescriptionSnapshot:optional(validatePracticePrescription), evaluation:optional(validatePracticeEvaluation) });
 const runtime = obj({ phase:one('ready','countin','running','paused'), runStartedAt:optional(iso), bpm, trainerCleanRounds:num(0,100000,true), trainerStartSeconds:num(0,31536000), checkpointAt:iso, metronomeOn:bool });
 const rawSession = obj({ ...entity, profileId:optional(id), profileNameSnapshot:optional(name), status:one('active','completed','abandoned'), startedAt:iso, endedAt:optional(iso), activeBlockIndex:order, blocks:arr(practiceBlock,200), sessionNotes:text(), sessionRating:optional(one(1,2,3,4,5)), sourceRoutineId:optional(id), sourceDailyPlanId:optional(id), runtime });
 export const validateSession: Validator<PracticeSession> = (v,p = 'Session') => {
