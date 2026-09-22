@@ -24,7 +24,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);
+  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
@@ -151,7 +151,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[]}));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[],recordings:exported.data.recordings??[]}));
 });
 test('backup restore rebuilds derived mastery from evidence while preserving manual scheduling overrides',async()=>{
   await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
@@ -231,6 +231,11 @@ test('weekly schedules persist through the v7 repository and modern backup resto
 test('older version-4 backups without weekly schedules restore as an empty weeklySchedules collection',async()=>{
   await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.weeklySchedules;
   await restoreBackup(backup);assert.deepEqual((await db.readData()).weeklySchedules,[]);
+});
+
+test('older version-4 backups without recordings restore with an empty recording collection',async()=>{
+  await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.recordings;
+  await restoreBackup(backup);assert.deepEqual((await db.readData()).recordings,[]);
 });
 
 test('older version-4 backups without training plans restore as an empty trainingPlans collection',async()=>{
