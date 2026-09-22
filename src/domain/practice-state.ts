@@ -67,10 +67,28 @@ export type PracticeReasonCode =
   | 'neglected'
   | 'domain-balance'
   | 'upcoming-performance'
+  | 'setlist-focus'
+  | 'transition-risk'
+  | 'performance-simulation'
   | 'prerequisite'
   | 'musical-transfer'
   | 'maintenance'
   | 'user-request';
+
+export type SetPrepStage = 'build' | 'integrate' | 'simulate' | 'taper' | 'performance-day';
+export type SetPrepMode = 'focused' | 'run-through';
+export type SetPrepRole = 'weak-spot' | 'transition' | 'song' | 'run-through';
+
+export interface SetPrepSnapshot {
+  engineVersion: 1;
+  setlistId: string;
+  setlistName: string;
+  performanceDate?: string;
+  stage: SetPrepStage;
+  mode: SetPrepMode;
+  role: SetPrepRole;
+  setPosition: number;
+}
 
 export interface PracticePrescription {
   target: PracticeTargetRef;
@@ -94,6 +112,9 @@ export interface PlanGeneration {
   generatedAt:string;
   requestedMinutes?:number;
   sessionIntent?:'balanced'|'songs'|'timing'|'technique';
+  setlistId?:string;
+  setPrepStage?:SetPrepStage;
+  setPrepMode?:SetPrepMode;
   engineVersion?:number;
 }
 
