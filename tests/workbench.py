@@ -378,7 +378,7 @@ class Workbench(e2e.MusicPracticeTests):
         fixture=self.read("""(async()=>{
           const d=structuredClone(load('app/store.js').store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId);
           const rows=d.exercises.filter(e=>e.profileId===profile.id&&e.primarySkillId),a=rows[0],b=rows.find(e=>e.primarySkillId!==a.primarySkillId),now=new Date().toISOString(),today=load('domain/utils.js').localDate();
-          d.goals=[{id:'qa-weekly-goal',createdAt:now,updatedAt:now,profileId:profile.id,type:'bpm',title:'QA adaptive goal',description:'',exerciseId:b.id,targetValue:b.targetBpm||120,unit:'BPM',completed:false}];
+          d.goals=[{id:'qa-weekly-goal',createdAt:now,updatedAt:now,profileId:profile.id,type:'custom',title:'QA adaptive goal',description:'',exerciseId:b.id,targetValue:1,unit:'focus',completed:false}];
           d.priorityCycles=[{id:'qa-old-cycle',createdAt:now,updatedAt:now,profileId:profile.id,name:'QA old priorities',status:'active',startedOn:today,items:[{id:'qa-old-item',skillId:a.primarySkillId,weight:3,note:'Old focus'}]}];
           await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
           return {profileId:profile.id,oldSkill:a.primarySkillId,goalSkill:b.primarySkillId};
