@@ -175,6 +175,23 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.wait_read("load('app/store.js').store.snapshot().songs.map(song=>song.title)",
                        lambda value: value == ['Restore this song'])
 
+    def test_20_recording_media_blob_round_trip(self):
+        self.onboard()
+        result=self.read("""(async()=>{
+          const media=load('db/media.js'),id='qa-recording-asset';
+          const source=new Blob(['steadybar-recording-evidence'],{type:'audio/webm'});
+          await media.saveRecordingAsset(id,source,new Date().toISOString());
+          const stored=await media.getRecordingAsset(id);
+          const before={exists:await media.recordingAssetExists(id),type:stored?.type,size:stored?.size,text:stored?await stored.text():''};
+          await media.deleteRecordingAsset(id);
+          return {...before,existsAfter:await media.recordingAssetExists(id)};
+        })()""")
+        self.assertTrue(result['exists'])
+        self.assertEqual(result['type'],'audio/webm')
+        self.assertEqual(result['text'],'steadybar-recording-evidence')
+        self.assertGreater(result['size'],0)
+        self.assertFalse(result['existsAfter'])
+
     def test_18_countin_excluded_and_cancelled_safely(self):
         self.onboard();self.route('/metronome')
         self.page.get_by_label('Count-in',exact=True).select_option('1')
@@ -220,6 +237,7 @@ if __name__ == '__main__':
         'test_17_real_webaudio_schedule_and_stop',
         'test_18_countin_excluded_and_cancelled_safely',
         'test_19_drag_reorder_and_keyboard_skip_link',
+        'test_20_recording_media_blob_round_trip',
     ]
     suite = unittest.TestSuite(NativeOriginSmoke(name) for name in names)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
