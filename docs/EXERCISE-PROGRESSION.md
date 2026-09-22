@@ -82,6 +82,7 @@ Autopilot retains its exact fixed session budgets.
 
 - Exercise slots can receive a progression prescription.
 - strictDuration prevents the progression engine from expanding a slot.
+- Autopilot slot duration is treated as a scheduling constraint, not as the new manual duration baseline for that exercise.
 - ramp-in slots pass allowAdvance=false, so a warm-up cannot silently become a harder challenge.
 - repertoire selection/composition behavior is unchanged.
 
