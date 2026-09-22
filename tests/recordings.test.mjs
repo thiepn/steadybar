@@ -6,6 +6,7 @@ import {migratePracticeModel} from '../dist/app/db/practice-model-migration.js';
 import {activeProfile} from '../dist/app/domain/profiles.js';
 import {createBackup} from '../dist/app/db/backup.js';
 import {validateData,validatePracticeRecording} from '../dist/app/domain/validation.js';
+import {nextRecordingAttempt} from '../dist/app/app/recordings.js';
 
 const at='2026-09-23T08:00:00.000Z';
 function modern(){
@@ -40,6 +41,12 @@ test('recording asset IDs are unique across the workspace',()=>{
   const data=modern(),first=recording(data),second=recording(data,{id:'recording-2',attemptNumber:2});
   data.recordings=[first,second];
   assert.throws(()=>validateData(data),/audio asset IDs must be unique/i);
+});
+
+test('attempt numbering stays monotonic when an earlier recording was deleted',()=>{
+  const data=modern(),one=recording(data,{id:'one',assetId:'one',attemptNumber:1}),three=recording(data,{id:'three',assetId:'three',attemptNumber:3});
+  const probe={sourceType:one.sourceType,sourceExerciseId:one.sourceExerciseId,sourceSongId:one.sourceSongId,sourceSongSectionId:one.sourceSongSectionId,title:one.title};
+  assert.equal(nextRecordingAttempt([one,three],probe),4);
 });
 
 test('modern backups include recording metadata without changing backup envelope version',()=>{
