@@ -8,7 +8,7 @@ const result=one('not-yet','usable','solid');
 const context=one('normal','cold','transfer','maintenance','performance','unknown');
 const limitation=one('timing','coordination','memory','dynamics','tension','sound','accuracy','endurance','too-fast','form');
 const intent=one('ramp-in','learn','build','stabilize','retest','apply','maintain','perform','free');
-const reason=one('active-priority','active-goal','retention-due','recent-weakness','neglected','domain-balance','upcoming-performance','setlist-focus','transition-risk','performance-simulation','prerequisite','musical-transfer','maintenance','user-request');
+const reason=one('active-priority','active-goal','training-phase','retention-due','recent-weakness','neglected','domain-balance','upcoming-performance','setlist-focus','transition-risk','performance-simulation','prerequisite','musical-transfer','maintenance','user-request');
 const mastery=one('unassessed','discover','learn','build','stabilize','retest','apply','maintain');
 
 export const validatePracticeTarget:Validator<PracticeTargetRef>=(v,p='Practice target')=>{
