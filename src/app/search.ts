@@ -11,11 +11,11 @@ import { icon, type IconName } from '../ui/icons.js';
 interface SearchItem{label:string;type:string;icon:IconName;action:()=>void|Promise<unknown>}
 export function openSearch():void{
   if(document.querySelector('dialog[open]'))return;
-  const data=store.snapshot(),selectedProfileId=activeProfile(data).id,availableProfileIds=new Set(practiceProfiles(data).map(p=>p.id)),query=el('input',{type:'search',placeholder:'Find a lesson, exercise, song, routine, or action…','aria-label':'Search everything',autocomplete:'off',class:'command-input'}),results=el('div',{class:'command-results',role:'list','aria-label':'Search results'});
+  const data=store.snapshot(),selectedProfileId=activeProfile(data).id,availableProfileIds=new Set(practiceProfiles(data).map(p=>p.id)),query=el('input',{type:'search',placeholder:'Find a lesson, exercise, song, recording, routine, or action…','aria-label':'Search everything',autocomplete:'off',class:'command-input'}),results=el('div',{class:'command-results',role:'list','aria-label':'Search results'});
   const items:SearchItem[]=[
     {label:'Start practice',type:'Command',icon:'play',action:()=>navigate('/practice')},{label:'Open metronome',type:'Command',icon:'pulse',action:()=>navigate('/metronome')},
     {label:'New exercise',type:'Command',icon:'plus',action:()=>editExercise()},{label:'New routine',type:'Command',icon:'plus',action:()=>editRoutine()},{label:'New song',type:'Command',icon:'plus',action:()=>editSong()},{label:'New setlist',type:'Command',icon:'plus',action:()=>editSetlist()},{label:'New goal',type:'Command',icon:'plus',action:()=>editGoal()},
-    {label:'Open progress',type:'Command',icon:'progress',action:()=>navigate('/progress')},{label:'Manage profiles',type:'Command',icon:'settings',action:()=>navigate('/profiles')},{label:'Open settings',type:'Command',icon:'settings',action:()=>navigate('/settings')},{label:'Export backup',type:'Command',icon:'download',action:exportBackup},
+    {label:'Open progress',type:'Command',icon:'progress',action:()=>navigate('/progress')},{label:'Open recordings',type:'Command',icon:'note',action:()=>navigate('/recordings')},{label:'Manage profiles',type:'Command',icon:'settings',action:()=>navigate('/profiles')},{label:'Open settings',type:'Command',icon:'settings',action:()=>navigate('/settings')},{label:'Export backup',type:'Command',icon:'download',action:exportBackup},
     {label:'Open guided courses',type:'Command',icon:'library',action:()=>navigate('/courses')},
     ...coursesFor(activeProfile(data)).flatMap(course=>[
       {label:course.title,type:'Course',icon:'library' as const,action:()=>navigate(`/courses/${course.id}`)},
