@@ -62,6 +62,7 @@ export type PracticeTargetRef =
 export type PracticeReasonCode =
   | 'active-priority'
   | 'active-goal'
+  | 'training-phase'
   | 'retention-due'
   | 'recent-weakness'
   | 'neglected'
