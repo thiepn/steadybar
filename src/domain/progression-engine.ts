@@ -11,7 +11,7 @@ export interface ProgressionOptions {
   allowAdvance?: boolean;
 }
 
-const DIMENSIONS:ProgressionDimension[]=['tempo','duration','subdivision','click-density','gap-click','dynamics','orchestration','memory','musical-context'];
+const DIMENSIONS:ProgressionDimension[]=['tempo','duration','subdivision','click-density','gap-click','accent-pattern','dynamics','orchestration','memory','musical-context'];
 
 function finishedExerciseBlocks(data:Data,exerciseId:string):PracticeBlock[] {
   return data.sessions
@@ -74,6 +74,7 @@ function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|unde
   if(!options.strictDuration)out.push('duration');
   const nonListening=!['fretboard','pitch-match','vocal-pattern','sight-reading'].includes(protocol.kind);
   if(nonListening)out.push('dynamics');
+  if(family==='percussion'&&(protocol.kind==='tempo'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
   if(family==='percussion'&&(protocol.kind==='tempo'||!!exercise.sticking))out.push('orchestration');
   if(!['sight-reading','fretboard','pitch-match','vocal-pattern'].includes(protocol.kind))out.push('memory');
   if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire')out.push('musical-context');
@@ -81,9 +82,9 @@ function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|unde
 }
 
 function dimensionOrder(mastery:MasteryState|undefined):ProgressionDimension[] {
-  if(mastery==='apply'||mastery==='maintain')return ['musical-context','memory','dynamics','orchestration','gap-click','click-density','tempo','duration','subdivision'];
-  if(mastery==='retest')return ['click-density','gap-click','memory','tempo','dynamics','duration','subdivision','orchestration','musical-context'];
-  return ['tempo','duration','dynamics','click-density','subdivision','memory','gap-click','orchestration','musical-context'];
+  if(mastery==='apply'||mastery==='maintain')return ['musical-context','memory','dynamics','accent-pattern','orchestration','gap-click','click-density','tempo','duration','subdivision'];
+  if(mastery==='retest')return ['click-density','gap-click','memory','accent-pattern','tempo','dynamics','duration','subdivision','orchestration','musical-context'];
+  return ['tempo','duration','dynamics','accent-pattern','click-density','subdivision','memory','gap-click','orchestration','musical-context'];
 }
 
 function limitationDimension(limitations:LimitationTag[],eligible:Set<ProgressionDimension>):ProgressionDimension|undefined {
@@ -91,7 +92,7 @@ function limitationDimension(limitations:LimitationTag[],eligible:Set<Progressio
     'too-fast':['tempo'],
     endurance:['duration','tempo'],
     timing:['click-density','gap-click','tempo'],
-    dynamics:['dynamics'],
+    dynamics:['accent-pattern','dynamics'],
     sound:['dynamics'],
     coordination:['orchestration','tempo'],
     memory:['memory'],
@@ -125,6 +126,14 @@ function subdivisionAt(authored:Subdivision,level:number):Subdivision {
 
 function softCue(dimension:ProgressionDimension,level:number):{summary:string;cue:string} {
   const l=Math.max(0,Math.min(3,level));
+  if(dimension==='accent-pattern'){
+    const rows=[
+      ['Original accents','Keep the exercise’s original accent placement and make the contrast controlled.'],
+      ['Moving accent','Move one clear accent through successive notes or beats while keeping all unaccented notes even.'],
+      ['Alternating accents','Alternate two deliberate accent placements between rounds without changing tempo or sticking.'],
+      ['Accent contour','Create a repeatable accent contour across the phrase while preserving the underlying pulse and technique.'],
+    ] as const;const row=rows[l]!;return {summary:row[0],cue:row[1]};
+  }
   if(dimension==='dynamics'){
     const rows=[
       ['Normal dynamics','Use the exercise’s normal dynamic level and keep tone even.'],
@@ -204,7 +213,7 @@ function buildDimension(exercise:Exercise,state:PracticeState|undefined,blocks:P
 
 function canAdvanceDimension(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],dimension:ProgressionDimension):boolean {
   const level=levelFor(blocks,dimension);
-  if(['click-density','gap-click','dynamics','orchestration','memory','musical-context'].includes(dimension)&&level>=3)return false;
+  if(['click-density','gap-click','accent-pattern','dynamics','orchestration','memory','musical-context'].includes(dimension)&&level>=3)return false;
   if(dimension==='subdivision'){
     const authored=protocolPulse(exerciseProtocol(exercise))?.subdivision??1;
     return subdivisionAt(authored,level)!==1;
