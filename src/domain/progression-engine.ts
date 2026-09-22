@@ -36,7 +36,23 @@ function latestProgression(blocks:PracticeBlock[]):ExerciseProgression|undefined
 function latestBlock(blocks:PracticeBlock[]):PracticeBlock|undefined{return blocks.at(-1);}
 
 function levelFor(blocks:PracticeBlock[],dimension:ProgressionDimension):0|1|2|3 {
-  return latestByDimension(blocks,dimension)?.level??0;
+  const explicit=latestByDimension(blocks,dimension)?.level;
+  if(explicit!==undefined)return explicit;
+  if(dimension==='click-density'){
+    const timing=[...blocks].reverse().find(block=>block.timingClickSnapshot?.mode!=='gap')?.timingClickSnapshot;
+    if(!timing||timing.mode==='standard')return 0;
+    if(timing.mode==='one-per-bar')return 3;
+    if(timing.mode==='sparse'&&timing.sparseEvery>=3)return 2;
+    return 1;
+  }
+  if(dimension==='gap-click'){
+    const timing=[...blocks].reverse().find(block=>block.timingClickSnapshot?.mode==='gap')?.timingClickSnapshot;
+    if(!timing||timing.mode!=='gap')return 0;
+    if(timing.gapClickBars<=1&&timing.gapSilentBars>=3)return 3;
+    if(timing.gapClickBars<=2&&timing.gapSilentBars>=2)return 2;
+    return 1;
+  }
+  return 0;
 }
 
 function usedCount(blocks:PracticeBlock[],dimension:ProgressionDimension):number {
