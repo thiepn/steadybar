@@ -472,6 +472,7 @@ class Workbench(e2e.MusicPracticeTests):
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
+        self.page.set_viewport_size({'width':390,'height':844})
         self.route('/review')
         expect(self.page.get_by_role('heading',name='Long-term training cycle',exact=True)).to_be_visible()
         expect(self.page.get_by_text('QA 10-week development',exact=False).first).to_be_visible()
