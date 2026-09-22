@@ -5,12 +5,14 @@ import { skillDefinition, skillDefinitionsFor } from './skill-graph.js';
 import type { PracticeReasonCode, PracticeState, PracticeTargetRef } from './practice-state.js';
 import { practiceTargetKey } from './practice-state.js';
 import { localDate } from './utils.js';
+import { activeTrainingContext } from './training-plan.js';
 
 const HOUR=60*60*1000,DAY=24*HOUR;
 
 export type PriorityFactorCode =
   | PracticeReasonCode
   | 'manual-priority'
+  | 'training-phase'
   | 'profile-focus'
   | 'musical-usefulness'
   | 'recent-repetition'
@@ -177,6 +179,14 @@ function priorityCycleFactor(data:Data,profileId:string,skillIds:string[]):Prior
   return factor('active-priority',points,'Current priority · '+label,'active-priority');
 }
 
+function trainingPhaseFactor(data:Data,profileId:string,skillIds:string[],today:string):PriorityFactor|undefined {
+  const context=activeTrainingContext(data,profileId,today),phase=context?.phase;if(!context||!phase)return undefined;
+  const lineage=candidateSkillSet(skillIds),matches=phase.focuses.filter(item=>lineage.has(item.skillId)).sort((a,b)=>b.weight-a.weight||a.id.localeCompare(b.id)),item=matches[0];
+  if(!item)return undefined;
+  const label=skillDefinition(item.skillId)?.label??item.skillId,points=item.weight===3?10:item.weight===2?7:4;
+  return factor('training-phase',points,`Training phase · ${context.plan.name} · ${phase.name} · ${label}`,'training-phase');
+}
+
 function stateFactorSet(state:PracticeState|undefined,now:number):PriorityFactor[] {
   if(!state)return [factor('neglected',8,'Not practiced yet','neglected')];
   const factors:PriorityFactor[]=[];
@@ -262,6 +272,7 @@ export function buildPriorityCandidates(data:Data,profileId?:string,options:Prio
     const targetKey=practiceTargetKey(seed.target),state=states.get(targetKey),factors:PriorityFactor[]=[];
     factors.push(...stateFactorSet(state,now));
     const cycle=priorityCycleFactor(data,pid,seed.skillIds);if(cycle)factors.push(cycle);
+    const training=trainingPhaseFactor(data,pid,seed.skillIds,today);if(training)factors.push(training);
     const focus=profileFocusFactor(data,pid,seed.skillIds);if(focus)factors.push(focus);
     const importance=importanceFactor(seed.skillIds);if(importance)factors.push(importance);
     const balance=balanceFactor(recent,seed.skillIds);if(balance)factors.push(balance);
@@ -287,7 +298,7 @@ export function rankExerciseTargets(data:Data,profileId?:string,options:Priority
 }
 
 export function priorityReasonText(candidate:PriorityCandidate):string {
-  const order:PriorityFactorCode[]=['upcoming-performance','active-goal','active-priority','profile-focus','retention-due','recent-weakness','musical-transfer','domain-balance','neglected','musical-usefulness','repertoire-status','manual-priority'];
+  const order:PriorityFactorCode[]=['upcoming-performance','active-goal','active-priority','training-phase','profile-focus','retention-due','recent-weakness','musical-transfer','domain-balance','neglected','musical-usefulness','repertoire-status','manual-priority'];
   const positive=candidate.factors.filter(f=>f.points>0);
   for(const code of order){const match=positive.find(f=>f.code===code);if(match)return match.detail;}
   return positive.sort((a,b)=>b.points-a.points||a.code.localeCompare(b.code))[0]?.detail??'General practice candidate';
