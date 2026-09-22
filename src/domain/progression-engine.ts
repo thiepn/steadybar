@@ -204,7 +204,7 @@ function canAdvanceDimension(exercise:Exercise,state:PracticeState|undefined,blo
   return true;
 }
 
-function chooseAdvanceDimension(data:Data,exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],eligible:ProgressionDimension[]):ProgressionDimension|undefined {
+function chooseAdvanceDimension(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],eligible:ProgressionDimension[]):ProgressionDimension|undefined {
   const allowed=new Set(eligible),order=dimensionOrder(state?.mastery).filter(d=>allowed.has(d)&&canAdvanceDimension(exercise,state,blocks,d));
   if(!order.length)return undefined;
   const index=new Map(order.map((dimension,i)=>[dimension,i]));
@@ -233,7 +233,7 @@ export function buildExerciseProgression(data:Data,exercise:Exercise,options:Pro
   }
 
   if(!state||['discover','learn','unassessed'].includes(state.mastery))return baseline(exercise,state,blocks);
-  const dimension=chooseAdvanceDimension(data,exercise,state,blocks,eligible);
+  const dimension=chooseAdvanceDimension(exercise,state,blocks,eligible);
   if(!dimension)return baseline(exercise,state,blocks);
   const nextLevel=Math.min(3,levelFor(blocks,dimension)+1) as 0|1|2|3;
   return buildDimension(exercise,state,blocks,dimension,nextLevel,'advance',options);
