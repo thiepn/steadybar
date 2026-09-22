@@ -567,7 +567,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-player .session-recovery{margin:0 0 18px}
 .focus-player .practice-error:not(:empty){margin:0}
 .focus-workspace.without-tempo .focus-readouts{grid-template-columns:minmax(0,1fr)}
-.focus-workspace.without-tempo .focus-readouts .time-readout{border-right:0}
+.focus-workspace.without-tempo .focus-readouts .time-readout{border-right:0}\n.focus-workspace.without-tempo .focus-transport{grid-template-columns:minmax(0,1fr)}
 .focus-player.protocol-practice .focus-readouts{max-width:430px;width:100%;margin-inline:auto}
 .focus-player.protocol-practice .focus-identity{margin-bottom:2px}
 @media (max-width:640px){
