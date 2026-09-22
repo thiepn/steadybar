@@ -23,6 +23,7 @@ export type ProgressionDimension =
   | 'subdivision'
   | 'click-density'
   | 'gap-click'
+  | 'accent-pattern'
   | 'dynamics'
   | 'orchestration'
   | 'memory'
