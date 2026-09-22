@@ -27,11 +27,15 @@ export function recordingTargetKey(recording:Pick<PracticeRecording,'sourceType'
   return recording.sourceType+':'+recording.title.toLowerCase();
 }
 
+export function nextRecordingAttempt(existing:readonly PracticeRecording[],recording:Pick<PracticeRecording,'sourceType'|'sourceExerciseId'|'sourceSongId'|'sourceSongSectionId'|'title'>):number{
+  const key=recordingTargetKey(recording);
+  return Math.max(0,...existing.filter(row=>recordingTargetKey(row)===key).map(row=>row.attemptNumber))+1;
+}
+
 export async function savePracticeRecording(capture:RecordingCapture,context:RecordingContext):Promise<PracticeRecording>{
   const base=metadata(),existing=(store.snapshot().recordings??[]);
   const probe={sourceType:context.sourceType,sourceExerciseId:context.sourceExerciseId,sourceSongId:context.sourceSongId,sourceSongSectionId:context.sourceSongSectionId,title:context.title};
-  const key=recordingTargetKey(probe);
-  const attemptNumber=Math.max(0,...existing.filter(row=>recordingTargetKey(row)===key).map(row=>row.attemptNumber))+1;
+  const attemptNumber=nextRecordingAttempt(existing,probe);
   const recording:PracticeRecording={
     ...base,recordingVersion:1,profileId:context.profileId,assetId:base.id,title:context.title,
     durationSeconds:capture.durationSeconds,mimeType:capture.mimeType,sizeBytes:capture.blob.size,
