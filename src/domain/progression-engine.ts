@@ -37,7 +37,7 @@ function latestByDimension(blocks:PracticeBlock[],dimension:ProgressionDimension
 }
 
 function latestProgression(blocks:PracticeBlock[]):ExerciseProgression|undefined {
-  return [...blocks].reverse().find(block=>block.progressionSnapshot)?.progressionSnapshot;
+  return latestBlock(blocks)?.progressionSnapshot;
 }
 
 function latestBlock(blocks:PracticeBlock[]):PracticeBlock|undefined{return blocks.at(-1);}
