@@ -20,13 +20,14 @@ import { setlistsPage, setlistPage } from './pages/setlists.js';
 import { goalsPage } from './pages/goals.js';
 import { historyPage, sessionPage } from './pages/history.js';
 import { progressPage } from './pages/progress.js';
+import { weeklyReviewPage } from './pages/review.js';
 import { settingsPage } from './pages/settings.js';
 import { profilesPage } from './pages/profiles.js';
 import { practicePage, activePracticePage } from './pages/practice.js';
 import { metronomePage } from './pages/metronome.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/progress','Progress','progress'],['/history','History','history'],['/settings','Settings','settings']];
+const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/history','History','history'],['/settings','Settings','settings']];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
@@ -41,6 +42,7 @@ function route(path:string):Page{
   if(parts[0]==='songs')return id?songPage(id,parts[2]==='parts'?parts[3]:undefined):songsPage();
   if(parts[0]==='setlists')return id?setlistPage(id):setlistsPage();
   if(path==='/goals')return goalsPage();
+  if(path==='/review')return weeklyReviewPage();
   if(path==='/progress')return progressPage();
   if(parts[0]==='history')return id?sessionPage(id):historyPage();
   if(path==='/profiles')return profilesPage();

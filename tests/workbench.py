@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/library','/routines','/songs','/setlists','/goals','/progress','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/library','/routines','/songs','/setlists','/goals','/review','/progress','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -371,6 +371,60 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.get_by_label('Progress date range',exact=True).select_option('7')
         expect(self.page.get_by_text('Previous',exact=False).first).to_be_visible()
         self.assert_bounds(1440)
+
+
+    def test_56_weekly_review_applies_editable_priorities_and_restores_history(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const d=structuredClone(load('app/store.js').store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId);
+          const rows=d.exercises.filter(e=>e.profileId===profile.id&&e.primarySkillId),a=rows[0],b=rows.find(e=>e.primarySkillId!==a.primarySkillId),now=new Date().toISOString(),today=load('domain/utils.js').localDate();
+          d.goals=[{id:'qa-weekly-goal',createdAt:now,updatedAt:now,profileId:profile.id,type:'custom',title:'QA adaptive goal',description:'',exerciseId:b.id,targetValue:1,unit:'focus',completed:false}];
+          d.priorityCycles=[{id:'qa-old-cycle',createdAt:now,updatedAt:now,profileId:profile.id,name:'QA old priorities',status:'active',startedOn:today,items:[{id:'qa-old-item',skillId:a.primarySkillId,weight:3,note:'Old focus'}]}];
+          await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
+          return {profileId:profile.id,oldSkill:a.primarySkillId,goalSkill:b.primarySkillId};
+        })()""")
+        self.route('/review')
+        expect(self.page.get_by_role('heading',name='Weekly Review',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Next 7 days focus',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Autopilot emphasis',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Current priority cycle',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('QA old priorities',exact=True)).to_be_visible()
+        self.assertGreater(self.page.locator('.weekly-focus-card').count(),0)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+        cards=self.page.locator('.weekly-focus-card')
+        for i in range(1,cards.count()):
+            check=cards.nth(i).locator('input[type=checkbox]')
+            if check.is_checked():check.uncheck()
+        first=cards.first
+        first.locator('select').select_option('1')
+        self.page.get_by_role('button',name='Replace active priorities',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_role('button',name='Replace priorities',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Weekly priorities applied.',exact=True)).to_be_visible()
+        state=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),active=d.priorityCycles.find(c=>c.status==='active'),old=d.priorityCycles.find(c=>c.id==='qa-old-cycle');
+          return {activeName:active?.name,activeItems:active?.items,oldStatus:old?.status,oldEnded:old?.endedOn};
+        })()""")
+        self.assertEqual(len(state['activeItems']),1);self.assertEqual(state['activeItems'][0]['weight'],1)
+        self.assertEqual(state['oldStatus'],'completed');self.assertTrue(state['oldEnded'])
+
+        expect(self.page.get_by_role('heading',name='Recent priority cycles',exact=True)).to_be_visible()
+        row=self.page.locator('.weekly-history-row').filter(has_text='QA old priorities').first
+        expect(row).to_be_visible();row.get_by_role('button',name='Restore',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_role('button',name='Restore priorities',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Previous priorities restored as a new active cycle.',exact=True)).to_be_visible()
+        restored=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),active=d.priorityCycles.find(c=>c.status==='active'),old=d.priorityCycles.find(c=>c.id==='qa-old-cycle');
+          return {name:active?.name,skill:active?.items[0]?.skillId,oldStatus:old?.status,oldName:old?.name};
+        })()""")
+        self.assertEqual(restored['name'],'Restored · QA old priorities')
+        self.assertEqual(restored['skill'],fixture['oldSkill']);self.assertEqual(restored['oldStatus'],'completed');self.assertEqual(restored['oldName'],'QA old priorities')
+
+        self.route('/progress')
+        expect(self.page.locator('#main').get_by_role('link',name='Weekly Review',exact=True)).to_be_visible()
 
 
 

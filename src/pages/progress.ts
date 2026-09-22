@@ -30,7 +30,7 @@ function insightCard(insight:DiagnosticInsight):HTMLElement{
 
 export function progressPage():Page{
   let chartCleanup=()=>{},drawVersion=0,disposed=false;
-  const data=store.view(),profile=activeProfile(store.snapshot()),page=el('div',{class:'page'},pageHeader('','Progress',`${profile.name} · Practice time, evidence trends and explainable diagnostics.`));
+  const data=store.view(),profile=activeProfile(store.snapshot()),page=el('div',{class:'page'},pageHeader('','Progress',`${profile.name} · Practice time, evidence trends and explainable diagnostics.`,[link('Weekly Review','/review','button secondary','progress')]));
   page.append(learningSummary());
   if(!finishedSessions(data.sessions).length){page.append(empty('No practice data yet','Finish a session to see your practice time and recorded attempts here.',link('Start practice','/practice','button primary','play'),'progress'));return {node:page,cleanup:()=>{disposed=true;chartCleanup();}};}
   const range=el('select',{'aria-label':'Progress date range'},[['7','7 days'],['30','30 days'],['90','3 months'],['365','1 year'],['all','All time'],['custom','Custom range']].map(([v,l])=>el('option',{value:v,selected:v==='30'},l)));

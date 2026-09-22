@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Weekly Review & adaptive planning — 2.11.0
+
+The new **Weekly Review** page turns the last seven days of practice evidence into an explicit proposal for the next seven days. It reuses the existing diagnostics and Priority Engine rather than introducing another opaque coaching model.
+
+Steadybar first reviews the rolling seven-day window, then generates up to three suggested skill priorities. The currently active Priority Cycle is deliberately removed from the ranking input while the proposal is calculated, so an old focus cannot keep recommending itself merely because it was already active. Goals, retention, recent weakness, repertoire urgency, neglect/balance, musical transfer, profile focus and recurring limitation evidence remain visible reasons.
+
+Suggestions are not applied automatically. Each one can be excluded or changed between **Primary**, **Secondary**, and **Support** before applying. Applying the review completes the previous active Priority Cycle and keeps it in history. Previous cycles can later be restored as a new active copy, and the current cycle can be ended without deleting its record.
+
+The review also suggests which existing Autopilot emphasis best matches the primary focus, but Today remains the place where session duration and emphasis are explicitly chosen.
+
 ## Practice analytics & diagnostics — 2.10.0
 
 Progress now combines the existing practice-time, distribution, tempo, task, frequency and goal views with a runtime-only diagnostics layer. The analytics engine is rebuilt directly from current sessions and PracticeState every time; there is no cached “AI score” that can drift away from the underlying evidence.
