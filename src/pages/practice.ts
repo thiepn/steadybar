@@ -15,6 +15,8 @@ import { practice } from '../practice/controller.js';
 import { duration, clock, localDate } from '../domain/utils.js';
 import { RATINGS, type TimingClickConfig } from '../domain/models.js';
 import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
+import { PracticeRecorder, practiceRecorder } from '../audio/recording.js';
+import { savePracticeRecording, type RecordingContext } from '../app/recordings.js';
 import type { LimitationTag, PracticeResult } from '../domain/practice-state.js';
 import { trainerLabel } from '../domain/trainer.js';
 import { routineDuration } from '../domain/analytics.js';
@@ -43,7 +45,7 @@ export function activePracticePage():Page{
   if(active.status!=='active')return sessionPage(active.id,true);
   if(practice.external)return {node:empty('Practice is running in another tab.','Pause it in the other tab, then reload here. This protects your time and prevents duplicate metronomes.',button('Check again',async()=>{await practice.recover();navigate('/practice/active');},'primary','restart'))};
 
-  let task:TaskPanel|undefined,taskStamp='',completedView=false,lastIndex=-1,lastId='',lastState='';
+  let task:TaskPanel|undefined,taskStamp='',completedView=false,lastIndex=-1,lastId='',lastState='',recordingContext:RecordingContext|undefined;
   const page=el('div',{class:'active-page focus-player'}),stage=el('main',{class:'focus-stage'});
   const blockNumber=el('span',{class:'focus-block-index'}),status=el('span',{class:'status-label'}),intentBadge=el('span',{class:'focus-intent',hidden:true});
   const title=el('h1',{class:'active-title'}),sticking=el('p',{class:'active-sticking sticking'});
@@ -54,9 +56,17 @@ export function activePracticePage():Page{
   const progressText=el('p',{class:'trainer-status'}),notesText=el('p',{class:'active-note-preview muted small'}),error=el('div',{class:'practice-error',role:'alert',hidden:true});
   const next=el('div',{class:'next-block focus-next'}),queue=el('div',{class:'practice-queue focus-queue'});
 
-  const leave=button('Leave',async()=>{await practice.pause();await store.refresh();navigate('/');},'ghost','exit');
+  const recordingStatus=el('p',{class:'recording-status muted small',role:'status',hidden:true});
+  let recordButton!:HTMLButtonElement;
+  const resetRecordingUi=()=>{if(recordButton){const label=recordButton.querySelector('span');if(label)label.textContent=PracticeRecorder.supported()?'Record attempt':'Recording unavailable';recordButton.classList.remove('recording-active');recordButton.setAttribute('aria-pressed','false');}recordingStatus.hidden=true;recordingStatus.textContent='';recordingContext=undefined;};
+  const discardActiveRecording=async(reason='Leave this recording?')=>{
+    if(!practiceRecorder.active)return true;
+    if(!await confirmAction(reason,'The current microphone capture has not been saved. Discard it and continue?','Discard recording',true))return false;
+    practiceRecorder.cancel();resetRecordingUi();return true;
+  };
+  const leave=button('Leave',async()=>{if(!await discardActiveRecording('Leave practice while recording?'))return;await practice.pause();await store.refresh();navigate('/');},'ghost','exit');
   leave.setAttribute('aria-label','Save & leave');leave.title='Pause, save, and leave practice';
-  const finishSession=async()=>{if(await confirmAction('Finish this session?','Your time, attempts, notes, and block results will be saved. Unfinished future blocks will be marked skipped.','Finish session')){await practice.finish();draw();}};
+  const finishSession=async()=>{if(!await discardActiveRecording('Finish session while recording?'))return;if(await confirmAction('Finish this session?','Your time, attempts, notes, and block results will be saved. Unfinished future blocks will be marked skipped.','Finish session')){await practice.finish();draw();}};
   const focusToggle=button('Fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen().catch(()=>{});},'ghost','focus');
   const sessionMenu=el('details',{class:'focus-session-menu'},
     el('summary',{},'Session'),
@@ -68,16 +78,16 @@ export function activePracticePage():Page{
 
   const start=button('Start practice',()=>practice.toggle(),'primary focus-start','play');
   const metro=button('Metronome on',()=>practice.toggleAudio(),'ghost focus-metro','volume');
-  const finishUnrated=button('Finish block',()=>practice.finishBlock(),'ghost');
-  const skip=button('Skip block',()=>practice.finishBlock(true),'ghost','skip');
-  const restart=button('Restart block',async()=>{await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart');
+  const finishUnrated=button('Finish block',async()=>{if(!await discardActiveRecording('Finish block while recording?'))return;await practice.finishBlock();},'ghost');
+  const skip=button('Skip block',async()=>{if(!await discardActiveRecording('Skip block while recording?'))return;await practice.finishBlock(true);},'ghost','skip');
+  const restart=button('Restart block',async()=>{if(!await discardActiveRecording('Restart block while recording?'))return;await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart');
 
   const limitationOptions:[LimitationTag,string][]=[['timing','Timing'],['coordination','Coordination'],['memory','Memory'],['dynamics','Dynamics'],['tension','Tension'],['sound','Sound'],['accuracy','Accuracy'],['endurance','Endurance'],['too-fast','Too fast'],['form','Form']];
   const limitationChecks=limitationOptions.map(([value,label])=>el('label',{class:'practice-limitation'},el('input',{type:'checkbox',value}),el('span',{},label)));
   const selectedLimitations=()=>limitationChecks.filter(label=>(label.querySelector('input') as HTMLInputElement).checked).map(label=>(label.querySelector('input') as HTMLInputElement).value as LimitationTag);
   const resetLimitations=()=>limitationChecks.forEach(label=>(label.querySelector('input') as HTMLInputElement).checked=false);
   const summaryFeedback=el('p',{class:'attempt-feedback small',role:'status'});
-  const complete=async(result:PracticeResult)=>{try{await practice.completeBlock(result,selectedLimitations());summaryFeedback.textContent='';resetLimitations();window.scrollTo({top:0,behavior:'smooth'});}catch(e){notify(e instanceof Error?e.message:'The block result could not be saved.','error');}};
+  const complete=async(result:PracticeResult)=>{try{if(!await discardActiveRecording('Save this block result while recording?'))return;await practice.completeBlock(result,selectedLimitations());summaryFeedback.textContent='';resetLimitations();window.scrollTo({top:0,behavior:'smooth'});}catch(e){notify(e instanceof Error?e.message:'The block result could not be saved.','error');}};
   const summaryButtons=[
     button('Not yet',()=>complete('not-yet'),'focus-result result-not-yet'),
     button('Usable',()=>complete('usable'),'focus-result result-usable'),
@@ -113,13 +123,32 @@ export function activePracticePage():Page{
       await practice.setTimingClick(timing);notify(`Click pattern · ${timingClickLabel({...store.snapshot().settings.metronome,timing})}.`);
     },'Use click pattern');
   };
+  const toggleRecording=async()=>{
+    if(practiceRecorder.active){
+      if(!recordingContext){practiceRecorder.cancel();resetRecordingUi();throw new Error('Recording context was lost. Retry the attempt.');}
+      recordingStatus.hidden=false;recordingStatus.textContent='Saving recording…';
+      const captured=await practiceRecorder.stop(),saved=await savePracticeRecording(captured,recordingContext);
+      resetRecordingUi();notify(`Recording saved · Attempt ${saved.attemptNumber}.`);
+      return;
+    }
+    const session=practice.session,block=session?.blocks[session.activeBlockIndex];
+    if(!session||session.status!=='active'||!block)throw new Error('Start a practice session before recording an attempt.');
+    await practiceRecorder.start();
+    recordingContext={profileId:block.profileId??session.profileId!,title:block.titleSnapshot,sourceType:block.type,sessionId:session.id,blockId:block.id,sourceExerciseId:block.sourceExerciseId,sourceSongId:block.sourceSongId,sourceSongSectionId:block.sourceSongSectionId,bpm:block.initialBpm===undefined&&block.finalBpm===undefined?undefined:session.runtime.bpm};
+    const label=recordButton.querySelector('span');if(label)label.textContent='Stop & save recording';
+    recordButton.classList.add('recording-active');recordButton.setAttribute('aria-pressed','true');
+    recordingStatus.hidden=false;recordingStatus.textContent='Recording this attempt · audio stays on this device.';
+  };
+  recordButton=button(PracticeRecorder.supported()?'Record attempt':'Recording unavailable',toggleRecording,'ghost','note');
+  recordButton.setAttribute('aria-pressed','false');
+  if(!PracticeRecorder.supported()){recordButton.disabled=true;recordButton.title='This browser does not expose microphone recording.';}
   const timingButton=button('Timing click',timingClick,'ghost','pulse');
   const trainerButton=button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress');
   const limitations=el('details',{class:'focus-drawer practice-limitations'},el('summary',{},'What limited it? · optional'),el('div',{class:'focus-drawer-body focus-limitations'},limitationChecks));
   const tools=el('details',{class:'focus-drawer focus-tools'},
     el('summary',{},'Tools & block options'),
     el('div',{class:'focus-drawer-body focus-tool-grid'},
-      button('Quick note',note,'ghost','note'),timingButton,trainerButton,restart,skip,finishUnrated));
+      recordButton,button('Quick note',note,'ghost','note'),timingButton,trainerButton,restart,skip,finishUnrated,recordingStatus));
   const queueDrawer=el('details',{class:'focus-drawer focus-queue-drawer'},el('summary',{},'Session queue'),el('div',{class:'focus-drawer-body'},queue));
 
   const progressionBadge=el('span',{class:'focus-intent focus-progression',hidden:true}),setPrepBadge=el('span',{class:'focus-intent focus-set-prep',hidden:true}),progressionCue=el('p',{class:'focus-progression-cue',hidden:true});
@@ -207,6 +236,10 @@ export function activePracticePage():Page{
     else if(event.key==='Escape'&&document.fullscreenElement)void document.exitFullscreen().catch(()=>{});
   };
   window.addEventListener('keydown',onKey);const unsubscribe=practice.subscribe(draw),timer=setInterval(tick,250);draw();
-  return {node:page,cleanup:()=>{task?.cleanup();unsubscribe();clearInterval(timer);window.removeEventListener('keydown',onKey);if(!practice.external&&practice.session?.status==='active'&&['running','countin'].includes(practice.session.runtime.phase))void practice.pause().catch(()=>{});if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});}};
+  return {
+    node:page,
+    beforeLeave:async()=>discardActiveRecording('Leave practice while recording?'),
+    cleanup:()=>{if(practiceRecorder.active)practiceRecorder.cancel();resetRecordingUi();task?.cleanup();unsubscribe();clearInterval(timer);window.removeEventListener('keydown',onKey);if(!practice.external&&practice.session?.status==='active'&&['running','countin'].includes(practice.session.runtime.phase))void practice.pause().catch(()=>{});if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});}
+  };
 }
 

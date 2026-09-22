@@ -24,7 +24,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);
+  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
@@ -151,7 +151,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[]}));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[],recordings:exported.data.recordings??[]}));
 });
 test('backup restore rebuilds derived mastery from evidence while preserving manual scheduling overrides',async()=>{
   await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
@@ -220,6 +220,13 @@ test('training plans persist through the repository and modern backup restore',a
   await db.resetWorkspace();assert.equal((await db.readData()).trainingPlans.length,0);
   await restoreBackup(backup);const restored=await db.readData();assert.equal(restored.trainingPlans.length,1);assert.equal(restored.trainingPlans[0].id,plan.id);
 });
+test('recording metadata persists through the v8 structured repository',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId),exercise=data.exercises.find(row=>row.profileId===profile.id);
+  const now='2026-09-23T08:00:00.000Z',row={id:'repository-recording',createdAt:now,updatedAt:now,recordingVersion:1,profileId:profile.id,assetId:'repository-recording',title:exercise.name,durationSeconds:8.5,mimeType:'audio/webm',sizeBytes:2048,sourceType:'exercise',sourceExerciseId:exercise.id,bpm:100,attemptNumber:1,note:'',tags:[],markedBest:false,milestone:false,favorite:false};
+  await db.put('recordings',row);assert.equal((await db.get('recordings',row.id)).assetId,row.assetId);
+  assert.equal((await db.readData()).recordings.length,1);
+});
+
 test('weekly schedules persist through the v7 repository and modern backup restore',async()=>{
   await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId);
   const schedule=buildWeeklySchedule(data,{profileId:profile.id,weekStart:'2026-09-21',targetMinutes:90,practiceDays:3,now:'2026-09-22T08:00:00.000Z'});
@@ -231,6 +238,11 @@ test('weekly schedules persist through the v7 repository and modern backup resto
 test('older version-4 backups without weekly schedules restore as an empty weeklySchedules collection',async()=>{
   await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.weeklySchedules;
   await restoreBackup(backup);assert.deepEqual((await db.readData()).weeklySchedules,[]);
+});
+
+test('older version-4 backups without recordings restore with an empty recording collection',async()=>{
+  await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.recordings;
+  await restoreBackup(backup);assert.deepEqual((await db.readData()).recordings,[]);
 });
 
 test('older version-4 backups without training plans restore as an empty trainingPlans collection',async()=>{

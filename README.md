@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Recordings & practice evidence — 2.14.0
+
+Active practice now includes a lightweight **Record attempt** control. It captures microphone audio for the current block and saves contextual metadata such as the profile, session, block, exercise/song section, BPM and attempt number. The flow is intentionally short: start capture, play, stop and save, then continue practicing.
+
+Open **Recordings** to replay evidence, add a self-rating or note, and mark an attempt as Favorite, Milestone or the current Best for that target. Session History shows which sessions have attached recording evidence. Steadybar does not grade the audio automatically; labels and ratings remain explicit user evidence.
+
+Recording audio is stored locally in a separate media IndexedDB so large blobs do not enter normal workspace state. Structured recording metadata uses database schema v8 and is included in the existing backup envelope v4. **Audio blobs are not included in JSON backups**, so important recordings should be preserved separately before browser data is cleared. Nothing is uploaded automatically.
+
+See [practice recordings architecture and limitations](docs/PRACTICE-RECORDINGS.md).
+
 ## Weekly Practice Calendar & schedule orchestration — 2.13.0
 
 Steadybar now has a persistent Monday–Sunday **Practice Calendar** between Weekly Review and Today. A week can be generated from the active Training Cycle, weekly time/session goals, current Priority Cycle and profile defaults, then edited as seven explicit Practice / Optional / Rest days.
@@ -131,7 +141,7 @@ Use the profile selector or Settings → Manage profiles to open the dedicated P
 
 Appearance retains System/Light/Dark, eight background themes and sixteen independent accents. Neutral dark mode is charcoal/black. No new fonts, remote color assets, dashboard redesign or account system is introduced.
 
-**Honest results:** counters and voice/groove feedback are self-reported. Fretboard note answers are checked against the displayed prompt. Reference tones do not listen to or grade your performance. Practice time, coverage and self-assessment are not mastery scores. Microphone analysis, audio recording and generated backing tracks are not part of this release.
+**Honest results:** counters and voice/groove feedback are self-reported. Fretboard note answers are checked against the displayed prompt. Reference tones do not listen to or grade your performance. Practice time, coverage and self-assessment are not mastery scores. The original 2.1 course release did not grade microphone input; current Steadybar can save local practice recordings, but it still does not infer musical quality from them.
 
 ## Validation
 
@@ -163,7 +173,7 @@ Strict TypeScript, native DOM components, IndexedDB, Web Audio, local SVG charts
 
 Data belongs to the browser profile and origin. Another device, browser, port or domain does not share it. Export backups regularly and before moving domains. Restore supports validated transactional **replacement**, not merge. Reset and replacement require confirmation and initiate a safety-backup download; verify that your browser saved it.
 
-Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 4** and the same `music-practice-os` format identifier. Version-1, version-2 and version-3 backups remain importable. The physical IndexedDB version is 5; practice state and priority cycles are stored separately from immutable session history. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
+Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 4** and the same `music-practice-os` format identifier. Version-1, version-2 and version-3 backups remain importable. The physical structured-workspace IndexedDB version is 8; practice state, priority cycles, weekly schedules and recording metadata are stored separately from immutable session history. Recording audio blobs live in the separate local media database described above. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
 
 Active sessions checkpoint every five seconds. Recovery excludes unknown crash downtime; up to the last checkpoint interval may be missing. Backgrounding pauses practice. Keep the app foregrounded for reliable audio; OS suspension and hardware/Bluetooth latency are outside its timing guarantees.
 
