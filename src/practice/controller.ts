@@ -2,7 +2,7 @@ import { reference } from '../audio/reference.js';
 import type { PracticeProtocol } from '../domain/practice-types.js';
 import { validateProtocol, validateOutcome, assertOutcomeMatches, assertProtocolCompatible } from '../domain/practice-validation.js';
 import { protocolPulse, patternFits, fretPrompt } from '../domain/protocols.js';
-import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TrainerConfig } from '../domain/models.js';
+import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TimingClickConfig, TrainerConfig } from '../domain/models.js';
 import type { LimitationTag, PracticeContext, PracticeResult } from '../domain/practice-state.js';
 import { contextForIntent } from '../domain/practice-state.js';
 import { finalizeSession, get, insertActiveSession, updateSession } from '../db/database.js';
@@ -130,6 +130,12 @@ export class PracticeController {
     const wasRunning=this.session?.runtime.phase==='running';
     await this.pause();await this.mutate(s=>{s.runtime.metronomeOn=!s.runtime.metronomeOn;return s;});
     if(wasRunning)await this.start();
+  }
+  async setTimingClick(timing:TimingClickConfig):Promise<void>{
+    const settings=store.snapshot().settings;
+    await store.settings({metronome:{...settings.metronome,timing:structuredClone(timing)}},false);
+    if(audio.running)audio.update(this.config());
+    this.emit();
   }
   async attempt(rating:Rating):Promise<void>{
     const current=this.session?.blocks[this.session.activeBlockIndex];if(current?.protocolSnapshot&&current.protocolSnapshot.kind!=='tempo')throw new Error('Use this exercise’s task results instead of a tempo rating.');
