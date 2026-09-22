@@ -24,7 +24,7 @@ const timingClick = obj({
 const progression = obj({
   engineVersion: one(1),
   direction: one('reduce','hold','advance'),
-  dimension: one('baseline','tempo','duration','subdivision','click-density','gap-click','dynamics','orchestration','memory','musical-context'),
+  dimension: one('baseline','tempo','duration','subdivision','click-density','gap-click','accent-pattern','dynamics','orchestration','memory','musical-context'),
   level: one(0,1,2,3),
   summary: text(300,1),
   cue: text(1000,1),
