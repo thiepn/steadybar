@@ -457,7 +457,6 @@ class Workbench(e2e.MusicPracticeTests):
 
         self.page.get_by_role('button',name='Activate',exact=True).click()
         expect(self.page.get_by_text('Training cycle activated.',exact=True)).to_be_visible()
-        self.page.wait_for_function("()=>window.__qa ? __qa.load('app/store.js').store.snapshot().trainingPlans.some(p=>p.status==='active') : document.body.textContent.includes('Active cycle')")
         active=self.read("(()=>{const p=load('app/store.js').store.snapshot().trainingPlans.find(p=>p.status==='active');return {id:p?.id,status:p?.status};})()")
         self.assertEqual(active['id'],created['id']);self.assertEqual(active['status'],'active')
 
