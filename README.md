@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Exercise progression — 2.8.0
+
+Exercise practice can now use a **Next challenge** recommendation driven by Steadybar’s existing mastery/retention evidence. The progression engine changes **one variable at a time** rather than treating BPM as the only form of difficulty or stacking several changes together.
+
+Depending on the exercise and evidence, the next challenge may adjust tempo, controlled duration, metronome subdivision support, click density, gap/silent measures, accent pattern, dynamics, percussion orchestration, memory demand, or musical context. Phase 7 sparse/gap-click evidence is carried forward instead of being treated as ordinary standard-click practice. A generated challenge is saved with the practice block so History can show the conditions that were actually attempted.
+
+The recommendation remains optional. **Start practice** still launches the ordinary exercise, while **Start next challenge** or **Add next challenge to today** uses the generated progression. Manual edits override the recommendation and remove its generated-evidence label. Autopilot can attach progression to exercise blocks while preserving its exact session duration. Voice exercises are not automatically escalated.
+
+This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
+
 ## Metronome & timing training — 2.7.0
 
 The metronome now supports **Standard**, **2 & 4**, **Sparse**, **One click per bar**, and **Gap click** modes alongside the existing 1×/2×/3×/4× subdivision and per-beat accent controls. Gap training includes 3 bars click → 1 silent, 2 → 2, and 1 → 3 progressions; sparse mode can click every 2, 3, or 4 beats. Count-ins stay audible, while intentionally silent beats do not flash visually.
