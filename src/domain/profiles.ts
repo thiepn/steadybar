@@ -34,7 +34,7 @@ export function profileView(data: Data,id=activeProfile(data).id): Data {
   if(!data.profiles || !id)return data;
   return {...data,courseProgress:data.courseProgress?.filter(p=>p.profileId===id),exercises:data.exercises.filter(e=>e.profileId===id),routines:data.routines.filter(r=>r.profileId===id),
     dailyPlans:data.dailyPlans.filter(p=>p.profileId===id),goals:data.goals.filter(g=>!g.profileId||g.profileId===id),
-    sessions:data.sessions.filter(s=>s.profileId===id),trainingPlans:data.trainingPlans?.filter(p=>p.profileId===id),practiceStates:data.practiceStates?.filter(s=>s.profileId===id),priorityCycles:data.priorityCycles?.filter(c=>c.profileId===id)};
+    sessions:data.sessions.filter(s=>s.profileId===id),trainingPlans:data.trainingPlans?.filter(p=>p.profileId===id),weeklySchedules:data.weeklySchedules?.filter(w=>w.profileId===id),practiceStates:data.practiceStates?.filter(s=>s.profileId===id),priorityCycles:data.priorityCycles?.filter(c=>c.profileId===id)};
 }
 export function instrumentType(value:string):InstrumentType {
   return ({drums:'drums',guitar:'guitar',bass:'bass',piano:'piano',keyboard:'piano',voice:'voice',vocals:'voice'} as Record<string,InstrumentType>)[value.toLowerCase()] ?? 'custom';
