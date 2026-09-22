@@ -58,7 +58,7 @@ export interface PracticeBlock {
   profileId?: string; profileNameSnapshot?: string; protocolSnapshot?: PracticeProtocol; instructionsSnapshot?: string; outcomes?: ProtocolOutcome[]; protocolState?: ProtocolState; sourceSongPartId?: string;
   id: string; type: RoutineBlock['type']; sourceExerciseId?: string; sourceSongId?: string; sourceSongSectionId?: string;
   titleSnapshot: string; categorySnapshot: string; stickingSnapshot: string;
-  meterSnapshot: Meter; subdivisionSnapshot: Subdivision;
+  meterSnapshot: Meter; subdivisionSnapshot: Subdivision; timingClickSnapshot?: TimingClickConfig;
   targetSeconds: number; actualActiveSeconds: number; initialBpm?: number; finalBpm?: number;
   tempoAttempts: TempoAttempt[]; notes: string; startedAt?: string; endedAt?: string;
   completed: boolean; skipped: boolean; tempoTrainer?: TrainerConfig; prescriptionSnapshot?: PracticePrescription; evaluation?: PracticeEvaluation;
