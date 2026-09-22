@@ -124,7 +124,7 @@ export class PracticeController {
   async setBpm(value:number):Promise<void>{
     const current=this.session?.blocks[this.session.activeBlockIndex];if(current?.protocolSnapshot&&!protocolPulse(current.protocolSnapshot))throw new Error('This exercise has no tempo target.');
     const bpm=clampBpm(value);
-    await this.mutate(s=>{s=checkpointSession(s);s.runtime.bpm=bpm;const block=s.blocks[s.activeBlockIndex]!;block.finalBpm=bpm;delete block.tempoTrainer;return s;});
+    await this.mutate(s=>{s=checkpointSession(s);s.runtime.bpm=bpm;const block=s.blocks[s.activeBlockIndex]!;block.finalBpm=bpm;delete block.tempoTrainer;if(block.progressionSnapshot?.bpm!==undefined&&block.progressionSnapshot.bpm!==bpm)delete block.progressionSnapshot;return s;});
     if(audio.running)audio.update(this.config());
   }
   async toggleAudio():Promise<void>{
@@ -136,7 +136,7 @@ export class PracticeController {
     await this.mutate(s=>{
       for(let i=s.activeBlockIndex;i<s.blocks.length;i++){
         const block=s.blocks[i]!;
-        if(block.initialBpm!==undefined&&(i===s.activeBlockIndex||!block.startedAt))block.timingClickSnapshot=structuredClone(timing);
+        if(block.initialBpm!==undefined&&(i===s.activeBlockIndex||!block.startedAt)){block.timingClickSnapshot=structuredClone(timing);if(block.progressionSnapshot?.timingClick&&JSON.stringify(block.progressionSnapshot.timingClick)!==JSON.stringify(timing))delete block.progressionSnapshot;}
       }
       return s;
     });
@@ -200,7 +200,7 @@ export class PracticeController {
       b.protocolSnapshot=config;b.protocolState={step:0,clean:0,total:0,...(config.kind==='vocal-pattern'?{rootMidi:config.startMidi}:{})};
       b.outcomes=[];b.tempoAttempts=[];b.initialBpm=protocolPulse(config)?.bpm;b.finalBpm=b.initialBpm;
       const timing=protocolPulse(config);b.meterSnapshot=timing?{beats:timing.beats,beatUnit:timing.beatUnit}:s.blocks[s.activeBlockIndex]!.meterSnapshot;b.subdivisionSnapshot=timing?.subdivision??1;
-      b.stickingSnapshot=config.kind==='tempo'?config.sticking??'':'';delete b.tempoTrainer;
+      b.stickingSnapshot=config.kind==='tempo'?config.sticking??'':'';delete b.tempoTrainer;delete b.progressionSnapshot;
       s.runtime.bpm=b.initialBpm??80;s.runtime.metronomeOn=b.initialBpm!==undefined;s.runtime.phase='ready';return s;
     });
   }
@@ -217,7 +217,7 @@ export class PracticeController {
     this.beat=undefined;this.emit();
   }
   async trainer(config:TrainerConfig | undefined):Promise<void>{
-    await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;if(config.mode==='endurance')block.targetSeconds=Math.ceil(block.actualActiveSeconds)+config.seconds;}return s;});
+    await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;if(config)delete block.progressionSnapshot;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;if(config.mode==='endurance')block.targetSeconds=Math.ceil(block.actualActiveSeconds)+config.seconds;}return s;});
   }
   async finishBlock(skip=false):Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;await this.mutate(s=>finishBlock(s,skip),ending);this.beat=undefined;this.emit();}
   async restart():Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.mutate(restartBlock);this.beat=undefined;this.emit();}

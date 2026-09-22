@@ -26,7 +26,7 @@ export function blockList(blocks:RoutineBlock[],onChange:(blocks:RoutineBlock[])
     const bpm=el('input',{type:'number',value:block.bpm,min:20,max:300,step:1,inputmode:'numeric',class:'inline-number','aria-label':`${block.title} BPM`});
     const updateInput=async(field:'targetSeconds'|'bpm',value:number,control:HTMLInputElement)=>{
       if(!control.reportValidity())return;
-      try{await change(rows=>rows.map(b=>b.id===block.id?{...b,[field]:value,...(field==='targetSeconds'&&b.tempoTrainer?.mode==='endurance'?{tempoTrainer:{...b.tempoTrainer,seconds:value}}:{})}:b));}catch(error){notify(error instanceof Error?error.message:'The block could not be saved.','error');}
+      try{await change(rows=>rows.map(b=>b.id===block.id?{...b,[field]:value,progression:undefined,...(field==='targetSeconds'&&b.tempoTrainer?.mode==='endurance'?{tempoTrainer:{...b.tempoTrainer,seconds:value}}:{})}:b));}catch(error){notify(error instanceof Error?error.message:'The block could not be saved.','error');}
     };
     minutes.addEventListener('change',()=>{void updateInput('targetSeconds',Math.round(Number(minutes.value)*60),minutes);});
     bpm.addEventListener('change',()=>{void updateInput('bpm',Number(bpm.value),bpm);});
@@ -42,7 +42,7 @@ export function blockList(blocks:RoutineBlock[],onChange:(blocks:RoutineBlock[])
       };
       const latest=()=>current.find(b=>b.id===block.id)||block;
       action('Edit block',`Edit ${block.title}`,'edit',()=>editBlock(latest(),async updated=>change(rows=>rows.map(b=>b.id===block.id?updated:b))));
-      if(hasTempo)action('Tempo trainer',`Tempo trainer for ${block.title}`,'progress',()=>trainerDialog(latest().tempoTrainer,async config=>change(rows=>rows.map(b=>b.id===block.id?{...b,tempoTrainer:config,...(config.mode==='endurance'?{targetSeconds:config.seconds}:{})}:b)),latest().bpm));
+      if(hasTempo)action('Tempo trainer',`Tempo trainer for ${block.title}`,'progress',()=>trainerDialog(latest().tempoTrainer,async config=>change(rows=>rows.map(b=>b.id===block.id?{...b,tempoTrainer:config,progression:undefined,...(config.mode==='endurance'?{targetSeconds:config.seconds}:{})}:b)),latest().bpm));
       const index=current.findIndex(b=>b.id===block.id);
       action('Move up',`Move ${block.title} up`,'up',()=>moveById(block.id,-1),index<=0);
       action('Move down',`Move ${block.title} down`,'down',()=>moveById(block.id,1),index===current.length-1);
@@ -65,6 +65,7 @@ export function blockList(blocks:RoutineBlock[],onChange:(blocks:RoutineBlock[])
       draggingId='';
     });
     if(protocol){const cue=protocol.kind==='tempo'?protocol.sticking:protocolSummary(protocol);if(cue)title.append(el('p',{class:protocol.kind==='tempo'?'block-cue sticking':'block-cue'},cue));}
+    if(block.progression)title.append(el('p',{class:'block-cue block-progression'},'Next challenge · '+block.progression.summary));
     list.append(row);
   });
   list.append(el('div',{class:'block-add'},button('Add block',()=>editBlock(undefined,async block=>change(rows=>[...rows,block])),'ghost','plus')));

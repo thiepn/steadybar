@@ -15,6 +15,31 @@ export interface TimingClickConfig {
   gapClickBars: number;
   gapSilentBars: number;
 }
+export type ProgressionDirection = 'reduce' | 'hold' | 'advance';
+export type ProgressionDimension =
+  | 'baseline'
+  | 'tempo'
+  | 'duration'
+  | 'subdivision'
+  | 'click-density'
+  | 'gap-click'
+  | 'accent-pattern'
+  | 'dynamics'
+  | 'orchestration'
+  | 'memory'
+  | 'musical-context';
+export interface ExerciseProgression {
+  engineVersion: 1;
+  direction: ProgressionDirection;
+  dimension: ProgressionDimension;
+  level: 0 | 1 | 2 | 3;
+  summary: string;
+  cue: string;
+  bpm?: number;
+  targetSeconds?: number;
+  subdivision?: Subdivision;
+  timingClick?: TimingClickConfig;
+}
 export interface Meter { beats: number; beatUnit: 4 | 8 }
 export interface MetronomeConfig {
   bpm: number; meter: Meter; subdivision: Subdivision; accents: Accent[];
@@ -44,7 +69,7 @@ export interface RoutineBlock {
   id: string; type: 'exercise' | 'song' | 'song-section' | 'free';
   exerciseId?: string; songId?: string; songSectionId?: string; songPartId?: string; profileId?: string; protocol?: PracticeProtocol;
   title: string; targetSeconds: number; bpm?: number; notes: string;
-  tempoTrainer?: TrainerConfig; prescription?: PracticePrescription; order: number;
+  tempoTrainer?: TrainerConfig; prescription?: PracticePrescription; progression?: ExerciseProgression; order: number;
 }
 export interface Routine extends Entity {
   profileId?: string;
@@ -58,7 +83,7 @@ export interface PracticeBlock {
   profileId?: string; profileNameSnapshot?: string; protocolSnapshot?: PracticeProtocol; instructionsSnapshot?: string; outcomes?: ProtocolOutcome[]; protocolState?: ProtocolState; sourceSongPartId?: string;
   id: string; type: RoutineBlock['type']; sourceExerciseId?: string; sourceSongId?: string; sourceSongSectionId?: string;
   titleSnapshot: string; categorySnapshot: string; stickingSnapshot: string;
-  meterSnapshot: Meter; subdivisionSnapshot: Subdivision; timingClickSnapshot?: TimingClickConfig;
+  meterSnapshot: Meter; subdivisionSnapshot: Subdivision; timingClickSnapshot?: TimingClickConfig; progressionSnapshot?: ExerciseProgression;
   targetSeconds: number; actualActiveSeconds: number; initialBpm?: number; finalBpm?: number;
   tempoAttempts: TempoAttempt[]; notes: string; startedAt?: string; endedAt?: string;
   completed: boolean; skipped: boolean; tempoTrainer?: TrainerConfig; prescriptionSnapshot?: PracticePrescription; evaluation?: PracticeEvaluation;

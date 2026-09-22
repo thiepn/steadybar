@@ -256,6 +256,7 @@ input.metronome-bpm:hover {border-color:var(--border-strong)}
 .volume-row>.field {flex:1;min-width:80px;margin:0}.volume-row>.button {font-size:12px;padding-inline:8px}
 .metronome-side .section-heading {gap:6px}.preset-row {display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);padding:10px 0}
 .preset-button {flex:1;min-width:0;text-align:left;justify-content:flex-start;padding-left:0;font-size:13px;font-weight:500}.preset-row>.small {white-space:nowrap;font-family:var(--mono);font-size:11px}
+.progression-card{border-left:2px solid var(--accent)}.progression-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 10px}.progression-heading strong{font-size:15px}.block-progression{color:var(--accent-text);font-weight:550}.progression-review{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 10px;align-items:center;margin:10px 0;padding:10px 0;border-block:1px solid var(--border)}.progression-review p{grid-column:2;margin:0}.focus-progression-cue{margin:8px 0 0;padding:9px 11px;border-left:2px solid var(--accent);background:var(--surface-soft);font-size:12px;line-height:1.5;color:var(--muted)}
 .inset {padding:8px 0}.playback-help {border-top:1px solid var(--border);padding:16px 0;font-size:13px}.playback-help summary {cursor:pointer}.playback-help p {margin-top:14px}
 /* Active practice. All frequent controls share one compact work surface. */
 .active-main {min-height:100dvh}.active-page {max-width:1200px;margin:auto;padding:24px 32px 40px}
@@ -360,6 +361,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .block-cue {font-size:11px}.plan-panel>.section-heading {padding:16px}.plan-panel>.section-heading .button {font-size:12px;padding:8px 10px}
 }
 @media (max-width:759px) {
+  .progression-heading{align-items:flex-start}.progression-card .actions>.button{flex:1 1 180px}.progression-review{grid-template-columns:minmax(0,1fr)}.progression-review p{grid-column:1}.focus-progression-cue{font-size:11px;padding:8px 9px}
   body {font-size:14px}.app-shell {display:block}.sidebar {display:none}
   .topbar {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--bg)}
   .mobile-brand {font-size:17px;letter-spacing:-.5px;gap:8px}.mobile-brand>svg {width:22px;height:22px}
