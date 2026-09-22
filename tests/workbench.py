@@ -402,7 +402,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.get_by_role('button',name='Replace active priorities',exact=True).click()
         dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
         dialog.get_by_role('button',name='Replace priorities',exact=True).click()
-        expect(dialog).to_have_count(0)
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Weekly priorities applied.',exact=True)).to_be_visible()
         state=self.read("""(()=>{
           const d=load('app/store.js').store.snapshot(),active=d.priorityCycles.find(c=>c.status==='active'),old=d.priorityCycles.find(c=>c.id==='qa-old-cycle');
           return {activeName:active?.name,activeItems:active?.items,oldStatus:old?.status,oldEnded:old?.endedOn};
@@ -415,7 +415,7 @@ class Workbench(e2e.MusicPracticeTests):
         expect(row).to_be_visible();row.get_by_role('button',name='Restore',exact=True).click()
         dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
         dialog.get_by_role('button',name='Restore priorities',exact=True).click()
-        expect(dialog).to_have_count(0)
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Previous priorities restored as a new active cycle.',exact=True)).to_be_visible()
         restored=self.read("""(()=>{
           const d=load('app/store.js').store.snapshot(),active=d.priorityCycles.find(c=>c.status==='active'),old=d.priorityCycles.find(c=>c.id==='qa-old-cycle');
           return {name:active?.name,skill:active?.items[0]?.skillId,oldStatus:old?.status,oldName:old?.name};
