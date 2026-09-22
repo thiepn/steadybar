@@ -286,6 +286,48 @@ class Workbench(e2e.MusicPracticeTests):
         self.assert_bounds(820)
 
 
+    def test_54_set_prep_readiness_and_ordered_runthrough(self):
+        self.onboard()
+        self.read("""(async()=>{
+          const d=structuredClone(load('app/store.js').store.snapshot()),now=new Date().toISOString(),date=load('domain/utils.js').localDate(new Date(Date.now()+5*86400000));
+          const mk=(id,title,bpm)=>({id,createdAt:now,updatedAt:now,title,artist:'',bpm,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'performance-ready',notes:'',sections:[{id:id+'-v',name:'Verse',notes:'',order:0},{id:id+'-c',name:'Chorus',notes:'',order:1}],transitions:[{id:id+'-t',fromSectionId:id+'-v',toSectionId:id+'-c',name:'Verse → Chorus',notes:'Land it cleanly.'}]});
+          d.songs=[mk('qa-set-song-a','QA Set Song A',72),mk('qa-set-song-b','QA Set Song B',80)];
+          d.setlists=[{id:'qa-set',createdAt:now,updatedAt:now,name:'QA Sunday Set',date,songIds:['qa-set-song-a','qa-set-song-b'],notes:'QA set prep'}];
+          d.dailyPlans=[];d.sessions=d.sessions.filter(s=>s.status!=='active');
+          await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
+        })()""")
+        self.route('/setlists/qa-set')
+        expect(self.page.get_by_role('heading',name='Set preparation',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Unassessed',exact=True).first).to_be_visible()
+        expect(self.page.get_by_role('button',name='Start Set Prep',exact=True)).to_be_visible()
+        for width,height in ((320,720),(390,844),(820,1000)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+        self.page.get_by_role('button',name='Start Set Prep',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Preparation mode',exact=True).select_option('run-through')
+        dialog.get_by_label('Session time',exact=True).select_option('10')
+        self.assert_bounds(820)
+        dialog.get_by_role('button',name='Build & start',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.locator('.focus-workspace')).to_be_visible()
+        result=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),plan=d.dailyPlans.find(p=>p.generation?.kind==='set-prep'),s=load('practice/controller.js').practice.session;
+          return {
+            generation:plan?.generation,
+            titles:s.blocks.map(b=>b.titleSnapshot),
+            generated:s.blocks.map(b=>b.prescriptionSnapshot?.generatedBy),
+            intents:s.blocks.map(b=>b.prescriptionSnapshot?.intent),
+            positions:s.blocks.map(b=>b.setPrepSnapshot?.setPosition),
+            modes:s.blocks.map(b=>b.setPrepSnapshot?.mode),
+          };
+        })()""")
+        self.assertEqual(result['titles'],['QA Set Song A','QA Set Song B'])
+        self.assertEqual(result['generated'],['set-prep','set-prep'])
+        self.assertEqual(result['intents'],['perform','perform'])
+        self.assertEqual(result['positions'],[0,1]);self.assertEqual(result['modes'],['run-through','run-through'])
+        self.assertEqual(result['generation']['kind'],'set-prep');self.assertEqual(result['generation']['setPrepMode'],'run-through')
+        expect(self.page.locator('.focus-set-prep')).to_be_visible();self.assert_bounds(820)
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

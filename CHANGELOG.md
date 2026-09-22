@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.9.0 — Set Prep & Performance Readiness — 2026-09-22
+
+- Add an evidence-based Set Prep engine on top of dated setlists, existing repertoire PracticeState, Priority, Mastery/Retention and performance-context evidence.
+- Classify each setlist song as **Unassessed**, **Needs work**, **Usable**, or **Ready evidence** instead of inventing an opaque numerical readiness score.
+- Keep readiness profile/part-specific: a manual song status such as `performance-ready` never fabricates evaluated evidence, and a newer weak section or transition can override otherwise strong whole-song evidence.
+- Add staged preparation windows from the performance date: **Build** (>14 days), **Integrate** (8–14), **Simulate** (3–7), **Taper** (1–2), and **Performance day**.
+- Add **Focused prep** generation that prioritizes weak/unassessed sections and transitions according to the current prep window.
+- Add ordered **Run-through** generation that preserves the exact setlist order, including repeated songs, and records `perform` context so successful simulations become performance evidence.
+- Make Set Prep sessions exact-duration at 10/15/20/30/45/60 minutes while requiring at least one minute per song for full run-throughs.
+- Persist immutable setlist/stage/mode/role/set-position snapshots with generated blocks and show them in Today, Focus Player and History.
+- Stamp Set Prep targets as scheduled atomically and track generated skips independently from mastery, matching Autopilot’s bookkeeping discipline.
+- Preserve the existing manual **Generate preparation routine** workflow as a separate editable, non-evidence-based option.
+- Keep set-prep metadata optional, requiring no IndexedDB or backup-envelope migration and preserving older sessions/backups.
+- Add deterministic domain and cross-browser acceptance coverage for prep windows, readiness evidence, transition risk, due retention, exact budgets, ordered run-throughs, skip bookkeeping and mobile Set Prep UX.
+
 ## 2.8.0 — Exercise Progression Engine — 2026-09-22
 
 - Add a deterministic Exercise Progression Engine on top of the existing Mastery/Retention `reduce / hold / advance` signal instead of inventing a second mastery model.

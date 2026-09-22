@@ -1,5 +1,5 @@
 import type { PracticeProfile, PracticeProtocol, ProtocolOutcome, ProtocolState, SongPart, SongTransition, Experience } from './practice-types.js';
-import type { PlanGeneration, PracticeEvaluation, PracticePrescription, PracticeState, PriorityCycle } from './practice-state.js';
+import type { PlanGeneration, PracticeEvaluation, PracticePrescription, PracticeState, PriorityCycle, SetPrepSnapshot } from './practice-state.js';
 import type { CourseProgress, LessonSource } from '../learning/types.js';
 import type { AccentColor, SurfaceTheme } from './appearance.js';
 export type Category = 'rudiment' | 'technique' | 'groove' | 'coordination' | 'warmup' | 'timing' | 'other';
@@ -69,7 +69,7 @@ export interface RoutineBlock {
   id: string; type: 'exercise' | 'song' | 'song-section' | 'free';
   exerciseId?: string; songId?: string; songSectionId?: string; songPartId?: string; profileId?: string; protocol?: PracticeProtocol;
   title: string; targetSeconds: number; bpm?: number; notes: string;
-  tempoTrainer?: TrainerConfig; prescription?: PracticePrescription; progression?: ExerciseProgression; order: number;
+  tempoTrainer?: TrainerConfig; prescription?: PracticePrescription; progression?: ExerciseProgression; setPrep?: SetPrepSnapshot; order: number;
 }
 export interface Routine extends Entity {
   profileId?: string;
@@ -83,7 +83,7 @@ export interface PracticeBlock {
   profileId?: string; profileNameSnapshot?: string; protocolSnapshot?: PracticeProtocol; instructionsSnapshot?: string; outcomes?: ProtocolOutcome[]; protocolState?: ProtocolState; sourceSongPartId?: string;
   id: string; type: RoutineBlock['type']; sourceExerciseId?: string; sourceSongId?: string; sourceSongSectionId?: string;
   titleSnapshot: string; categorySnapshot: string; stickingSnapshot: string;
-  meterSnapshot: Meter; subdivisionSnapshot: Subdivision; timingClickSnapshot?: TimingClickConfig; progressionSnapshot?: ExerciseProgression;
+  meterSnapshot: Meter; subdivisionSnapshot: Subdivision; timingClickSnapshot?: TimingClickConfig; progressionSnapshot?: ExerciseProgression; setPrepSnapshot?: SetPrepSnapshot;
   targetSeconds: number; actualActiveSeconds: number; initialBpm?: number; finalBpm?: number;
   tempoAttempts: TempoAttempt[]; notes: string; startedAt?: string; endedAt?: string;
   completed: boolean; skipped: boolean; tempoTrainer?: TrainerConfig; prescriptionSnapshot?: PracticePrescription; evaluation?: PracticeEvaluation;

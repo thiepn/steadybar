@@ -23,7 +23,10 @@ export function todayPage(): Page {
   const weekStart = isoWeekStart(), weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const week = filterSessions(data.sessions, localDate(weekStart), localDate(weekEnd));
-  const savePlan = async (blocks: RoutineBlock[]) => store.save('dailyPlans', { ...(plan || metadata()), profileId:profile.id,date: localDate(), blocks });
+  const savePlan = async (blocks: RoutineBlock[]) => {
+    const keepSetPrep=plan?.generation?.kind!=='set-prep'||(blocks.length>0&&blocks.every(block=>block.setPrep&&block.setPrep.setlistId===plan.generation?.setlistId&&block.setPrep.stage===plan.generation?.setPrepStage&&block.setPrep.mode===plan.generation?.setPrepMode));
+    await store.save('dailyPlans',{...(plan||metadata()),profileId:profile.id,date:localDate(),blocks,...(!keepSetPrep?{generation:undefined}:{})});
+  };
   const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`));
   page.append(learningSummary());
   if(profile.instrumentType==='voice'){
@@ -57,7 +60,7 @@ export function todayPage(): Page {
   const start = button('Start full session', () => launchPractice(plan?.blocks || [], { planId: plan?.id }), 'primary', 'play');
   const total = routineDuration(plan?.blocks || []);
   const planPanel = el('section', { class: 'panel plan-panel', 'aria-label': 'Today’s practice plan' },
-    sectionHeader('Today’s plan', plan?.blocks.length ? `${duration(total)} · ${plan.blocks.length} blocks${plan.generation?.kind==='autopilot'?' · Autopilot':''}` : 'Not planned',
+    sectionHeader('Today’s plan', plan?.blocks.length ? `${duration(total)} · ${plan.blocks.length} blocks${plan.generation?.kind==='autopilot'?' · Autopilot':plan.generation?.kind==='set-prep'?` · Set prep · ${plan.generation.setPrepStage?.replaceAll('-',' ')??'prep'}`:''}` : 'Not planned',
       plan?.blocks.length ? [start] : []));
   if (plan?.blocks.length) {
     planPanel.append(blockList(plan.blocks, savePlan, block => launchPractice([block], { planId: plan.id })),

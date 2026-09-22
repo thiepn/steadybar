@@ -8,7 +8,7 @@ const result=one('not-yet','usable','solid');
 const context=one('normal','cold','transfer','maintenance','performance','unknown');
 const limitation=one('timing','coordination','memory','dynamics','tension','sound','accuracy','endurance','too-fast','form');
 const intent=one('ramp-in','learn','build','stabilize','retest','apply','maintain','perform','free');
-const reason=one('active-priority','active-goal','retention-due','recent-weakness','neglected','domain-balance','upcoming-performance','prerequisite','musical-transfer','maintenance','user-request');
+const reason=one('active-priority','active-goal','retention-due','recent-weakness','neglected','domain-balance','upcoming-performance','setlist-focus','transition-risk','performance-simulation','prerequisite','musical-transfer','maintenance','user-request');
 const mastery=one('unassessed','discover','learn','build','stabilize','retest','apply','maintain');
 
 export const validatePracticeTarget:Validator<PracticeTargetRef>=(v,p='Practice target')=>{
@@ -36,13 +36,22 @@ export const validatePracticePrescription:Validator<PracticePrescription>=(v,p='
   return r;
 };
 
-export const validatePlanGeneration:Validator<PlanGeneration>=obj({
+const rawPlanGeneration=obj({
   kind:one('manual','routine','autopilot','set-prep','lesson'),
   generatedAt:iso,
   requestedMinutes:optional(num(1,1440,true)),
   sessionIntent:optional(one('balanced','songs','timing','technique')),
+  setlistId:optional(id),
+  setPrepStage:optional(one('build','integrate','simulate','taper','performance-day')),
+  setPrepMode:optional(one('focused','run-through')),
   engineVersion:optional(num(1,10000,true)),
 });
+export const validatePlanGeneration:Validator<PlanGeneration>=(v,p='Plan generation')=>{
+  const generation=rawPlanGeneration(v,p);
+  if(generation.kind==='set-prep'&&(!generation.setlistId||!generation.setPrepStage||!generation.setPrepMode))fail(p,'set-prep generation needs its setlist, stage and mode');
+  if(generation.kind!=='set-prep'&&(generation.setlistId||generation.setPrepStage||generation.setPrepMode))fail(p,'set-prep metadata belongs only to set-prep generation');
+  return generation;
+};
 
 const tempo=obj({
   peak:optional(num(20,300,true)),working:optional(num(20,300,true)),cold:optional(num(20,300,true)),
