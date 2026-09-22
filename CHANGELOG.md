@@ -5,7 +5,7 @@
 - Add local microphone **Record attempt** capture directly inside the Focus Player.
 - Store large audio blobs in a separate local IndexedDB media database instead of serializing them into workspace state.
 - Add durable profile-scoped recording metadata with session, block, exercise/song/section and BPM context plus attempt numbering.
-- Add a `/recordings` evidence library with local playback, self-rating, notes, Favorite, Milestone and one Current best marker per target.
+- Add a `/recordings` evidence library with local playback, per-recording audio export, self-rating, notes, Favorite, Milestone and one Current best marker per target.
 - Show recording counts in History and surface session-linked evidence on session detail pages.
 - Add explicit microphone lifecycle guards so leaving, finishing, skipping or restarting while recording requires discarding the unsaved capture first.
 - Release microphone tracks and object URLs when capture/playback ends.
