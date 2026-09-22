@@ -157,7 +157,7 @@ export function activePracticePage():Page{
     const session=practice.session;if(!session)return;
     if(session.status!=='active'){if(!completedView){completedView=true;task?.cleanup();page.replaceChildren(sessionPage(session.id,true).node);}return;}
     const block=session.blocks[session.activeBlockIndex]!,phase=session.runtime.phase;
-    const state=JSON.stringify([block.id,block.protocolSnapshot,phase,session.runtime.bpm,session.runtime.metronomeOn,block.notes,practice.error,practice.recovered,block.prescriptionSnapshot]);
+    const state=JSON.stringify([block.id,block.protocolSnapshot,block.timingClickSnapshot,phase,session.runtime.bpm,session.runtime.metronomeOn,block.notes,practice.error,practice.recovered,block.prescriptionSnapshot]);
     if(lastState!==state){
       lastState=state;recovery.hidden=!practice.recovered;
       const cueText=block.instructionsSnapshot||'';cues.hidden=!cueText;text(cuesText,cueText);
