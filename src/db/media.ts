@@ -53,3 +53,8 @@ export async function recordingAssetExists(id:string):Promise<boolean>{
   const db=await database(),tx=db.transaction(RECORDING_STORE,'readonly'),done=complete(tx);
   const count=await request(tx.objectStore(RECORDING_STORE).count(id));await done;return count>0;
 }
+
+export async function clearRecordingAssets():Promise<void>{
+  const db=await database(),tx=db.transaction(RECORDING_STORE,'readwrite'),done=complete(tx);
+  tx.objectStore(RECORDING_STORE).clear();await done;
+}
