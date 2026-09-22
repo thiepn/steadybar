@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.11.0 — Weekly Review & Adaptive Practice Planning — 2026-09-22
+
+- Add a dedicated **Weekly Review** workspace using a rolling seven-day window and the immediately preceding seven days for context.
+- Reuse the Phase 10 diagnostics engine for the weekly evidence recap instead of creating a second analytics model.
+- Generate at most three next-week skill-area suggestions from the existing explainable Priority Engine.
+- Neutralize the current active Priority Cycle while computing the replacement proposal so last week's priorities cannot automatically reinforce themselves.
+- Let current goals, due retention, recent weakness, upcoming performances, neglect/balance, musical transfer, profile focus and recurring limitation evidence shape the proposal.
+- Expose every suggested focus with explicit reasons and example targets rather than a hidden coach score.
+- Make the proposal editable before application: each suggestion can be excluded and its Priority Cycle strength changed between **Primary**, **Secondary**, and **Support**.
+- Keep planning user-controlled: no Priority Cycle changes occur until **Apply priorities** is pressed.
+- Applying a proposal atomically completes the previous active cycle and preserves it in history rather than overwriting it.
+- Add **End active priorities** and **Restore** actions; restoration creates a new active copy while preserving the historical source cycle unchanged.
+- Derive a suggested existing Autopilot emphasis (Balanced / Songs / Timing / Technique) from the proposed primary focus without changing Today settings automatically.
+- Add `/review` navigation, responsive Weekly Review UI, Progress → Weekly Review linkage, and full mobile support.
+- Add domain and browser coverage for rolling windows, runtime-only review generation, anti-self-reinforcement, validated cycle replacement, restore/end behavior, editable strengths and responsive UI.
+- No new IndexedDB store or backup-envelope migration is required; Phase 11 reuses the existing Priority Cycle persistence model.
+
 ## 2.10.0 — Practice Analytics & Diagnostic Intelligence — 2026-09-22
 
 - Add a runtime-only diagnostics engine derived from authoritative sessions and PracticeState instead of persisting stale analytics caches or opaque scores.
