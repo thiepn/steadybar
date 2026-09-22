@@ -1,6 +1,5 @@
 import type { Data, PracticeSession, ProgressionDimension } from './models.js';
 import type { LimitationTag, MasteryState, PracticeResult, PracticeState, PracticeTargetRef } from './practice-state.js';
-import { practiceTargetKey } from './practice-state.js';
 import { finishedSessions, sessionTime } from './analytics.js';
 import { reviewDue } from './mastery-engine.js';
 import { skillDefinition } from './skill-graph.js';
