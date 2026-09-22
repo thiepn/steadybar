@@ -220,6 +220,13 @@ test('training plans persist through the repository and modern backup restore',a
   await db.resetWorkspace();assert.equal((await db.readData()).trainingPlans.length,0);
   await restoreBackup(backup);const restored=await db.readData();assert.equal(restored.trainingPlans.length,1);assert.equal(restored.trainingPlans[0].id,plan.id);
 });
+test('recording metadata persists through the v8 structured repository',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId),exercise=data.exercises.find(row=>row.profileId===profile.id);
+  const now='2026-09-23T08:00:00.000Z',row={id:'repository-recording',createdAt:now,updatedAt:now,recordingVersion:1,profileId:profile.id,assetId:'repository-recording',title:exercise.name,durationSeconds:8.5,mimeType:'audio/webm',sizeBytes:2048,sourceType:'exercise',sourceExerciseId:exercise.id,bpm:100,attemptNumber:1,note:'',tags:[],markedBest:false,milestone:false,favorite:false};
+  await db.put('recordings',row);assert.equal((await db.get('recordings',row.id)).assetId,row.assetId);
+  assert.equal((await db.readData()).recordings.length,1);
+});
+
 test('weekly schedules persist through the v7 repository and modern backup restore',async()=>{
   await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId);
   const schedule=buildWeeklySchedule(data,{profileId:profile.id,weekStart:'2026-09-21',targetMinutes:90,practiceDays:3,now:'2026-09-22T08:00:00.000Z'});
