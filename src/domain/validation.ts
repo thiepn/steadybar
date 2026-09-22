@@ -249,7 +249,7 @@ export function validateData(input:unknown):Data {
     if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');
     for(const plan of trainingPlans){
       const profile=requireProfile(plan.profileId);
-      for(const goalId of plan.goalIds){const goal=goals.get(goalId);if(!goal)fail('Training plan','linked goal does not exist');if(goal.profileId&&goal.profileId!==plan.profileId)fail('Training plan','linked goal belongs to a different profile');}
+      for(const goalId of plan.goalIds){const goal=goals.get(goalId);if(!goal){fail('Training plan','linked goal does not exist');continue;}if(goal.profileId&&goal.profileId!==plan.profileId)fail('Training plan','linked goal belongs to a different profile');}
       for(const setlistId of plan.setlistIds)if(!setlists.has(setlistId))fail('Training plan','linked setlist does not exist');
       for(const phase of plan.phases)for(const focus of phase.focuses)if(!isSkillForInstrument(focus.skillId,profile.instrumentType))fail('Training plan','phase focus does not belong to this profile');
     }
