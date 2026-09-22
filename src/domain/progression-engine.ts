@@ -11,6 +11,13 @@ export interface ProgressionOptions {
   allowAdvance?: boolean;
 }
 
+interface EffectiveConditions {
+  bpm?: number;
+  targetSeconds: number;
+  subdivision?: Subdivision;
+  timingClick?: TimingClickConfig;
+}
+
 const DIMENSIONS:ProgressionDimension[]=['tempo','duration','subdivision','click-density','gap-click','accent-pattern','dynamics','orchestration','memory','musical-context'];
 
 function finishedExerciseBlocks(data:Data,exerciseId:string):PracticeBlock[] {
@@ -34,6 +41,24 @@ function latestProgression(blocks:PracticeBlock[]):ExerciseProgression|undefined
 }
 
 function latestBlock(blocks:PracticeBlock[]):PracticeBlock|undefined{return blocks.at(-1);}
+
+function effectiveConditions(data:Data,exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],options:ProgressionOptions):EffectiveConditions {
+  const pulse=protocolPulse(exerciseProtocol(exercise)),last=latestBlock(blocks),lastProgression=latestProgression(blocks);
+  const bpm=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??last?.finalBpm??last?.initialBpm;
+  const targetSeconds=options.strictDuration&&options.seconds!==undefined
+    ? options.seconds
+    : lastProgression?.targetSeconds??last?.targetSeconds??options.seconds??exercise.defaultSeconds??300;
+  const subdivision=pulse ? lastProgression?.subdivision??last?.subdivisionSnapshot??pulse.subdivision : undefined;
+  const timingClick=pulse
+    ? structuredClone(lastProgression?.timingClick??last?.timingClickSnapshot??data.settings.metronome.timing??DEFAULT_TIMING_CLICK)
+    : undefined;
+  return {
+    ...(bpm!==undefined?{bpm}:{}),
+    targetSeconds,
+    ...(subdivision!==undefined?{subdivision}:{}),
+    ...(timingClick?{timingClick}:{}),
+  };
+}
 
 function levelFor(blocks:PracticeBlock[],dimension:ProgressionDimension):0|1|2|3 {
   const explicit=latestByDimension(blocks,dimension)?.level;
@@ -166,49 +191,48 @@ function softCue(dimension:ProgressionDimension,level:number):{summary:string;cu
   ] as const;const row=rows[l]!;return {summary:row[0],cue:row[1]};
 }
 
-function baseline(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],direction:'hold'|'reduce'='hold'):ExerciseProgression {
-  const authored=exerciseBpm(exercise),last=latestBlock(blocks),known=state?.tempo?.working??state?.tempo?.peak??authored??last?.finalBpm??last?.initialBpm;
+function baseline(exercise:Exercise,state:PracticeState|undefined,conditions:EffectiveConditions,direction:'hold'|'reduce'='hold'):ExerciseProgression {
+  const known=conditions.bpm;
   if(direction==='reduce'&&known!==undefined){
     const min=exercise.minBpm??20,step=Math.max(2,Math.round(known*.05)),bpm=clamp(known-step,min,300);
-    return {engineVersion:1,direction:'reduce',dimension:'tempo',level:0,summary:'Recovery · '+bpm+' BPM',cue:'Reduce the tempo and recover clean, relaxed control before adding difficulty again.',bpm};
+    return {...conditions,engineVersion:1,direction:'reduce',dimension:'tempo',level:0,summary:'Recovery · '+bpm+' BPM',cue:'Reduce the tempo and recover clean, relaxed control before adding difficulty again.',bpm};
   }
   return {
-    engineVersion:1,direction:'hold',dimension:'baseline',level:0,
+    ...conditions,engineVersion:1,direction:'hold',dimension:'baseline',level:0,
     summary:known!==undefined?'Hold · '+known+' BPM':'Establish a baseline',
     cue:state?.evidenceCount?'Repeat known conditions and confirm the result before changing another difficulty dimension.':'Establish a comfortable, repeatable baseline before increasing difficulty.',
-    ...(known!==undefined?{bpm:known}:{}),
   };
 }
 
-function buildDimension(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],dimension:ProgressionDimension,level:0|1|2|3,direction:'reduce'|'advance',options:ProgressionOptions):ExerciseProgression {
-  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),last=latestBlock(blocks);
+function buildDimension(exercise:Exercise,conditions:EffectiveConditions,dimension:ProgressionDimension,level:0|1|2|3,direction:'reduce'|'advance'):ExerciseProgression {
+  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol);
   if(dimension==='tempo'){
-    const current=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??last?.finalBpm??last?.initialBpm??80;
+    const current=conditions.bpm??80;
     const min=exercise.minBpm??20,max=exercise.maxBpm??exercise.targetBpm??300,step=Math.max(2,Math.round(current*.04));
     const bpm=direction==='advance'?clamp(current+step,min,max):clamp(current-step,min,max);
-    return {engineVersion:1,direction,dimension,level,summary:(direction==='advance'?'Tempo step':'Tempo reset')+' · '+bpm+' BPM',cue:direction==='advance'?'Raise only the tempo. Keep the same pattern, click difficulty, dynamics, and orchestration.':'Lower only the tempo until control is repeatable again.',bpm};
+    return {...conditions,engineVersion:1,direction,dimension,level,summary:(direction==='advance'?'Tempo step':'Tempo reset')+' · '+bpm+' BPM',cue:direction==='advance'?'Raise only the tempo. Keep the same duration, subdivision, click difficulty, dynamics, and orchestration.':'Lower only the tempo until control is repeatable again.',bpm};
   }
   if(dimension==='duration'){
-    const current=options.seconds??last?.targetSeconds??exercise.defaultSeconds??300;
+    const current=conditions.targetSeconds;
     const targetSeconds=direction==='advance'?Math.min(1800,round15(current*1.2)):Math.max(60,round15(current*.75));
     const minutes=Math.round(targetSeconds/60*10)/10;
-    return {engineVersion:1,direction,dimension,level,summary:(direction==='advance'?'Longer set':'Shorter set')+' · '+minutes+' min',cue:direction==='advance'?'Keep all other conditions unchanged and extend only the continuous controlled duration.':'Shorten the set and rebuild endurance without changing the other conditions.',targetSeconds};
+    return {...conditions,engineVersion:1,direction,dimension,level,summary:(direction==='advance'?'Longer set':'Shorter set')+' · '+minutes+' min',cue:direction==='advance'?'Keep all other conditions unchanged and extend only the continuous controlled duration.':'Shorten the set and rebuild endurance without changing the other conditions.',targetSeconds};
   }
   if(dimension==='subdivision'){
     const authored=pulse?.subdivision??1,target=subdivisionAt(authored,level);
-    return {engineVersion:1,direction,dimension,level,summary:target===1?'Beat-only click support':'Click subdivision · '+target+'×',cue:'Keep the played pattern unchanged; only reduce the metronome subdivision support and maintain the internal subdivision.',subdivision:target};
+    return {...conditions,engineVersion:1,direction,dimension,level,summary:target===1?'Beat-only click support':'Click subdivision · '+target+'×',cue:'Keep tempo, duration, and click pattern unchanged; only reduce the metronome subdivision support and maintain the internal subdivision.',subdivision:target};
   }
   if(dimension==='click-density'){
     const timing=timingForClickDensity(level,pulse?.beats??4);
     const summary=timing.mode==='two-four'?'Click on 2 & 4':timing.mode==='sparse'?'Sparse click · every '+timing.sparseEvery+' beats':timing.mode==='one-per-bar'?'One click per bar':'Standard click';
-    return {engineVersion:1,direction,dimension,level,summary,cue:'Keep tempo and exercise material unchanged. Let the reduced click information test your internal pulse.',timingClick:timing};
+    return {...conditions,engineVersion:1,direction,dimension,level,summary,cue:'Keep tempo, duration, subdivision, and exercise material unchanged. Let the reduced click information test your internal pulse.',timingClick:timing};
   }
   if(dimension==='gap-click'){
     const timing=timingForGap(level),summary=timing.mode==='gap'?'Gap click · '+timing.gapClickBars+' on / '+timing.gapSilentBars+' silent':'Standard click';
-    return {engineVersion:1,direction,dimension,level,summary,cue:'Keep playing through the silent bars and meet the returning click without correcting by watching the screen.',timingClick:timing};
+    return {...conditions,engineVersion:1,direction,dimension,level,summary,cue:'Keep tempo, duration, subdivision, and exercise material unchanged. Keep playing through the silent bars and meet the returning click without correcting by watching the screen.',timingClick:timing};
   }
   const soft=softCue(dimension,level);
-  return {engineVersion:1,direction,dimension,level,summary:soft.summary,cue:soft.cue};
+  return {...conditions,engineVersion:1,direction,dimension,level,summary:soft.summary,cue:soft.cue};
 }
 
 function canAdvanceDimension(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],dimension:ProgressionDimension):boolean {
@@ -239,30 +263,31 @@ function chooseAdvanceDimension(exercise:Exercise,state:PracticeState|undefined,
 
 export function buildExerciseProgression(data:Data,exercise:Exercise,options:ProgressionOptions={}):ExerciseProgression {
   const state=stateFor(data,exercise),blocks=finishedExerciseBlocks(data,exercise.id),latest=latestProgression(blocks);
+  const conditions=effectiveConditions(data,exercise,state,blocks,options);
   const eligible=eligibleDimensions(data,exercise,state,options),allowed=new Set(eligible);
   let direction=state?.challenge??'hold';
   if(direction==='advance'&&options.allowAdvance===false)direction='hold';
 
   if(direction==='hold'){
-    if(latest&&allowed.has(latest.dimension)&&!(options.strictDuration&&latest.dimension==='duration'))return {...structuredClone(latest),direction:'hold'};
-    return baseline(exercise,state,blocks);
+    if(latest&&allowed.has(latest.dimension)&&!(options.strictDuration&&latest.dimension==='duration'))return {...structuredClone(latest),...conditions,direction:'hold'};
+    return baseline(exercise,state,conditions);
   }
 
   if(direction==='reduce'){
     if(latest&&allowed.has(latest.dimension)&&latest.level>0){
       const level=Math.max(0,latest.level-1) as 0|1|2|3;
-      return buildDimension(exercise,state,blocks,latest.dimension,level,'reduce',options);
+      return buildDimension(exercise,conditions,latest.dimension,level,'reduce');
     }
     const dimension=limitationDimension(state?.limitations??[],allowed);
-    if(dimension)return buildDimension(exercise,state,blocks,dimension,0,'reduce',options);
-    return baseline(exercise,state,blocks,'reduce');
+    if(dimension)return buildDimension(exercise,conditions,dimension,0,'reduce');
+    return baseline(exercise,state,conditions,'reduce');
   }
 
-  if(!state||['discover','learn','unassessed'].includes(state.mastery))return baseline(exercise,state,blocks);
+  if(!state||['discover','learn','unassessed'].includes(state.mastery))return baseline(exercise,state,conditions);
   const dimension=chooseAdvanceDimension(exercise,state,blocks,eligible);
-  if(!dimension)return baseline(exercise,state,blocks);
+  if(!dimension)return baseline(exercise,state,conditions);
   const nextLevel=Math.min(3,levelFor(blocks,dimension)+1) as 0|1|2|3;
-  return buildDimension(exercise,state,blocks,dimension,nextLevel,'advance',options);
+  return buildDimension(exercise,conditions,dimension,nextLevel,'advance');
 }
 
 export function applyExerciseProgression(block:RoutineBlock,progression:ExerciseProgression):RoutineBlock {
