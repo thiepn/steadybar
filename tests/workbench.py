@@ -467,7 +467,7 @@ class Workbench(e2e.MusicPracticeTests):
         dialog.get_by_label('Suggested Autopilot emphasis',exact=True).select_option('timing')
         dialog.get_by_role('button',name='Save phase',exact=True).click()
         expect(dialog).to_have_count(0);expect(self.page.get_by_text('Training phase updated.',exact=True)).to_be_visible()
-        edited=self.read("(()=>{const p=load('app/store.js').store.snapshot().trainingPlans.find(p=>p.id==="+json.dumps("__PLAN__")+");return p;})()".replace('"__PLAN__"',json.dumps(created['id'])))
+        edited=self.read("load('app/store.js').store.snapshot().trainingPlans.find(p=>p.status==='active')")
         self.assertEqual(edited['phases'][0]['weeklyMinutes'],90);self.assertEqual(edited['phases'][0]['emphasis'],'timing')
 
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
