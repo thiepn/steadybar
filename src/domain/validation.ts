@@ -77,6 +77,7 @@ export const validateRoutineBlock: Validator<RoutineBlock> = (v,p='Block') => {
   if(block.type==='exercise' && !block.exerciseId)fail(p,'an exercise block needs an exercise ID');
   if((block.type==='song' || block.type==='song-section') && !block.songId)fail(p,'a song block needs a song ID');
   if(block.type==='song-section' && !block.songSectionId)fail(p,'a section block needs a section ID');
+  if(block.progression&&block.type!=='exercise')fail(p,'exercise progression can only belong to an exercise block');
   return block;
 };
 const rawRoutine = obj({ ...entity, profileId:optional(id), name, description:text(), blocks:arr(validateRoutineBlock,200), scheduledDays:arr(num(0,6,true),7), tags:arr(text(80),50), builtin:bool, archived:bool });
@@ -108,6 +109,7 @@ export const validateSession: Validator<PracticeSession> = (v,p = 'Session') => 
       if((b.outcomes??[]).filter(o=>o.kind==='reading'&&o.firstRead).length>1)fail('Session','only one first-read outcome is allowed in a segment');
     }
     if(b.protocolState && b.protocolState.clean>b.protocolState.total)fail(p,'clean count exceeds attempts');
+    if(b.progressionSnapshot&&b.type!=='exercise')fail(p,'exercise progression evidence must belong to an exercise block');
     if(b.completed && b.skipped)fail(p,'a block cannot be both completed and skipped');
     if(new Set(b.tempoAttempts.map(a=>a.id)).size!==b.tempoAttempts.length)fail(p,'attempt IDs must be unique within a block');
   }
