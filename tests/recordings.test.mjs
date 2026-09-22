@@ -6,7 +6,7 @@ import {migratePracticeModel} from '../dist/app/db/practice-model-migration.js';
 import {activeProfile} from '../dist/app/domain/profiles.js';
 import {createBackup} from '../dist/app/db/backup.js';
 import {validateData,validatePracticeRecording} from '../dist/app/domain/validation.js';
-import {nextRecordingAttempt} from '../dist/app/app/recordings.js';
+import {nextRecordingAttempt} from '../dist/app/domain/recordings.js';
 
 const at='2026-09-23T08:00:00.000Z';
 function modern(){
