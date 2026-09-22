@@ -264,8 +264,8 @@ class Workbench(e2e.MusicPracticeTests):
         evidence=self.read("({global:load('app/store.js').store.snapshot().settings.metronome.timing.mode,snapshot:load('practice/controller.js').practice.session.blocks[load('practice/controller.js').practice.session.activeBlockIndex].timingClickSnapshot.mode})")
         self.assertEqual(evidence,{'global':'one-per-bar','snapshot':'one-per-bar'})
         tools=self.page.locator('details.focus-tools')
-        if not tools.evaluate('(e)=>e.open'): tools.locator('summary').click()
-        expect(self.page.get_by_role('button',name='Timing click · 1 click / bar',exact=True)).to_be_visible()
+        timing_control=tools.locator('button').filter(has_text='Timing click').first
+        expect(timing_control).to_contain_text('Timing click · 1 click / bar')
 
 
 
