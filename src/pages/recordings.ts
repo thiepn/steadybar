@@ -44,7 +44,7 @@ export function recordingsPage():Page{
   const data=store.snapshot(),profile=activeProfile(data),rows=(data.recordings??[]).filter(row=>row.profileId===profile.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   const page=el('div',{class:'page recordings-page'},pageHeader('','Recordings',`${profile.name} · Local practice evidence captured during sessions.`,[link('Practice','/practice','button secondary','play')]));
   const totalSeconds=rows.reduce((sum,row)=>sum+row.durationSeconds,0),totalBytes=rows.reduce((sum,row)=>sum+row.sizeBytes,0);
-  page.append(el('div',{class:'stats-strip'},stat('Recordings',rows.length),stat('Recorded time',duration(totalSeconds)),stat('Local audio',bytes(totalBytes)),stat('Milestones',rows.filter(row=>row.milestone).length)));
+  page.append(el('div',{class:'stats-strip'},stat('Recordings',rows.length),stat('Recorded time',duration(totalSeconds)),stat('Captured size',bytes(totalBytes)),stat('Milestones',rows.filter(row=>row.milestone).length)));
 
   if(!rows.length){
     page.append(empty('No recordings yet.','Open an active practice session and use Record attempt under Tools & block options. Audio stays on this device.',link('Start practice','/practice','button primary','play'),'note'));
