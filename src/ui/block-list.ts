@@ -21,7 +21,7 @@ export function blockList(blocks:RoutineBlock[],onChange:(blocks:RoutineBlock[])
   list.append(el('div',{class:'plan-columns','aria-hidden':'true'},el('span',{},'Sequence'),el('span',{},'Duration / tempo')));
   blocks.forEach((block,index)=>{
     const exercise=store.snapshot().exercises.find(e=>e.id===block.exerciseId),protocol=block.protocol??(exercise?exerciseProtocol(exercise):undefined),hasTempo=protocol?!!protocolPulse(protocol):block.bpm!==undefined;
-    const title=el('div',{class:'block-title'},el('strong',{},block.title),el('div',{class:'block-subtitle'},block.type!=='exercise'?badge(block.type==='free'?'Free practice':block.type==='song-section'?'Song section':'Song'):null,block.prescription?.generatedBy==='autopilot'?badge(`Autopilot · ${titleCase(block.prescription.intent)}`,'accent'):null,block.tempoTrainer?badge(`${block.tempoTrainer.mode} trainer`,'accent'):null,block.notes?el('span',{class:'muted small truncate',title:block.notes},block.notes):null));
+    const title=el('div',{class:'block-title'},el('strong',{},block.title),el('div',{class:'block-subtitle'},block.type!=='exercise'?badge(block.type==='free'?'Free practice':block.type==='song-section'?'Song section':'Song'):null,block.prescription?.generatedBy==='autopilot'?badge(`Autopilot · ${titleCase(block.prescription.intent)}`,'accent'):block.prescription?.generatedBy==='set-prep'?badge(`Set prep · ${titleCase(block.prescription.intent)}`,'accent'):null,block.tempoTrainer?badge(`${block.tempoTrainer.mode} trainer`,'accent'):null,block.notes?el('span',{class:'muted small truncate',title:block.notes},block.notes):null));
     const minutes=el('input',{type:'number',value:block.targetSeconds/60,min:1/60,max:1440,step:'any',inputmode:'decimal',class:'inline-number','aria-label':`${block.title} duration in minutes`});
     const bpm=el('input',{type:'number',value:block.bpm,min:20,max:300,step:1,inputmode:'numeric',class:'inline-number','aria-label':`${block.title} BPM`});
     const updateInput=async(field:'targetSeconds'|'bpm',value:number,control:HTMLInputElement)=>{
@@ -66,6 +66,7 @@ export function blockList(blocks:RoutineBlock[],onChange:(blocks:RoutineBlock[])
     });
     if(protocol){const cue=protocol.kind==='tempo'?protocol.sticking:protocolSummary(protocol);if(cue)title.append(el('p',{class:protocol.kind==='tempo'?'block-cue sticking':'block-cue'},cue));}
     if(block.progression)title.append(el('p',{class:'block-cue block-progression'},'Next challenge · '+block.progression.summary));
+    if(block.setPrep)title.append(el('p',{class:'block-cue block-set-prep'},`Set prep · ${titleCase(block.setPrep.stage)} · ${titleCase(block.setPrep.role)}`));
     list.append(row);
   });
   list.append(el('div',{class:'block-add'},button('Add block',()=>editBlock(undefined,async block=>change(rows=>[...rows,block])),'ghost','plus')));
