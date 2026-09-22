@@ -12,6 +12,15 @@ function bytes(value:number):string{
   if(value<1024*1024)return (value/1024).toFixed(value<10*1024?1:0)+' KB';
   return (value/(1024*1024)).toFixed(value<10*1024*1024?1:0)+' MB';
 }
+function recordingExtension(mimeType:string):string{
+  if(mimeType.includes('ogg'))return 'ogg';
+  if(mimeType.includes('mp4')||mimeType.includes('aac'))return 'm4a';
+  if(mimeType.includes('wav'))return 'wav';
+  return 'webm';
+}
+function safeFilename(value:string):string{
+  return value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'practice';
+}
 function editRecording(recording:PracticeRecording):void{
   formDialog('Recording details',[
     select('rating','Self-rating',[['','Not rated'],['1','1 · Rough'],['2','2 · Developing'],['3','3 · Okay'],['4','4 · Good'],['5','5 · Strong']],recording.rating?String(recording.rating):''),
@@ -50,6 +59,13 @@ export function recordingsPage():Page{
   page.append(player);
 
   const list=el('section',{class:'panel'},sectionHeader('Practice evidence',`${rows.length} saved attempt${rows.length===1?'':'s'}`));
+  const exportRecording=async(row:PracticeRecording)=>{
+    const blob=await recordingBlob(row);
+    if(!blob){notify('The audio file is unavailable on this device, so it cannot be exported.','error');return;}
+    const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+    anchor.href=url;anchor.download=`steadybar-${safeFilename(row.title)}-attempt-${row.attemptNumber}.${recordingExtension(row.mimeType)}`;
+    anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
   const load=async(row:PracticeRecording)=>{
     const blob=await recordingBlob(row);
     if(!blob){notify('The audio file is unavailable on this device. Its recording metadata is still preserved.','error');return;}
@@ -69,6 +85,7 @@ export function recordingsPage():Page{
       row.rating?badge(`Rating ${row.rating}/5`):null);
     const actions=el('div',{class:'actions wrap'},
       button('Play',()=>load(row),'secondary','play'),
+      button('Export',()=>exportRecording(row),'ghost'),
       button('Details',()=>editRecording(row),'ghost','note'),
       button('Delete',async()=>{if(await confirmAction('Delete this recording?','The local audio and its recording metadata will be permanently removed. Practice-session history is unchanged.','Delete recording',true)){await deletePracticeRecording(row.id);notify('Recording deleted.');}},'ghost danger-text'));
     list.append(el('article',{class:'recording-card'},el('div',{class:'recording-card-main'},el('div',{class:'split'},el('div',{},el('div',{class:'eyebrow'},formatDate(row.createdAt,true)),el('h3',{},row.title)),el('strong',{},duration(row.durationSeconds))),tags,row.note?el('p',{class:'muted small pre-line'},row.note):null,el('p',{class:'muted small'},`${row.mimeType||'Audio'} · ${bytes(row.sizeBytes)} · stored locally`)),actions));
