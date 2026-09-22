@@ -22,6 +22,12 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Metronome & timing training — 2.7.0
+
+The metronome now supports **Standard**, **2 & 4**, **Sparse**, **One click per bar**, and **Gap click** modes alongside the existing 1×/2×/3×/4× subdivision and per-beat accent controls. Gap training includes 3 bars click → 1 silent, 2 → 2, and 1 → 3 progressions; sparse mode can click every 2, 3, or 4 beats. Count-ins stay audible, while intentionally silent beats do not flash visually.
+
+The standalone metronome also has a configurable **Tempo ramp** (start BPM, increment, interval, ceiling). The Focus Player exposes timing-click selection under Tools & block options without changing the current practice block, evidence, mastery, retention, Priority, or Autopilot result model. Timing modes are scheduled on the Web Audio clock rather than JavaScript UI timers.
+
 ## Guided courses — 2.1.0
 
 Open **Learn** to follow an actual teaching sequence: **16 original courses, 94 lessons and 188 runnable lesson tasks**. Drums, Guitar, Bass, Piano and Voice each have Foundations (8 lessons), Skill development (6) and Ensemble application (4). The Custom profile has a four-lesson practice-method course, not fictitious instrument-specific tuition.

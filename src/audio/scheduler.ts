@@ -1,5 +1,58 @@
-import type { Accent, MetronomeConfig } from '../domain/models.js';
+import { DEFAULT_TIMING_CLICK, type Accent, type MetronomeConfig, type TimingClickConfig } from '../domain/models.js';
 export interface BeatEvent {time:number;beat:number;part:number;bar:number;accent:Accent;countingIn:boolean;firstPracticeBeat:boolean}
+
+export function resolvedTiming(config:MetronomeConfig):TimingClickConfig {
+  return config.timing ? {...config.timing} : {...DEFAULT_TIMING_CLICK};
+}
+
+export function timingClickLabel(config:MetronomeConfig):string {
+  const timing=resolvedTiming(config);
+  switch(timing.mode){
+    case 'standard': return 'Standard';
+    case 'two-four': return '2 & 4';
+    case 'sparse': return `Every ${timing.sparseEvery} beats`;
+    case 'one-per-bar': return '1 click / bar';
+    case 'gap': return `${timing.gapClickBars} on · ${timing.gapSilentBars} silent`;
+  }
+}
+
+function sameTiming(a:MetronomeConfig,b:MetronomeConfig):boolean {
+  const x=resolvedTiming(a),y=resolvedTiming(b);
+  return x.mode===y.mode && x.sparseEvery===y.sparseEvery && x.gapClickBars===y.gapClickBars && x.gapSilentBars===y.gapSilentBars;
+}
+
+function baseAccent(config:MetronomeConfig,beat:number,part:number):Accent {
+  const beatAccent=config.accents[beat] ?? 1;
+  if(beatAccent===0)return 0;
+  return part===0 ? beatAccent : 1;
+}
+
+function clickAccent(config:MetronomeConfig,bar:number,beat:number,part:number,countingIn:boolean):Accent {
+  const normal=baseAccent(config,beat,part);
+  if(countingIn)return normal;
+  const timing=resolvedTiming(config),practiceBar=Math.max(0,bar-config.countIn);
+  switch(timing.mode){
+    case 'standard': return normal;
+    case 'two-four':
+      return part===0 && (beat===1 || beat===3) ? (config.accents[beat]===0 ? 0 : 1) : 0;
+    case 'sparse': {
+      if(part!==0)return 0;
+      const position=practiceBar*config.meter.beats+beat;
+      if(position%timing.sparseEvery!==0)return 0;
+      const accent=config.accents[beat] ?? 1;
+      return accent===0 ? 0 : beat===0 ? 2 : 1;
+    }
+    case 'one-per-bar': {
+      if(part!==0 || beat!==0)return 0;
+      return config.accents[0]===0 ? 0 : 2;
+    }
+    case 'gap': {
+      const cycle=timing.gapClickBars+timing.gapSilentBars;
+      return practiceBar%cycle<timing.gapClickBars ? normal : 0;
+    }
+  }
+}
+
 /** Pure audio-time clock. Rendering and wall-clock timers never determine note positions. */
 export class ScheduleClock {
   nextTime=0;beat=0;part=0;bar=0;
@@ -10,14 +63,15 @@ export class ScheduleClock {
   constructor(config:MetronomeConfig, startTime=0){this.config=structuredClone(config);this.nextTime=startTime;}
   update(config:MetronomeConfig):void{
     // A changed count-in applies to the next start, never to an already-running count-in.
+    const structuralChanged=config.meter.beats!==this.config.meter.beats || config.meter.beatUnit!==this.config.meter.beatUnit || config.subdivision!==this.config.subdivision || !sameTiming(config,this.config);
     this.config={...this.config,bpm:config.bpm,volume:config.volume,accents:config.meter.beats===this.config.meter.beats ? [...config.accents] : this.config.accents};
-    if(config.meter.beats!==this.config.meter.beats || config.meter.beatUnit!==this.config.meter.beatUnit || config.subdivision!==this.config.subdivision)this.structural={...structuredClone(config),countIn:this.config.countIn};
+    if(structuralChanged)this.structural={...structuredClone(config),countIn:this.config.countIn};
     else this.structural=undefined;
   }
   next():BeatEvent {
     if(this.beat===0 && this.part===0 && this.structural){this.config={...this.structural,bpm:this.config.bpm,volume:this.config.volume};this.structural=undefined;}
-    const c=this.config;
-    const event:BeatEvent={time:this.nextTime,beat:this.beat,part:this.part,bar:this.bar,accent:(c.accents[this.beat] ?? 1)===0 ? 0 : this.part===0 ? c.accents[this.beat] ?? 1 : 1,countingIn:this.bar<c.countIn,firstPracticeBeat:this.bar===c.countIn && this.beat===0 && this.part===0};
+    const c=this.config,countingIn=this.bar<c.countIn;
+    const event:BeatEvent={time:this.nextTime,beat:this.beat,part:this.part,bar:this.bar,accent:clickAccent(c,this.bar,this.beat,this.part,countingIn),countingIn,firstPracticeBeat:this.bar===c.countIn && this.beat===0 && this.part===0};
     if(event.firstPracticeBeat)this.practiceStartTime=event.time;
     this.nextTime+=60/c.bpm/c.subdivision;
     this.part++;

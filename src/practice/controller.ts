@@ -2,7 +2,8 @@ import { reference } from '../audio/reference.js';
 import type { PracticeProtocol } from '../domain/practice-types.js';
 import { validateProtocol, validateOutcome, assertOutcomeMatches, assertProtocolCompatible } from '../domain/practice-validation.js';
 import { protocolPulse, patternFits, fretPrompt } from '../domain/protocols.js';
-import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TrainerConfig } from '../domain/models.js';
+import { DEFAULT_TIMING_CLICK } from '../domain/models.js';
+import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TimingClickConfig, TrainerConfig } from '../domain/models.js';
 import type { LimitationTag, PracticeContext, PracticeResult } from '../domain/practice-state.js';
 import { contextForIntent } from '../domain/practice-state.js';
 import { finalizeSession, get, insertActiveSession, updateSession } from '../db/database.js';
@@ -73,7 +74,7 @@ export class PracticeController {
   elapsed():number{return this.session ? blockElapsed(this.session) : 0;}
   private config():MetronomeConfig{
     const s=this.session!,block=s.blocks[s.activeBlockIndex]!,settings=store.snapshot().settings.metronome;
-    return {...structuredClone(settings),bpm:s.runtime.bpm,meter:block.meterSnapshot,subdivision:block.subdivisionSnapshot,accents:settings.meter.beats===block.meterSnapshot.beats && settings.meter.beatUnit===block.meterSnapshot.beatUnit ? [...settings.accents] : defaultAccents(block.meterSnapshot.beats,block.meterSnapshot.beatUnit)};
+    return {...structuredClone(settings),bpm:s.runtime.bpm,meter:block.meterSnapshot,subdivision:block.subdivisionSnapshot,accents:settings.meter.beats===block.meterSnapshot.beats && settings.meter.beatUnit===block.meterSnapshot.beatUnit ? [...settings.accents] : defaultAccents(block.meterSnapshot.beats,block.meterSnapshot.beatUnit),timing:structuredClone(block.timingClickSnapshot??settings.timing??DEFAULT_TIMING_CLICK)};
   }
   private async requestWake():Promise<void>{
     if(!store.snapshot().settings.wakeLock || !('wakeLock' in navigator) || document.hidden)return;
@@ -130,6 +131,19 @@ export class PracticeController {
     const wasRunning=this.session?.runtime.phase==='running';
     await this.pause();await this.mutate(s=>{s.runtime.metronomeOn=!s.runtime.metronomeOn;return s;});
     if(wasRunning)await this.start();
+  }
+  async setTimingClick(timing:TimingClickConfig):Promise<void>{
+    await this.mutate(s=>{
+      for(let i=s.activeBlockIndex;i<s.blocks.length;i++){
+        const block=s.blocks[i]!;
+        if(block.initialBpm!==undefined&&(i===s.activeBlockIndex||!block.startedAt))block.timingClickSnapshot=structuredClone(timing);
+      }
+      return s;
+    });
+    const settings=store.snapshot().settings;
+    await store.settings({metronome:{...settings.metronome,timing:structuredClone(timing)}},false);
+    if(audio.running)audio.update(this.config());
+    this.emit();
   }
   async attempt(rating:Rating):Promise<void>{
     const current=this.session?.blocks[this.session.activeBlockIndex];if(current?.protocolSnapshot&&current.protocolSnapshot.kind!=='tempo')throw new Error('Use this exercise’s task results instead of a tempo rating.');

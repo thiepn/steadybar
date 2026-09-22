@@ -236,6 +236,38 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(after,before+1);expect(self.page.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
 
 
+    def test_52_timing_training_controls_persist_and_reach_focus_player(self):
+        self.onboard();self.route('/metronome')
+        mode=self.page.get_by_label('Timing click mode',exact=True)
+        mode.select_option('gap')
+        expect(self.page.get_by_label('Audible bars',exact=True)).to_be_visible()
+        expect(self.page.get_by_label('Silent bars',exact=True)).to_be_visible()
+        self.page.get_by_role('button',name='2 click → 2 silent',exact=True).click()
+        self.page.wait_for_timeout(350)
+        timing=self.read("load('app/store.js').store.snapshot().settings.metronome.timing")
+        self.assertEqual(timing['mode'],'gap');self.assertEqual(timing['gapClickBars'],2);self.assertEqual(timing['gapSilentBars'],2)
+        self.page.set_viewport_size({'width':320,'height':720});self.assert_bounds(320)
+        ramp=self.page.get_by_role('button',name='Tempo ramp off',exact=True);ramp.click()
+        expect(self.page.get_by_role('button',name='Tempo ramp on',exact=True)).to_be_visible()
+        expect(self.page.get_by_label('BPM',exact=True)).to_be_disabled()
+        self.assert_bounds(320);self.page.get_by_role('button',name='Tempo ramp on',exact=True).click()
+        expect(self.page.get_by_label('BPM',exact=True)).to_be_enabled()
+
+        self.route('/library/rudiment-2');self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.open_focus_drawer('Tools & block options')
+        expect(self.page.get_by_role('button',name=re.compile('Timing click · 2 on · 2 silent'))).to_be_visible()
+        self.page.get_by_role('button',name=re.compile('Timing click · 2 on · 2 silent')).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Click mode',exact=True).select_option('one-per-bar')
+        dialog.get_by_role('button',name='Use click pattern',exact=True).click()
+        expect(dialog).to_have_count(0)
+        evidence=self.read("({global:load('app/store.js').store.snapshot().settings.metronome.timing.mode,snapshot:load('practice/controller.js').practice.session.blocks[load('practice/controller.js').practice.session.activeBlockIndex].timingClickSnapshot.mode})")
+        self.assertEqual(evidence,{'global':'one-per-bar','snapshot':'one-per-bar'})
+        tools=self.page.locator('details.focus-tools')
+        timing_control=tools.locator('button').filter(has_text='Timing click').first
+        expect(timing_control).to_contain_text('Timing click · 1 click / bar')
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
