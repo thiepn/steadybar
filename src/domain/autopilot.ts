@@ -1,5 +1,6 @@
 import type { DailyPlan, Data, PracticeSession, RoutineBlock, Song, SongSection } from './models.js';
 import { exerciseBpm } from './protocols.js';
+import { applyExerciseProgression, buildExerciseProgression } from './progression-engine.js';
 import { rankPracticeTargets, type PriorityCandidate } from './priority-engine.js';
 import { skillDefinition } from './skill-graph.js';
 import type { PlanGeneration, PracticeIntent, PracticeReasonCode, PracticeState, PracticeTargetRef } from './practice-state.js';
@@ -206,7 +207,11 @@ function songBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:Slo
 function exerciseBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:SlotRole,intent:AutopilotSessionIntent):RoutineBlock {
   const target=candidate.target;if(target.kind!=='exercise')throw new Error('Expected an exercise target.');
   const exercise=data.exercises.find(e=>e.id===target.exerciseId);if(!exercise)throw new Error('Autopilot exercise target is unavailable.');
-  return {id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:candidate.profileId,title:exercise.name,targetSeconds:seconds,bpm:exerciseBpm(exercise),notes:'',prescription:prescription(candidate,role,intent),order:0};
+  const progression=buildExerciseProgression(data,exercise,{seconds,strictDuration:true,allowAdvance:role!=='ramp-in'});
+  const base:RoutineBlock={id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:candidate.profileId,title:exercise.name,targetSeconds:seconds,bpm:exerciseBpm(exercise),notes:'',prescription:prescription(candidate,role,intent),order:0};
+  const progressed=applyExerciseProgression(base,progression);
+  progressed.targetSeconds=seconds;
+  return progressed;
 }
 function candidateBlock(data:Data,candidate:PriorityCandidate,seconds:number,role:SlotRole,intent:AutopilotSessionIntent):RoutineBlock {
   return candidate.target.kind==='exercise'?exerciseBlock(data,candidate,seconds,role,intent):songBlock(data,candidate,seconds,role,intent);
