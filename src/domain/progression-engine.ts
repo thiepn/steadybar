@@ -45,9 +45,10 @@ function latestBlock(blocks:PracticeBlock[]):PracticeBlock|undefined{return bloc
 function effectiveConditions(data:Data,exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],options:ProgressionOptions):EffectiveConditions {
   const pulse=protocolPulse(exerciseProtocol(exercise)),last=latestBlock(blocks);
   const bpm=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??last?.finalBpm??last?.initialBpm;
+  const manualDurationSource=[...blocks].reverse().find(block=>block.prescriptionSnapshot?.generatedBy!=='autopilot');
   const targetSeconds=options.strictDuration&&options.seconds!==undefined
     ? options.seconds
-    : last?.targetSeconds??options.seconds??exercise.defaultSeconds??300;
+    : manualDurationSource?.targetSeconds??options.seconds??exercise.defaultSeconds??300;
   const subdivision=pulse ? last?.subdivisionSnapshot??pulse.subdivision : undefined;
   const timingClick=pulse
     ? structuredClone(last?.timingClickSnapshot??data.settings.metronome.timing??DEFAULT_TIMING_CLICK)
