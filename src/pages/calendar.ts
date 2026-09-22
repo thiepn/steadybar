@@ -5,7 +5,7 @@ import { buildWeeklySchedule, addScheduleDays, scheduleForWeek, weekStartFor, we
 import type { TrainingEmphasis, WeeklySchedule, WeeklyScheduleDay, WeeklyScheduleDayKind } from '../domain/models.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, checkbox, empty, formDialog, formNumber, formText, input, link, notify, pageHeader, progressBar, sectionHeader, select, stat, textarea } from '../ui/components.js';
+import { badge, button, checkbox, empty, formDialog, formNumber, formText, input, link, notify, pageHeader, sectionHeader, select, stat, textarea } from '../ui/components.js';
 import { duration, formatDate, localDate, titleCase } from '../domain/utils.js';
 
 const kindOptions:[WeeklyScheduleDayKind,string][]=[['practice','Practice'],['optional','Optional'],['rest','Rest']];
@@ -62,9 +62,8 @@ function dayCard(schedule:WeeklySchedule,day:WeeklyScheduleDay,actual:{activeSec
 export function calendarPage(requestedWeek?:string):Page{
   const data=store.view(),profile=activeProfile(store.snapshot()),weekStart=requestedWeek&&weekStartFor(requestedWeek)===requestedWeek?requestedWeek:weekStartFor(),schedule=scheduleForWeek(data,profile.id,weekStart);
   const previous=addScheduleDays(weekStart,-7),next=addScheduleDays(weekStart,7),current=weekStartFor(),weekEnd=addScheduleDays(weekStart,6);
-  const page=el('div',{class:'page calendar-page'},pageHeader('Weekly orchestration','Practice Calendar',`${profile.name} · ${formatDate(weekStart)} → ${formatDate(weekEnd)}`,[
-    link('← Previous','/calendar/'+previous,'button secondary'),weekStart!==current?link('Current week','/calendar/'+current,'button secondary'):null,link('Next →','/calendar/'+next,'button secondary'),
-  ].filter((item):item is HTMLElement=>!!item)));
+  const pageActions=[link('← Previous','/calendar/'+previous,'button secondary'),...(weekStart!==current?[link('Current week','/calendar/'+current,'button secondary')]:[]),link('Next →','/calendar/'+next,'button secondary')];
+  const page=el('div',{class:'page calendar-page'},pageHeader('Weekly orchestration','Practice Calendar',`${profile.name} · ${formatDate(weekStart)} → ${formatDate(weekEnd)}`,pageActions));
 
   if(!schedule){
     page.append(el('section',{class:'panel calendar-empty'},sectionHeader('This week is not scheduled','Calendar planning is separate from your executable DailyPlans.'),
