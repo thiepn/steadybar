@@ -23,7 +23,10 @@ export function todayPage(): Page {
   const weekStart = isoWeekStart(), weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const week = filterSessions(data.sessions, localDate(weekStart), localDate(weekEnd));
-  const savePlan = async (blocks: RoutineBlock[]) => store.save('dailyPlans', { ...(plan || metadata()), profileId:profile.id,date: localDate(), blocks });
+  const savePlan = async (blocks: RoutineBlock[]) => {
+    const keepSetPrep=plan?.generation?.kind!=='set-prep'||blocks.every(block=>block.setPrep&&block.setPrep.setlistId===plan.generation?.setlistId&&block.setPrep.stage===plan.generation?.setPrepStage&&block.setPrep.mode===plan.generation?.setPrepMode);
+    await store.save('dailyPlans',{...(plan||metadata()),profileId:profile.id,date:localDate(),blocks,...(!keepSetPrep?{generation:undefined}:{})});
+  };
   const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`));
   page.append(learningSummary());
   if(profile.instrumentType==='voice'){
