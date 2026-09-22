@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Practice analytics & diagnostics — 2.10.0
+
+Progress now combines the existing practice-time, distribution, tempo, task, frequency and goal views with a runtime-only diagnostics layer. The analytics engine is rebuilt directly from current sessions and PracticeState every time; there is no cached “AI score” that can drift away from the underlying evidence.
+
+For bounded date ranges, Steadybar compares the selected window with the immediately preceding equal-length window. It can surface changes in active practice, active days and evaluated **Solid / Usable / Not Yet** result mix. Directional result insights require minimum evidence in both periods; otherwise the app explicitly says the trend is underdetermined.
+
+Additional diagnostic views expose recurring self-reported limitation tags, due retention reviews, Peak / Working / Cold tempo gaps, Autopilot + Set Prep follow-through, Phase 8 progression outcomes, current mastery-state distribution and an inspectable per-target evidence table. Every diagnostic includes the concrete counts or BPM values behind it.
+
+These signals are deliberately descriptive. Higher practice time is not automatically better, a due review is not proof of decay, repeated limitation tags are not a medical or technical diagnosis, and no single score is presented as “musicianship.”
+
 ## Set Prep & performance readiness — 2.9.0
 
 Dated setlists now have an evidence-based **Set Prep** workspace. Steadybar does not assign a pseudo-precise readiness percentage; each song is classified as **Unassessed**, **Needs work**, **Usable**, or **Ready evidence** from the selected profile/part’s current practice evidence.

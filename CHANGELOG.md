@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.10.0 — Practice Analytics & Diagnostic Intelligence — 2026-09-22
+
+- Add a runtime-only diagnostics engine derived from authoritative sessions and PracticeState instead of persisting stale analytics caches or opaque scores.
+- Compare bounded date ranges against the immediately preceding equal-length window for active practice time, active days and evaluated Solid / Usable / Not Yet result mix.
+- Require minimum evaluation coverage before emitting directional result insights; insufficient evidence is surfaced explicitly instead of extrapolated.
+- Add recurring-limitation diagnostics using exact tagged-block counts, including comparison with the previous equal window.
+- Surface current retention reviews that are due without treating due dates as automatic skill decay.
+- Detect meaningful Peak / Working / Cold tempo reliability gaps and show the underlying BPM values instead of collapsing them into one “speed” metric.
+- Summarize Autopilot + Set Prep follow-through separately from mastery, including completed, skipped and ended-early generated blocks.
+- Aggregate Phase 8 progression outcomes by challenge dimension and flag repeated Not Yet friction only when multiple evaluated challenge blocks support it.
+- Add a current mastery-state distribution and an inspectable evidence-state table with latest result, evidence count, last practice, review status and Peak / Working / Cold tempo.
+- Expand Progress with equal-window trends, deterministic diagnostic cards, retention/tempo reliability, recurring limitations, progression outcomes and generated-practice follow-through while preserving all existing time, distribution, tempo, task, frequency and goal views.
+- Keep all analytics profile-scoped and responsive from 320px mobile layouts through desktop.
+- Add unit and browser coverage for trend windows, minimum-evidence safeguards, recurring limitations, due reviews, tempo gaps, generated follow-through, progression friction and responsive diagnostics UI.
+- No IndexedDB or backup-format migration is required.
+
 ## 2.9.0 — Set Prep & Performance Readiness — 2026-09-22
 
 - Add an evidence-based Set Prep engine on top of dated setlists, existing repertoire PracticeState, Priority, Mastery/Retention and performance-context evidence.
