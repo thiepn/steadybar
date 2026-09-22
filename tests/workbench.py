@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/library','/routines','/songs','/setlists','/goals','/review','/progress','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/library','/routines','/songs','/setlists','/goals','/cycles','/review','/progress','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -425,6 +425,62 @@ class Workbench(e2e.MusicPracticeTests):
 
         self.route('/progress')
         expect(self.page.locator('#main').get_by_role('link',name='Weekly Review',exact=True)).to_be_visible()
+
+
+    def test_57_training_cycles_create_activate_edit_and_feed_weekly_review(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const d=structuredClone(load('app/store.js').store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId),exercise=d.exercises.find(e=>e.profileId===profile.id&&e.primarySkillId),today=load('domain/utils.js').localDate(),end=new Date();
+          end.setDate(end.getDate()+69);
+          const endOn=load('domain/utils.js').localDate(end),now=new Date().toISOString();
+          d.goals=[{id:'qa-cycle-goal',createdAt:now,updatedAt:now,profileId:profile.id,type:'custom',title:'QA long-term cycle goal',description:'Long-term focus',exerciseId:exercise.id,targetValue:1,unit:'focus',deadline:endOn,completed:false}];
+          d.trainingPlans=[];
+          await load('db/database.js').replaceData(d);await load('app/store.js').store.refresh();
+          return {today,endOn,goalId:'qa-cycle-goal'};
+        })()""")
+        self.route('/cycles')
+        expect(self.page.get_by_role('heading',name='Training Cycles',exact=True)).to_be_visible()
+        self.page.get_by_role('button',name='New cycle',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Plan name',exact=True).fill('QA 10-week development')
+        dialog.get_by_label('Start date',exact=True).fill(fixture['today'])
+        dialog.get_by_label('Target / end date',exact=True).fill(fixture['endOn'])
+        dialog.get_by_label('Baseline weekly minutes',exact=True).fill('180')
+        goal=dialog.get_by_label('QA long-term cycle goal',exact=True)
+        if not goal.is_checked():goal.check()
+        dialog.get_by_role('button',name='Create draft',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.get_by_role('heading',name='QA 10-week development',exact=True)).to_be_visible()
+        self.assertGreaterEqual(self.page.locator('.training-phase-card').count(),5)
+        created=self.read("""(()=>{const p=load('app/store.js').store.snapshot().trainingPlans[0];return {id:p.id,status:p.status,start:p.startOn,end:p.endOn,kinds:p.phases.map(x=>x.kind)};})()""")
+        self.assertEqual(created['status'],'draft');self.assertEqual(created['start'],fixture['today']);self.assertEqual(created['end'],fixture['endOn'])
+        self.assertIn('deload',created['kinds'])
+
+        self.page.get_by_role('button',name='Activate',exact=True).click()
+        expect(self.page.get_by_text('Training cycle activated.',exact=True)).to_be_visible()
+        self.page.wait_for_function("()=>window.__qa ? __qa.load('app/store.js').store.snapshot().trainingPlans.some(p=>p.status==='active') : document.body.textContent.includes('Active cycle')")
+        active=self.read("(()=>{const p=load('app/store.js').store.snapshot().trainingPlans.find(p=>p.status==='active');return {id:p?.id,status:p?.status};})()")
+        self.assertEqual(active['id'],created['id']);self.assertEqual(active['status'],'active')
+
+        self.page.locator('.training-phase-card').first.get_by_role('button',name='Edit phase',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Weekly minute target',exact=True).fill('90')
+        dialog.get_by_label('Suggested Autopilot emphasis',exact=True).select_option('timing')
+        dialog.get_by_role('button',name='Save phase',exact=True).click()
+        expect(dialog).to_have_count(0);expect(self.page.get_by_text('Training phase updated.',exact=True)).to_be_visible()
+        edited=self.read("(()=>{const p=load('app/store.js').store.snapshot().trainingPlans.find(p=>p.id==="+json.dumps("__PLAN__")+");return p;})()".replace('"__PLAN__"',json.dumps(created['id'])))
+        self.assertEqual(edited['phases'][0]['weeklyMinutes'],90);self.assertEqual(edited['phases'][0]['emphasis'],'timing')
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+        self.route('/review')
+        expect(self.page.get_by_role('heading',name='Long-term training cycle',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('QA 10-week development',exact=False).first).to_be_visible()
+        self.assert_bounds(390)
+
+        self.route('/goals')
+        expect(self.page.get_by_text('Active cycle',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('link',name='Training Cycles',exact=True)).to_be_visible()
 
 
 
