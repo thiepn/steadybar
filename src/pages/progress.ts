@@ -14,7 +14,6 @@ import { dayChart, lineChart } from '../ui/charts.js';
 
 const trendLabel=(value:TrendDirection)=>value==='up'?'Higher':value==='down'?'Lower':value==='steady'?'Similar':'No comparison';
 const trendClass=(value:TrendDirection)=>value==='up'?'trend-up':value==='down'?'trend-down':value==='steady'?'trend-steady':'trend-unavailable';
-const resultSummary=(value:{solid:number;usable:number;notYet:number;total:number})=>value.total?`${value.solid} Solid · ${value.usable} Usable · ${value.notYet} Not Yet`:'No evaluated blocks';
 
 function comparisonCard(label:string,current:string,previous:string|undefined,trend:TrendDirection):HTMLElement{
   return el('div',{class:'diagnostic-comparison-card'},
