@@ -203,6 +203,7 @@ class Workbench(e2e.MusicPracticeTests):
             sessionBlocks:session?.blocks.length,
             sourcePlan:session?.sourceDailyPlanId,
             generatedBy:session?.blocks.map(b=>b.prescriptionSnapshot?.generatedBy),
+            progressions:session?.blocks.filter(b=>b.sourceExerciseId).map(b=>b.progressionSnapshot?.engineVersion),
             scheduled:targets.map(target=>d.practiceStates.find(s=>JSON.stringify(s.target)===JSON.stringify(target))?.scheduling.lastScheduledAt),
           };
         })()""")
@@ -212,6 +213,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(result['planBlocks'],2);self.assertEqual(result['sessionBlocks'],2)
         self.assertEqual(result['sourcePlan'],self.read("load('app/store.js').store.snapshot().dailyPlans.find(p=>p.generation?.kind==='autopilot').id"))
         self.assertEqual(result['generatedBy'],['autopilot','autopilot'])
+        self.assertTrue(result['progressions']);self.assertTrue(all(v==1 for v in result['progressions']))
         self.assertTrue(all(result['scheduled']))
 
 
@@ -266,6 +268,22 @@ class Workbench(e2e.MusicPracticeTests):
         tools=self.page.locator('details.focus-tools')
         timing_control=tools.locator('button').filter(has_text='Timing click').first
         expect(timing_control).to_contain_text('Timing click · 1 click / bar')
+
+
+    def test_53_exercise_next_challenge_is_visible_and_launches_with_evidence(self):
+        self.onboard();self.route('/library/rudiment-2')
+        expect(self.page.get_by_role('heading',name='Next challenge',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('button',name='Start next challenge',exact=True)).to_be_visible()
+        for width,height in ((320,720),(390,844),(820,1000)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+        self.page.get_by_role('button',name='Start next challenge',exact=True).click()
+        expect(self.page.locator('.focus-workspace')).to_be_visible()
+        result=self.read("(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {progression:b.progressionSnapshot,bpm:b.initialBpm,timing:b.timingClickSnapshot};})()")
+        self.assertEqual(result['progression']['engineVersion'],1)
+        self.assertIn(result['progression']['direction'],('reduce','hold','advance'))
+        expect(self.page.locator('.focus-progression')).to_be_visible()
+        expect(self.page.locator('.focus-progression-cue')).to_be_visible()
+        self.assert_bounds(self.page.viewport_size['width'])
 
 
 
