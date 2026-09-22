@@ -10,7 +10,7 @@ import { readData, replaceData } from './database.js';
 export function createBackup(data:Data,timestamp=nowISO()):Backup {
   const modern=data.schemaVersion===2&&data.practiceModelVersion===1;
   const version:Backup['version']=modern?4:data.schemaVersion===2?3:1;
-  const payload=data.schemaVersion===2?{...data,courseProgress:data.courseProgress??[],...(modern?{practiceStates:data.practiceStates??[],priorityCycles:data.priorityCycles??[]}:{})}:data;
+  const payload=data.schemaVersion===2?{...data,courseProgress:data.courseProgress??[],trainingPlans:data.trainingPlans??[],...(modern?{practiceStates:data.practiceStates??[],priorityCycles:data.priorityCycles??[]}:{})}:data;
   return validateBackup({format:'music-practice-os',version,exportedAt:timestamp,data:payload});
 }
 export function parseBackup(text:string):Backup {
