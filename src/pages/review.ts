@@ -1,7 +1,7 @@
 import { applyWeeklyFocus, endWeeklyFocus, restoreWeeklyFocus } from '../app/weekly-review.js';
 import { store } from '../app/store.js';
 import { activeProfile } from '../domain/profiles.js';
-import { buildWeeklyReview, type WeeklyFocusSelection } from '../domain/weekly-review.js';
+import { buildWeeklyReview, type WeeklyFocusSelection, type WeeklyFocusSuggestion } from '../domain/weekly-review.js';
 import { skillDefinition } from '../domain/skill-graph.js';
 import type { PriorityCycle } from '../domain/practice-state.js';
 import type { Page } from '../app/navigation.js';
@@ -45,7 +45,7 @@ export function weeklyReviewPage():Page{
   if(!review.focus.length){
     proposal.append(empty('No focus proposal yet','Steadybar does not have enough eligible skill-linked material to suggest a Priority Cycle. You can continue with Balanced Autopilot and current goals.',link('Open Today','/','button secondary')));
   }else{
-    const controls:{include:HTMLInputElement;weight:HTMLSelectElement;suggestion:typeof review.focus[number]}[]=[];
+    const controls:{include:HTMLInputElement;weight:HTMLSelectElement;suggestion:WeeklyFocusSuggestion}[]=[];
     for(const [index,suggestion] of review.focus.entries()){
       const includeWrap=checkbox(`weekly-focus-${index}`,`Include ${suggestion.label}`,true),include=includeWrap.querySelector('input')!;
       const weight=el('select',{'aria-label':`Priority strength · ${suggestion.label}`},
