@@ -253,8 +253,8 @@ export async function readData():Promise<Data> {
     await done;
     const source=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]]));
     if(!source.settings)throw new Error('Application settings are missing. Reload, or restore a known-good backup.');
-    if((source.profiles as unknown[])?.length){source.schemaVersion=2;source.practiceModelVersion=1;source.trainingPlans??=[];source.practiceStates??=[];source.priorityCycles??=[];}
-    else {if(!(source.courseProgress as unknown[])?.length)delete source.courseProgress;delete source.trainingPlans;delete source.weeklySchedules;delete source.practiceStates;delete source.priorityCycles;delete source.practiceModelVersion;}
+    if((source.profiles as unknown[])?.length){source.schemaVersion=2;source.practiceModelVersion=1;source.trainingPlans??=[];source.weeklySchedules??=[];source.recordings??=[];source.practiceStates??=[];source.priorityCycles??=[];}
+    else {if(!(source.courseProgress as unknown[])?.length)delete source.courseProgress;delete source.trainingPlans;delete source.weeklySchedules;delete source.recordings;delete source.practiceStates;delete source.priorityCycles;delete source.practiceModelVersion;}
     return source as unknown as Data;
   }catch(error){await done.catch(()=>{});throw error;}
 }
