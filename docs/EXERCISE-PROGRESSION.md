@@ -17,6 +17,8 @@ A generated challenge changes at most one difficulty dimension. This keeps the r
 
 For example, a recommendation may raise tempo OR remove click support OR add a memory demand. It does not simultaneously raise tempo, remove the click, increase duration and change orchestration.
 
+A generated progression also carries forward the effective tempo, target duration, subdivision support and timing-click pattern from the current evidence. These preserved conditions are part of the prescription but are not counted as changed axes. This prevents a sparse-click recommendation from accidentally resetting a proven tempo to the exercise’s authored default, or a tempo step from silently discarding an established gap-click condition.
+
 ## Challenge dimensions
 
 | Dimension | Progression idea |
