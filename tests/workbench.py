@@ -283,7 +283,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertIn(result['progression']['direction'],('reduce','hold','advance'))
         expect(self.page.locator('.focus-progression')).to_be_visible()
         expect(self.page.locator('.focus-progression-cue')).to_be_visible()
-        self.assert_bounds(self.page.viewport_size['width'])
+        self.assert_bounds(820)
 
 
 
