@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.14.0 — Recordings & Practice Evidence Core — 2026-09-23
+
+- Add local microphone **Record attempt** capture directly inside the Focus Player.
+- Store large audio blobs in a separate local IndexedDB media database instead of serializing them into workspace state.
+- Add durable profile-scoped recording metadata with session, block, exercise/song/section and BPM context plus attempt numbering.
+- Add a `/recordings` evidence library with local playback, self-rating, notes, Favorite, Milestone and one Current best marker per target.
+- Show recording counts in History and surface session-linked evidence on session detail pages.
+- Add explicit microphone lifecycle guards so leaving, finishing, skipping or restarting while recording requires discarding the unsaved capture first.
+- Release microphone tracks and object URLs when capture/playback ends.
+- Increment the structured workspace database to schema version 8 with a dedicated `recordings` metadata store.
+- Keep backup envelope version 4. Backups include recording metadata but deliberately exclude large local audio blobs; older v4 backups restore with an empty recording collection.
+- Add unit/database/profile/course/workbench coverage for recording metadata, schema migration and backup compatibility.
+- This release does not perform automatic audio-quality grading, trimming, waveform editing, synchronization or cloud upload.
+
 ## 2.13.0 — Weekly Schedule & Practice Calendar Orchestration — 2026-09-22
 
 - Add persistent Monday–Sunday **Practice Calendar** scheduling between Weekly Review and Today.
