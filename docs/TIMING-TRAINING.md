@@ -53,7 +53,7 @@ Timing training remains secondary to the Phase 6 playing surface.
 
 **Tools & block options → Timing click** exposes Standard, 2 & 4, Sparse, One click per bar, Gap click, sparse density, and common gap progressions.
 
-Changing this control changes the metronome configuration. It does not restart the block, create an attempt, alter a result, or change the PracticePrescription.
+Changing this control changes the metronome configuration. The effective timing-click configuration is also stored on the current practice block (and unstarted upcoming blocks) so later progression logic can distinguish Standard evidence from sparse/gap evidence. It does not restart the block, create an attempt, alter a result, or change the PracticePrescription.
 
 ## Scheduler semantics
 
@@ -70,7 +70,7 @@ Timing modes are implemented in the Web Audio scheduling clock.
 
 The MetronomeConfig timing field is optional.
 
-Older settings, presets, and backups therefore validate without migration and resolve to the Standard click. Newly saved settings and presets include the timing configuration.
+Older settings, presets, sessions, and backups therefore validate without migration and resolve to the Standard click. Newly created tempo blocks snapshot the effective timing-click configuration; new settings and presets include it as well.
 
 No IndexedDB version or backup-envelope version changes in Phase 7.
 
