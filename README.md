@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Weekly Practice Calendar & schedule orchestration — 2.13.0
+
+Steadybar now has a persistent Monday–Sunday **Practice Calendar** between Weekly Review and Today. A week can be generated from the active Training Cycle, weekly time/session goals, current Priority Cycle and profile defaults, then edited as seven explicit Practice / Optional / Rest days.
+
+Generated weeks begin as **Drafts** and affect nothing until applied. Applying a week does not create seven DailyPlans. Instead, when Today matches an applied Practice or Optional entry, the existing Today builder is prefilled with that day’s duration and emphasis. The controls remain editable and blocks are generated only when the user explicitly builds or starts practice, so current mastery and retention evidence stay fresh.
+
+Calendar shows planned minutes, recorded active practice, scheduled-day activity, performance dates and existing DailyPlans without computing an adherence score. Rest days remain advisory rather than restrictive; all ordinary practice controls stay available.
+
+Weekly Schedules use their own IndexedDB store (schema v7). Backup envelope v4 is unchanged: new backups include schedules, while older v4 backups restore with an empty schedule collection. Canonical Autopilot layouts remain unchanged, with 60 minutes added as a canonical preset and exact calendar-supplied durations supported from 5–180 whole minutes.
+
 ## Long-term Training Cycles & periodization — 2.12.0
 
 Steadybar now has persistent **Training Cycles** for planning a development block over multiple weeks. A cycle can link existing goals and setlists, then divide its exact date range into contiguous phases such as Foundation, Build, Integrate, Simulate, Taper, Consolidate, and—on longer cycles—a reduced-load consolidation phase.
