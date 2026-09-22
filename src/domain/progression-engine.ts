@@ -67,13 +67,14 @@ function profileFamily(data:Data,exercise:Exercise):string {
 }
 
 function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|undefined,options:ProgressionOptions):ProgressionDimension[] {
-  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),out:ProgressionDimension[]=[];
+  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),out:ProgressionDimension[]=[],family=profileFamily(data,exercise);
+  if(family==='voice')return out;
   if(pulse)out.push('tempo','click-density','gap-click');
   if(pulse?.subdivision&&pulse.subdivision>1)out.push('subdivision');
   if(!options.strictDuration)out.push('duration');
   const nonListening=!['fretboard','pitch-match','vocal-pattern','sight-reading'].includes(protocol.kind);
-  if(nonListening&&profileFamily(data,exercise)!=='voice')out.push('dynamics');
-  if(profileFamily(data,exercise)==='percussion'&&(protocol.kind==='tempo'||!!exercise.sticking))out.push('orchestration');
+  if(nonListening)out.push('dynamics');
+  if(family==='percussion'&&(protocol.kind==='tempo'||!!exercise.sticking))out.push('orchestration');
   if(!['sight-reading','fretboard','pitch-match','vocal-pattern'].includes(protocol.kind))out.push('memory');
   if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire')out.push('musical-context');
   return [...new Set(out)];
@@ -157,7 +158,7 @@ function softCue(dimension:ProgressionDimension,level:number):{summary:string;cu
 }
 
 function baseline(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],direction:'hold'|'reduce'='hold'):ExerciseProgression {
-  const authored=exerciseBpm(exercise),last=latestBlock(blocks),known=state?.tempo?.working??last?.finalBpm??last?.initialBpm??authored;
+  const authored=exerciseBpm(exercise),last=latestBlock(blocks),known=state?.tempo?.working??state?.tempo?.peak??authored??last?.finalBpm??last?.initialBpm;
   if(direction==='reduce'&&known!==undefined){
     const min=exercise.minBpm??20,step=Math.max(2,Math.round(known*.05)),bpm=clamp(known-step,min,300);
     return {engineVersion:1,direction:'reduce',dimension:'tempo',level:0,summary:'Recovery · '+bpm+' BPM',cue:'Reduce the tempo and recover clean, relaxed control before adding difficulty again.',bpm};
@@ -173,7 +174,7 @@ function baseline(exercise:Exercise,state:PracticeState|undefined,blocks:Practic
 function buildDimension(exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],dimension:ProgressionDimension,level:0|1|2|3,direction:'reduce'|'advance',options:ProgressionOptions):ExerciseProgression {
   const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),last=latestBlock(blocks);
   if(dimension==='tempo'){
-    const current=state?.tempo?.working??last?.finalBpm??last?.initialBpm??exerciseBpm(exercise)??80;
+    const current=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??last?.finalBpm??last?.initialBpm??80;
     const min=exercise.minBpm??20,max=exercise.maxBpm??exercise.targetBpm??300,step=Math.max(2,Math.round(current*.04));
     const bpm=direction==='advance'?clamp(current+step,min,max):clamp(current-step,min,max);
     return {engineVersion:1,direction,dimension,level,summary:(direction==='advance'?'Tempo step':'Tempo reset')+' · '+bpm+' BPM',cue:direction==='advance'?'Raise only the tempo. Keep the same pattern, click difficulty, dynamics, and orchestration.':'Lower only the tempo until control is repeatable again.',bpm};
@@ -209,7 +210,7 @@ function canAdvanceDimension(exercise:Exercise,state:PracticeState|undefined,blo
     return subdivisionAt(authored,level)!==1;
   }
   if(dimension==='tempo'){
-    const current=state?.tempo?.working??latestBlock(blocks)?.finalBpm??exerciseBpm(exercise);
+    const current=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??latestBlock(blocks)?.finalBpm;
     const max=exercise.maxBpm??exercise.targetBpm??300;
     return current===undefined||current<max;
   }
