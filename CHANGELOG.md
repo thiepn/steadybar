@@ -2,6 +2,20 @@
 
 ## 2.6.0 — Focus Player rebuild — 2026-09-22
 
+- Rebuild active practice around a single-column Focus Player instead of a workspace plus permanent queue sidebar.
+- Keep the primary playing surface limited to current block identity, active time, relevant tempo controls, protocol task controls, Start/Pause, Metronome, and Not Yet / Usable / Solid.
+- Make Not Yet / Usable / Solid the primary finish-and-advance controls; completing a result saves evidence and moves immediately to the next block.
+- Move legacy five-level tempo attempt ratings into a collapsed **Detailed attempt** drawer without removing them.
+- Move practice cues, limitation tags, quick note, tempo trainer, restart, skip, unrated Finish block, and the full session queue into collapsed secondary drawers.
+- Replace the old action-heavy practice header with a compact sticky header containing Save & leave, block/status context, and a **Session** menu for Appearance, Fullscreen, and Finish session.
+- Keep protocol-specific task panels fully functional while hiding tempo controls for non-tempo protocols and using a full-width transport there.
+- Make the result controls fixed/sticky and touch-sized on narrow phones so the three completion choices remain reachable from a music stand without scrolling through secondary tools.
+- Preserve desktop keyboard controls, recovery semantics, fullscreen support, immutable history, PracticeController behavior, Autopilot prescriptions, mastery evidence, and scheduler bookkeeping.
+- Add viewport certification from 320px phones through desktop: primary controls must remain readable/in-viewport, drawers start collapsed, secondary controls remain discoverable, and Solid must advance automatically to the next block.
+- No Mastery, Priority, Autopilot, planner, persistence, or course semantics change in this phase.
+
+## 2.6.0 — Focus Player rebuild — 2026-09-22
+
 - Rebuild active practice as a single-column Focus Player centered on the current block instead of a permanent workspace plus queue sidebar.
 - Keep the always-visible layer to the information needed while playing: block identity/intent, active time, tempo/beat feedback, protocol task controls, Start/Pause, Metronome, and Not Yet / Usable / Solid.
 - Make Not Yet / Usable / Solid the primary block-completion controls; saving a result advances to the next block without automatically starting it.

@@ -2,63 +2,67 @@
 
 ## Purpose
 
-Focus Player is the active-practice surface for Steadybar 2.6.
+The Focus Player is Steadybar's active-practice surface.
 
-Its job is not to expose every practice feature at once. Its job is to make the current few minutes obvious from a phone, tablet or music stand:
+Its job is not to expose every practice feature at once. Its job is to keep the drummer or musician inside the current task with the minimum interaction needed to:
 
-> **See the task → play → rate it → move on.**
+1. understand the block;
+2. start or pause;
+3. hear/control the click when relevant;
+4. complete task-specific actions;
+5. record the overall result;
+6. move to the next block.
 
-Planning remains in Today/Autopilot. History remains in History. Focus Player is deliberately optimized for low-interruption execution.
+All existing advanced controls remain available, but secondary controls no longer compete with the main playing surface.
 
-## Primary surface
+## Primary information hierarchy
 
-The always-visible layer contains only:
+Always visible when relevant:
 
-- current block number and state;
-- Autopilot/practice intent when one exists;
-- block title and sticking/pattern where relevant;
-- active time and target duration;
-- BPM and small tempo steps for pulse-based tasks;
-- beat feedback;
-- protocol-specific task controls;
+- block number / session status;
+- Autopilot/practice intent when present;
+- block title and sticking/pattern;
+- active time and target time;
+- BPM and ±1 / ±5 controls for tempo-capable blocks;
+- beat indicator;
 - Start / Pause;
-- Metronome when relevant;
-- Not Yet / Usable / Solid;
-- concise next-block preview.
+- Metronome on / off;
+- protocol-specific task actions;
+- **Not Yet / Usable / Solid**;
+- next-block preview.
 
-On small screens the result panel stays reachable at the bottom of the viewport.
+The result controls are the canonical block-completion path.
 
-## Primary completion model
+## Primary result behavior
 
 ### Not Yet
 
-The requested target was not reliably achieved.
+Saves a `not-yet` block evaluation and advances.
 
 ### Usable
 
-It basically worked but still has meaningful weakness.
+Saves a `usable` block evaluation and advances.
 
 ### Solid
 
-It was reliably performed at the requested challenge.
+Saves a `solid` block evaluation and advances.
 
-Choosing one:
+For all three:
 
-1. writes the block evaluation;
-2. preserves the Phase 3 evidence context from its prescription;
-3. completes the current block;
-4. advances to the next block;
-5. leaves the next block stopped so practice never starts unexpectedly.
+- selected limitation tags are included;
+- the current immutable session remains the evidence ledger;
+- Phase 3 mastery state is updated by normal session-finalization behavior;
+- the next block becomes Ready rather than auto-starting audio.
 
-The old unrated completion path still exists under Tools & block options.
+Phase 6 deliberately does **not** automatically start the next block. Physical setup may need to change between blocks.
 
 ## Secondary drawers
 
-Capabilities remain available without permanently occupying visual space.
+Collapsed by default:
 
 ### Detailed attempt
 
-Contains the existing five tempo-attempt ratings:
+Retains the legacy five-level tempo-attempt system:
 
 - Failed
 - Messy
@@ -66,15 +70,15 @@ Contains the existing five tempo-attempt ratings:
 - Clean
 - Effortless
 
-These remain attempt-level information and are still used for legacy clean-tempo analytics.
+These remain detailed within-block attempt records. They do not replace the overall Not Yet / Usable / Solid result.
 
 ### Practice cues
 
-Shows the immutable instructions snapshot for the current block.
+Shows authored exercise/lesson instructions when present.
 
 ### What limited it?
 
-Optional limitation tags used with the block-level result:
+Optional tags:
 
 - Timing
 - Coordination
@@ -92,22 +96,22 @@ Optional limitation tags used with the block-level result:
 Contains:
 
 - Quick note
-- Tempo trainer where relevant
+- Tempo trainer where applicable
 - Restart block
 - Skip block
-- Finish block without rating
+- Finish block without an overall rating
 
 ### Session queue
 
-Contains the complete ordered session and current/completed/skipped states.
+Contains the full block sequence and current/completed/skipped state.
 
-## Session header
+## Session-level controls
 
-The compact sticky topbar contains:
+The sticky top bar contains:
 
 - Save & leave
-- Block X / N
-- Ready / Count-in / Practicing / Paused
+- current block number
+- session status
 - Session menu
 
 The Session menu contains:
@@ -116,84 +120,86 @@ The Session menu contains:
 - Fullscreen
 - Finish session
 
-Fullscreen is optional. Focus Player itself is always the normal practice layout, so the old “Open sessions in Focus Mode” preference is no longer exposed.
+This keeps infrequent global actions available without turning the header into a toolbar.
 
-## Responsive contract
+## Tempo vs non-tempo blocks
 
-### Phone / music stand
+Tempo-capable blocks show:
 
-- primary controls remain at least 44px tall;
-- Not Yet / Usable / Solid stay inside the immediate viewport;
-- result panel is sticky;
-- no permanent side queue;
-- secondary controls do not consume space until their drawer is opened;
-- bottom clearance prevents drawers from sitting underneath the result dock.
+- BPM
+- ±1 / ±5
+- click
+- beat indicator
+- detailed attempt drawer
+- tempo trainer
 
-### Tablet / desktop
+Non-tempo protocols remove irrelevant tempo controls and expand Start/Pause to the available transport width.
 
-- single readable practice column;
-- maximum stage width keeps timer/task/result relationships visually close;
-- result panel is part of normal document flow rather than permanently following the user;
-- queue remains available on demand.
+The protocol-specific task panel remains first-class rather than being hidden in a generic drawer.
 
-## Protocol-specific tasks
+## Mobile / music-stand contract
 
-Focus Player does not replace Steadybar’s instrument protocols.
+At narrow widths:
 
-Repetition counters, chord-change rounds, groove review, scale cycles, fretboard prompts, vocal patterns/rest, pitch matching, sight reading and repertoire reflection continue to render their existing task-specific controls between the readout and transport.
+- no permanent right-hand queue;
+- one column;
+- touch targets ≥44px for primary actions;
+- time/BPM remain large and readable;
+- Start/Pause and Metronome remain near the top of the work surface;
+- Not Yet / Usable / Solid remain fixed near the bottom with safe-area padding;
+- enough bottom content padding prevents the fixed result panel from covering drawers/content;
+- secondary controls stay collapsed until requested.
 
-Tempo-only controls are not mounted for self-paced protocols.
+The release matrix explicitly checks 320×568, 360×800, 375×812, 390×844, 412×915 and 430×932 in addition to tablets/desktops.
 
-## Cross-engine disclosure rule
+## Block transitions
 
-Steadybar explicitly applies:
+When a rated block completes:
 
-`details:not([open]) > .focus-drawer-body { display: none }`
+1. evaluation is saved;
+2. the controller finishes the current block;
+3. the next block becomes active in Ready state;
+4. the Focus Player redraws the new title/task/readouts;
+5. the page returns to the top of the new block;
+6. audio remains stopped until the user presses Start.
 
-and the corresponding Session-menu rule.
+This is deliberate hands-on control rather than continuous auto-play.
 
-This is intentional. Browser UA styles differ, and author layout rules such as `display:grid` must not accidentally make closed-drawer controls measurable or focusable.
+## Keyboard controls
 
-## Keyboard
+Existing shortcuts remain:
 
-Existing practice shortcuts remain:
+- Space — Start/Pause
+- Arrow Up/Down — ±1 BPM
+- Shift + Arrow Up/Down — ±5 BPM
+- N — Quick note
+- Escape — leave fullscreen
 
-- Space — start / pause
-- Up / Down — BPM ±1
-- Shift + Up / Down — BPM ±5
-- N — quick note
-- Escape — exit fullscreen
+Shortcuts are ignored while typing in form controls or while dialogs are open.
 
-Typing in fields and focused buttons keeps normal browser behavior.
+## Recovery
 
-## Data integrity
+Recovered sessions keep the existing recovery actions:
 
-Phase 6 does not introduce a schema or evidence migration.
+- Resume saved session
+- End and keep history
+- Discard saved session
 
-It continues to use:
-
-- PracticeController
-- atomic session finalization
-- PracticeEvaluation
-- PracticePrescription snapshots
-- Phase 3 mastery derivation
-- Phase 4 priority state
-- Phase 5 Autopilot scheduling state
-
-Moving a control into a drawer does not change the persisted meaning of that action.
+Phase 6 changes presentation only; recovery/storage semantics are unchanged.
 
 ## Explicit non-goals
 
-Focus Player does not change:
+Phase 6 does not change:
 
-- mastery transition rules;
-- retention intervals;
-- priority weights;
-- Autopilot candidate ranking;
-- Autopilot time allocation;
-- automatic BPM/difficulty progression;
-- Set Prep logic;
-- MIDI/microphone analysis;
-- AI coaching.
+- PracticeController state semantics;
+- session persistence/history;
+- mastery/retention rules;
+- priority ranking;
+- Autopilot composition;
+- Set Prep;
+- difficulty progression;
+- timing-training modes;
+- MIDI or microphone analysis;
+- AI.
 
-Those remain separate phases.
+Those systems can evolve independently of the Focus Player.
