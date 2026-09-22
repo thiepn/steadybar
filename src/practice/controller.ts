@@ -136,7 +136,7 @@ export class PracticeController {
     await this.mutate(s=>{
       for(let i=s.activeBlockIndex;i<s.blocks.length;i++){
         const block=s.blocks[i]!;
-        if(i===s.activeBlockIndex||!block.startedAt)block.timingClickSnapshot=structuredClone(timing);
+        if(block.initialBpm!==undefined&&(i===s.activeBlockIndex||!block.startedAt))block.timingClickSnapshot=structuredClone(timing);
       }
       return s;
     });
