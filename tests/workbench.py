@@ -347,8 +347,8 @@ class Workbench(e2e.MusicPracticeTests):
             make('qa-prev-2',-9,'usable',[]),
             make('qa-cur-1',-5,'not-yet',['timing'],'autopilot',true),
             make('qa-cur-2',-4,'not-yet',['timing'],'autopilot',true),
-            make('qa-cur-3',-3,'usable',['timing'],'set-prep',true),
-            make('qa-cur-4',-2,'solid',[],'set-prep',false),
+            make('qa-cur-3',-3,'usable',['timing'],'autopilot',true),
+            make('qa-cur-4',-2,'solid',[],'autopilot',false),
           ];
           const target={kind:'exercise',exerciseId:e.id},key=load('domain/practice-state.js').practiceTargetKey(target);
           d.practiceStates=[{id:'qa-state',createdAt:day(-20),updatedAt:day(-1),profileId:e.profileId,targetKey:key,target,mastery:'maintain',lastPracticedAt:day(-2),lastEvaluatedAt:day(-2),lastAppliedAt:day(-8),nextReviewAt:day(-1),latestResult:'solid',limitations:['timing'],challenge:'hold',evidenceCount:8,tempo:{peak:130,peakAt:day(-15),working:110,workingAt:day(-8),cold:95,coldAt:day(-7)},recent:{solid:3,usable:2,notYet:2},scheduling:{consecutiveSkips:0,manualPriority:0},engine:{version:2,derivedAt:day(-1)}}];
