@@ -424,7 +424,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(restored['skill'],fixture['oldSkill']);self.assertEqual(restored['oldStatus'],'completed');self.assertEqual(restored['oldName'],'QA old priorities')
 
         self.route('/progress')
-        expect(self.page.get_by_role('link',name='Weekly Review',exact=True)).to_be_visible()
+        expect(self.page.locator('#main').get_by_role('link',name='Weekly Review',exact=True)).to_be_visible()
 
 
 
