@@ -38,7 +38,7 @@ test('short sessions cap genuinely new non-ramp material when familiar alternati
 });
 
 test('all canonical Autopilot budgets allocate exact time with stable slot counts',()=>{
-  const d=modern(),expected=new Map([[5,2],[10,3],[15,4],[20,4],[30,5],[45,6]]);
+  const d=modern(),expected=new Map([[5,2],[10,3],[15,4],[20,4],[30,5],[45,6],[60,6]]);
   for(const minutes of AUTOPILOT_MINUTES){
     const build=buildAutopilotPlan(d,{minutes,intent:'balanced',now:at,today});
     assert.equal(build.totalSeconds,minutes*60,String(minutes));
