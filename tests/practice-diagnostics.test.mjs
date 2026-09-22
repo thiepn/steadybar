@@ -38,15 +38,17 @@ test('equal selected windows compare against the immediately preceding equal-len
   const d=modern(),e=d.exercises[0];
   d.sessions=[
     session('p1','2026-09-10T10:00:00.000Z',[block('pb1',e.id,{result:'not-yet',seconds:600})]),
-    session('p2','2026-09-14T10:00:00.000Z',[block('pb2',e.id,{result:'usable',seconds:600})]),
+    session('p2','2026-09-12T10:00:00.000Z',[block('pb2',e.id,{result:'usable',seconds:600})]),
+    session('p3','2026-09-14T10:00:00.000Z',[block('pb3',e.id,{result:'usable',seconds:600})]),
     session('c1','2026-09-17T10:00:00.000Z',[block('cb1',e.id,{result:'solid',seconds:1200})]),
-    session('c2','2026-09-21T10:00:00.000Z',[block('cb2',e.id,{result:'solid',seconds:1200})]),
+    session('c2','2026-09-19T10:00:00.000Z',[block('cb2',e.id,{result:'solid',seconds:1200})]),
+    session('c3','2026-09-21T10:00:00.000Z',[block('cb3',e.id,{result:'solid',seconds:1200})]),
   ];
   const x=buildPracticeDiagnostics(d,{from:'2026-09-16',to:'2026-09-22',now:at});
   assert.equal(x.engineVersion,DIAGNOSTICS_ENGINE_VERSION);
   assert.deepEqual([x.comparison.previous.from,x.comparison.previous.to],['2026-09-09','2026-09-15']);
-  assert.equal(x.comparison.current.activeSeconds,2400);
-  assert.equal(x.comparison.previous.activeSeconds,1200);
+  assert.equal(x.comparison.current.activeSeconds,3600);
+  assert.equal(x.comparison.previous.activeSeconds,1800);
   assert.equal(x.comparison.activeTimeTrend,'up');
   assert.equal(x.comparison.solidShareTrend,'up');
   assert.ok(x.insights.some(row=>row.code==='result-improving'));
