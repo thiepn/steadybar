@@ -55,7 +55,7 @@ class Profiles(e2e.MusicPracticeTests):
     def complete_example(self,kind):
         protocol={'drums':'tempo','guitar':'chord-changes','bass':'groove','piano':'scale-cycle','voice':'vocal-pattern'}[kind]
         exercise=self.launch(protocol)
-        if kind=='drums':self.page.get_by_role('button',name='Clean',exact=True).click()
+        if kind=='drums':self.open_focus_drawer('Detailed attempt');self.page.get_by_role('button',name='Clean',exact=True).click()
         elif kind=='guitar':
             expect(self.page.get_by_label('BPM',exact=True)).to_have_count(0)
             self.page.get_by_role('button',name='Log round',exact=True).click()
@@ -412,7 +412,7 @@ class Profiles(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height})
             self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width,f'{kind} active {width}')
             if width<500:
-                for name in ('Start practice','Finish block'):
+                for name in ('Start practice','Not yet','Usable','Solid'):
                     control=self.page.get_by_role('button',name=name,exact=True);box=control.bounding_box();self.assertIsNotNone(box,f'{kind} {name} {width}x{height}');self.assertGreaterEqual(box['height'],44);self.assertLessEqual(box['y']+box['height'],height+1)
             if width in (320,390,820,1440):self.page.screenshot(path=str(e2e.ARTIFACTS/f'profiles-{kind}-active-{width}.png'),full_page=True)
             results.append({'profile':kind,'route':'active','width':width,'height':height,'overflow':False})

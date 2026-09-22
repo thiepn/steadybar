@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.6.0 — Focus Player rebuild — 2026-09-22
+
+- Rebuild active practice around a single-column Focus Player instead of a workspace plus permanent queue sidebar.
+- Keep the primary playing surface limited to current block identity, active time, relevant tempo controls, protocol task controls, Start/Pause, Metronome, and Not Yet / Usable / Solid.
+- Make Not Yet / Usable / Solid the primary finish-and-advance controls; completing a result saves evidence and moves immediately to the next block.
+- Move legacy five-level tempo attempt ratings into a collapsed **Detailed attempt** drawer without removing them.
+- Move practice cues, limitation tags, quick note, tempo trainer, restart, skip, unrated Finish block, and the full session queue into collapsed secondary drawers.
+- Replace the old action-heavy practice header with a compact sticky header containing Save & leave, block/status context, and a **Session** menu for Appearance, Fullscreen, and Finish session.
+- Keep protocol-specific task panels fully functional while hiding tempo controls for non-tempo protocols and using a full-width transport there.
+- Make the result controls fixed/sticky and touch-sized on narrow phones so the three completion choices remain reachable from a music stand without scrolling through secondary tools.
+- Preserve desktop keyboard controls, recovery semantics, fullscreen support, immutable history, PracticeController behavior, Autopilot prescriptions, mastery evidence, and scheduler bookkeeping.
+- Add viewport certification from 320px phones through desktop: primary controls must remain readable/in-viewport, drawers start collapsed, secondary controls remain discoverable, and Solid must advance automatically to the next block.
+- No Mastery, Priority, Autopilot, planner, persistence, or course semantics change in this phase.
+
+## 2.6.0 — Focus Player rebuild — 2026-09-22
+
+- Rebuild active practice as a single-column Focus Player centered on the current block instead of a permanent workspace plus queue sidebar.
+- Keep the always-visible layer to the information needed while playing: block identity/intent, active time, tempo/beat feedback, protocol task controls, Start/Pause, Metronome, and Not Yet / Usable / Solid.
+- Make Not Yet / Usable / Solid the primary block-completion controls; saving a result advances to the next block without automatically starting it.
+- Move detailed five-level tempo attempts into a collapsible Detailed attempt drawer while preserving all historical attempt semantics and best-clean tracking.
+- Move practice cues, limitation tags, Quick note, Tempo trainer, Restart, Skip, unrated Finish block, and the full session queue into explicit secondary drawers rather than removing them.
+- Add a compact sticky session header with Save & leave plus a Session menu for Appearance, fullscreen and Finish session.
+- Add a mobile/music-stand sticky result dock and responsive one-screen contract; core controls remain at least 44px and within the viewport down to 320×568.
+- Keep protocol-specific practice controls, vocal safety/recovery, session recovery, keyboard shortcuts, audio timing, persistence, immutable history and Autopilot prescriptions unchanged.
+- Make closed disclosure content explicitly hidden in author CSS so Firefox, Chromium and WebKit agree on drawer geometry.
+- Retire the obsolete “Open sessions in Focus Mode” setting from the UI because all sessions now use Focus Player; retain its stored compatibility field without migration.
+- Add cross-engine regression coverage for primary-surface geometry, closed drawers, legacy tool accessibility and result-driven block advancement.
+- Phase 6 changes presentation and interaction hierarchy only; mastery, retention, priority ranking and Autopilot composition rules remain unchanged.
+
 ## 2.5.0 — Practice Autopilot v1 — 2026-09-21
 
 - Add deterministic Practice Autopilot composition on top of the Phase 3 Mastery Engine and Phase 4 Priority Engine.
