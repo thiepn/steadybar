@@ -50,7 +50,7 @@ export interface WeeklyReviewOptions {
 
 const DAY=86400000;
 const urgentSignals=new Set<PriorityFactorCode>(['upcoming-performance','active-goal','retention-due','recent-weakness']);
-const mediumSignals=new Set<PriorityFactorCode>(['musical-transfer','domain-balance','neglected','profile-focus','manual-priority']);
+const mediumSignals=new Set<PriorityFactorCode>(['training-phase','musical-transfer','domain-balance','neglected','profile-focus','manual-priority']);
 
 const toMillis=(value:Date|string|number|undefined)=>value===undefined?Date.now():value instanceof Date?value.getTime():typeof value==='number'?value:Date.parse(value);
 function parseDay(value:string):number{
