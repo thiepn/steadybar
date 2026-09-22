@@ -161,7 +161,7 @@ function closeActive(cycles:PriorityCycle[],profileId:string,today:string,at:str
   return cycles.map(cycle=>{
     if(cycle.profileId!==profileId||cycle.status!=='active')return structuredClone(cycle);
     const endedOn=today<cycle.startedOn?cycle.startedOn:today;
-    return {...structuredClone(cycle),status:'completed',endedOn,updatedAt:at};
+    return {...structuredClone(cycle),status:'completed' as const,endedOn,updatedAt:at};
   });
 }
 function validateSelections(data:Data,profileId:string,selections:WeeklyFocusSelection[]):WeeklyFocusSelection[]{
@@ -180,7 +180,7 @@ export function applyWeeklyPriorityCycle(data:Data,profileId:string,selections:W
   const now=toMillis(options.now),at=new Date(now).toISOString(),today=options.today??localDate(new Date(now)),rows=validateSelections(data,profileId,selections);
   const next=structuredClone(data),items:PriorityItem[]=rows.map(row=>({id:uuid(),skillId:row.skillId,weight:row.weight,note:row.note}));
   next.priorityCycles=[...closeActive(next.priorityCycles??[],profileId,today,at),{
-    id:uuid(),createdAt:at,updatedAt:at,profileId,name:options.name?.trim()||`Weekly focus · ${today}`,status:'active',startedOn:today,items,
+    id:uuid(),createdAt:at,updatedAt:at,profileId,name:options.name?.trim()||`Weekly focus · ${today}`,status:'active' as const,startedOn:today,items,
   }];
   return next;
 }
