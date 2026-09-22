@@ -56,7 +56,13 @@ export function sessionPage(id:string,review=false):Page{
     if(course&&lesson)page.append(el('section',{class:'learning-summary'},el('div',{},el('h2',{},'Review your learning'),el('p',{class:'muted small'},'Practice time does not automatically pass a lesson. Check the performance and understanding separately.')),link('Return to lesson: '+lesson.title,lessonLink(course,lesson,session.profileId),'button secondary')));
   }
   if(session.sessionNotes)page.append(el('section',{class:'panel'},sectionHeader('Reflection'),el('p',{class:'pre-line'},session.sessionNotes)));
-  if(sessionRecordings.length)page.append(el('section',{class:'panel session-recordings'},sectionHeader('Practice evidence',`${sessionRecordings.length} recording${sessionRecordings.length===1?'':'s'}`,[link('Open recordings','/recordings','text-link','arrow')]),...sessionRecordings.map(row=>el('div',{class:'recording-history-row'},el('div',{},el('strong',{},row.title),el('span',{class:'muted small'},`Attempt ${row.attemptNumber}${row.bpm?` · ${row.bpm} BPM`:''} · ${duration(row.durationSeconds)}`)),el('div',{class:'tag-row'},row.markedBest?badge('Best','accent'):null,row.milestone?badge('Milestone','accent'):null,row.rating?badge(`${row.rating}/5`):null))));
+  if(sessionRecordings.length){
+    const evidence=el('section',{class:'panel session-recordings'},sectionHeader('Practice evidence',`${sessionRecordings.length} recording${sessionRecordings.length===1?'':'s'}`,[link('Open recordings','/recordings','text-link','arrow')]));
+    for(const row of sessionRecordings)evidence.append(el('div',{class:'recording-history-row'},
+      el('div',{},el('strong',{},row.title),el('span',{class:'muted small'},`Attempt ${row.attemptNumber}${row.bpm?` · ${row.bpm} BPM`:''} · ${duration(row.durationSeconds)}`)),
+      el('div',{class:'tag-row'},row.markedBest?badge('Best','accent'):null,row.milestone?badge('Milestone','accent'):null,row.rating?badge(`${row.rating}/5`):null)));
+    page.append(evidence);
+  }
   const records=el('section',{class:'panel'},sectionHeader('Practice blocks','Snapshots are kept even when source exercises or songs change.'));
   for(const [i,block] of session.blocks.entries()){
     const best=calculateBestCleanBpm(block.tempoAttempts),previous=block.sourceExerciseId?calculateBestCleanBpm([...exerciseAttempts(data.sessions.filter(s=>s.id!==id&&s.startedAt<session.startedAt),block.sourceExerciseId),...session.blocks.slice(0,i).filter(b=>b.sourceExerciseId===block.sourceExerciseId).flatMap(b=>b.tempoAttempts)]):undefined;
