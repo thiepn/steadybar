@@ -122,8 +122,9 @@ export function activePracticePage():Page{
       button('Quick note',note,'ghost','note'),timingButton,trainerButton,restart,skip,finishUnrated));
   const queueDrawer=el('details',{class:'focus-drawer focus-queue-drawer'},el('summary',{},'Session queue'),el('div',{class:'focus-drawer-body'},queue));
 
+  const progressionBadge=el('span',{class:'focus-intent focus-progression',hidden:true}),progressionCue=el('p',{class:'focus-progression-cue',hidden:true});
   const identity=el('section',{class:'practice-identity focus-identity'},
-    el('div',{class:'focus-meta'},intentBadge),title,sticking);
+    el('div',{class:'focus-meta'},intentBadge,progressionBadge),title,sticking,progressionCue);
   const transport=el('div',{class:'practice-main-controls focus-transport'},start,metro);
   const resultDock=el('section',{class:'focus-result-panel'},
     el('div',{class:'focus-result-heading'},el('span',{class:'label'},'How did that block feel?'),el('span',{class:'muted small'},'Saves result and moves on')),
@@ -157,7 +158,7 @@ export function activePracticePage():Page{
     const session=practice.session;if(!session)return;
     if(session.status!=='active'){if(!completedView){completedView=true;task?.cleanup();page.replaceChildren(sessionPage(session.id,true).node);}return;}
     const block=session.blocks[session.activeBlockIndex]!,phase=session.runtime.phase;
-    const state=JSON.stringify([block.id,block.protocolSnapshot,block.timingClickSnapshot,phase,session.runtime.bpm,session.runtime.metronomeOn,block.notes,practice.error,practice.recovered,block.prescriptionSnapshot]);
+    const state=JSON.stringify([block.id,block.protocolSnapshot,block.timingClickSnapshot,block.progressionSnapshot,phase,session.runtime.bpm,session.runtime.metronomeOn,block.notes,practice.error,practice.recovered,block.prescriptionSnapshot]);
     if(lastState!==state){
       lastState=state;recovery.hidden=!practice.recovered;
       const cueText=block.instructionsSnapshot||'';cues.hidden=!cueText;text(cuesText,cueText);
@@ -165,8 +166,10 @@ export function activePracticePage():Page{
       const pattern=block.protocolSnapshot?.kind==='tempo'?block.protocolSnapshot.sticking:!block.protocolSnapshot?block.stickingSnapshot:undefined;
       text(sticking,pattern??'');sticking.hidden=!pattern;
       text(blockNumber,`Block ${session.activeBlockIndex+1} / ${session.blocks.length}`);
-      const prescription=block.prescriptionSnapshot;
+      const prescription=block.prescriptionSnapshot,progression=block.progressionSnapshot;
       intentBadge.hidden=!prescription;text(intentBadge,prescription?`${prescription.generatedBy==='autopilot'?'Autopilot · ':''}${prescription.intent.replaceAll('-',' ')}`:'');
+      progressionBadge.hidden=!progression;text(progressionBadge,progression?'Progression · '+progression.summary:'');
+      progressionCue.hidden=!progression;text(progressionCue,progression?.cue??'');
       if(document.activeElement!==tempo)tempo.value=String(session.runtime.bpm);
       text(status,phase==='running'?'Practicing':phase==='countin'?'Count-in':phase==='paused'?'Paused':'Ready');
       text(start.querySelector('span')!,phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start');
