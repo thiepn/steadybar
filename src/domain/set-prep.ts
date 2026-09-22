@@ -128,7 +128,8 @@ function componentIssues(
     const r=readinessForState(stateFor(states,target),now);
     if(r.readiness==='needs-work'||(r.readiness==='unassessed'&&whole==='unassessed'))issues.push({kind:'transition',target,label:transition.name||from+' → '+to,readiness:r.readiness,detail:r.detail});
   }
-  return issues.sort((a,b)=>rank[a.readiness]-rank[b.readiness]||(a.kind==='transition'?-1:1)||a.label.localeCompare(b.label));
+  const kindRank=(kind:SetPrepIssue['kind'])=>kind==='transition'?0:kind==='section'?1:2;
+  return issues.sort((a,b)=>rank[a.readiness]-rank[b.readiness]||kindRank(a.kind)-kindRank(b.kind)||a.label.localeCompare(b.label));
 }
 
 function assessSong(data:Data,setPosition:number,song:Song,profileId:string,states:Map<string,PracticeState>,now:number):SetPrepSongAssessment {
@@ -167,7 +168,7 @@ export function assessSetlist(data:Data,setlist:Setlist,profileId:string=activeP
     else if(item.readiness==='needs-work')counts.needsWork++;
     else counts.unassessed++;
   }
-  const readiness=counts.needsWork||counts.unassessed?'attention':ordered.length&&counts.ready===ordered.length?'ready-evidence':'usable';
+  const readiness=!ordered.length||counts.needsWork||counts.unassessed?'attention':counts.ready===ordered.length?'ready-evidence':'usable';
   return {setlistId:setlist.id,setlistName:setlist.name,profileId,...(setlist.date?{performanceDate:setlist.date}:{}),...(window.daysUntil!==undefined?{daysUntil:window.daysUntil}:{}),window:window.window,readiness,counts,items:ordered};
 }
 
@@ -184,7 +185,7 @@ function prepStage(assessment:SetPrepAssessment):SetPrepStage {
 
 function stateIntent(state:PracticeState|undefined):PracticeIntent {
   if(!state)return 'build';
-  if(state.latestResult==='not-yet'||state.mastery==='learn'||state.mastery==='build')return 'build';
+  if(state.latestResult==='not-yet'||state.mastery==='discover'||state.mastery==='unassessed'||state.mastery==='learn'||state.mastery==='build')return 'build';
   if(state.mastery==='maintain')return 'maintain';
   if(state.mastery==='apply')return 'apply';
   if(state.mastery==='retest')return 'retest';
