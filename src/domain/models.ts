@@ -135,6 +135,16 @@ export interface WeeklySchedule extends Entity {
   profileId: string; weekStart: string; status: 'draft' | 'applied';
   targetMinutes: number; source: WeeklyScheduleSource; days: WeeklyScheduleDay[];
 }
+export type PracticeRecordingSourceType = 'exercise' | 'song' | 'song-section' | 'free';
+export interface PracticeRecording extends Entity {
+  recordingVersion: 1;
+  profileId: string; assetId: string; title: string;
+  durationSeconds: number; mimeType: string; sizeBytes: number;
+  sessionId?: string; blockId?: string; sourceType: PracticeRecordingSourceType;
+  sourceExerciseId?: string; sourceSongId?: string; sourceSongSectionId?: string;
+  bpm?: number; attemptNumber: number; rating?: 1 | 2 | 3 | 4 | 5;
+  note: string; tags: string[]; markedBest: boolean; milestone: boolean; favorite: boolean;
+}
 export interface Setlist extends Entity { name: string; date?: string; songIds: string[]; notes: string }
 export interface Preset extends Entity { name: string; config: MetronomeConfig }
 export interface Settings {
@@ -146,7 +156,7 @@ export interface Settings {
 export interface Data {
   schemaVersion?: 2; practiceModelVersion?: 1; profiles?: PracticeProfile[]; courseProgress?: CourseProgress[];
   exercises: Exercise[]; songs: Song[]; routines: Routine[]; dailyPlans: DailyPlan[];
-  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
+  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
   settings: Settings;
 }
 export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3 | 4; exportedAt: string; data: Data }
