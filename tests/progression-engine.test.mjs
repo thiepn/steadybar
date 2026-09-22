@@ -106,14 +106,11 @@ test('Autopilot-style strict budgets never expand duration',()=>{
 });
 
 test('voice exercises never receive automatic difficulty escalation',()=>{
-  const d=modern(),voiceProfile=d.profiles.find(p=>p.instrumentType==='voice');
-  assert.ok(voiceProfile);
-  const voice=migratePracticeModel(migratePracticeData(seedData(at)));
-  const profile=voice.profiles.find(p=>p.instrumentType==='voice');
-  if(!profile)return;
-  const source=voice.exercises.find(e=>e.profileId===profile.id);
-  if(!source)return;
-  voice.practiceStates=[exerciseState(source,{profileId:profile.id,targetKey:practiceTargetKey({kind:'exercise',exerciseId:source.id}),target:{kind:'exercise',exerciseId:source.id},challenge:'advance'})];
+  const legacy=seedData(at);legacy.settings.instrument='Vocals';
+  const voice=migratePracticeModel(migratePracticeData(legacy));
+  const profile=voice.profiles.find(p=>p.instrumentType==='voice'),source=voice.exercises.find(e=>e.profileId===profile?.id);
+  assert.ok(profile);assert.ok(source);
+  voice.practiceStates=[exerciseState(source,{profileId:profile.id,targetKey:practiceTargetKey({kind:'exercise',exerciseId:source.id}),target:{kind:'exercise',exerciseId:source.id},challenge:'advance',tempo:undefined})];
   const plan=buildExerciseProgression(voice,source);
   assert.equal(plan.direction,'hold');assert.equal(plan.dimension,'baseline');
 });
