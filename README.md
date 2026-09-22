@@ -22,6 +22,18 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Long-term Training Cycles & periodization — 2.12.0
+
+Steadybar now has persistent **Training Cycles** for planning a development block over multiple weeks. A cycle can link existing goals and setlists, then divide its exact date range into contiguous phases such as Foundation, Build, Integrate, Simulate, Taper, Consolidate, and—on longer cycles—a reduced-load consolidation phase.
+
+Cycles are **draft-first**. Creating or regenerating one does not affect practice scheduling until it is explicitly activated. Only one cycle can be active per profile; activating another pauses the previous one and preserves it. Phase workload, Autopilot emphasis, skill focuses and notes remain editable, while phase dates stay fixed to preserve a gap-free timeline unless the user explicitly regenerates the schedule.
+
+An active phase contributes a modest, fully explained `training-phase` signal to the existing Priority Engine. It is intentionally weaker than an applied Weekly Review Priority Cycle, so long-term direction informs practice without overriding next-week choices, active goals, due retention, or upcoming performance work.
+
+Weekly-minute targets and calendar progress are planning context rather than musicianship scores. Reduced-load and taper phases are scheduling templates, not medical or physiological prescriptions. Linked goals and performance dates are never silently rewritten.
+
+Training Cycles use their own IndexedDB store (database schema v6). The existing backup envelope remains v4: new backups include cycles, and old v4 backups remain restorable.
+
 ## Weekly Review & adaptive planning — 2.11.0
 
 The new **Weekly Review** page turns the last seven days of practice evidence into an explicit proposal for the next seven days. It reuses the existing diagnostics and Priority Engine rather than introducing another opaque coaching model.

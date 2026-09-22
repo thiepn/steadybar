@@ -11,6 +11,7 @@ import {seedData} from '../dist/app/db/seed.js';
 import {createBackup,restoreBackup} from '../dist/app/db/backup.js';
 import {createSession,pauseSession,finishBlock} from '../dist/app/practice/logic.js';
 import {applyAutopilotPlan,buildAutopilotPlan} from '../dist/app/domain/autopilot.js';
+import {buildTrainingPlan} from '../dist/app/domain/training-plan.js';
 import {requireActive} from '../dist/app/practice/guards.js';
 import {metadata,uuid} from '../dist/app/domain/utils.js';
 const adapter=transactionAdapter([...db.STORES,'migrationBackups']);
@@ -22,7 +23,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);
+  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
@@ -149,7 +150,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[]}));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[]}));
 });
 test('backup restore rebuilds derived mastery from evidence while preserving manual scheduling overrides',async()=>{
   await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
@@ -208,6 +209,28 @@ test('referenced records cannot be deleted and profiles use archival rather than
 test('explicit reset removes old upgrade data as well as profiles and practice records',async()=>{
  const legacy=seedData();legacy.settings.instrument='Guitar';await db.replaceData(legacy);await db.initializeDatabase();assert.ok(await db.migrationBackup());
  await db.resetWorkspace();assert.equal(await db.migrationBackup(),undefined);const d=await db.readData();assert.equal(d.profiles.length,1);assert.equal(d.settings.onboardingDone,false);assert.equal(d.sessions.length,0);
+});
+
+test('training plans persist through the repository and modern backup restore',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId);
+  const plan=buildTrainingPlan(data,{profileId:profile.id,name:'Repository cycle',startOn:'2026-09-22',endOn:'2026-11-22',baselineWeeklyMinutes:150,goalIds:[],setlistIds:[],now:'2026-09-22T08:00:00.000Z'});
+  await db.put('trainingPlans',plan);assert.equal((await db.get('trainingPlans',plan.id)).name,'Repository cycle');
+  const backup=createBackup(await db.readData());assert.equal(backup.version,4);assert.equal(backup.data.trainingPlans.length,1);
+  await db.resetWorkspace();assert.equal((await db.readData()).trainingPlans.length,0);
+  await restoreBackup(backup);const restored=await db.readData();assert.equal(restored.trainingPlans.length,1);assert.equal(restored.trainingPlans[0].id,plan.id);
+});
+test('older version-4 backups without training plans restore as an empty trainingPlans collection',async()=>{
+  await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.trainingPlans;
+  await restoreBackup(backup);const restored=await db.readData();assert.deepEqual(restored.trainingPlans,[]);
+});
+test('training-plan references prevent deleting linked goals or setlists',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId),exercise=data.exercises.find(row=>row.profileId===profile.id&&row.primarySkillId);
+  const goal={...metadata(),profileId:profile.id,type:'custom',title:'Linked cycle goal',description:'',exerciseId:exercise.id,targetValue:1,unit:'focus',completed:false};
+  await db.put('goals',goal);
+  const current=await db.readData(),plan=buildTrainingPlan(current,{profileId:profile.id,name:'Linked cycle',startOn:'2026-09-22',endOn:'2026-11-22',baselineWeeklyMinutes:120,goalIds:[goal.id],setlistIds:[],now:'2026-09-22T08:00:00.000Z'});
+  await db.put('trainingPlans',plan);
+  await assert.rejects(db.remove('goals',goal.id),/linked goal does not exist/i);
+  assert.ok(await db.get('goals',goal.id));
 });
 
 // Learning records share the same all-store commit barrier as practice history.

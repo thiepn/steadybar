@@ -8,7 +8,7 @@ import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPr
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
-import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan } from './models.js';
+import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan, TrainingPlan } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
 export { ValidationError, dateOnly, type Validator } from './schema.js';
@@ -146,9 +146,40 @@ export const validateGoal: Validator<Goal> = (v,p='Goal') => {
   return goal;
 };
 export const validateSetlist: Validator<Setlist> = obj({ ...entity, name, date:optional(dateOnly), songIds:arr(id,200), notes:text() });
+const trainingFocus=obj({id,skillId:id,weight:one(1,2,3),note:text()});
+const trainingPhase=obj({
+  id,name,kind:one('foundation','build','deload','integrate','simulate','taper','consolidate','custom'),
+  startOn:dateOnly,endOn:dateOnly,weeklyMinutes:num(15,10000,true),emphasis:one('balanced','songs','timing','technique'),
+  focuses:arr(trainingFocus,5),notes:text(),
+});
+const rawTrainingPlan=obj({
+  ...entity,profileId:id,name,status:one('draft','active','paused','completed','archived'),
+  startOn:dateOnly,endOn:dateOnly,baselineWeeklyMinutes:num(15,10000,true),
+  goalIds:arr(id,100),setlistIds:arr(id,100),notes:text(),phases:arr(trainingPhase,24),
+});
+const nextDate=(value:string)=>new Date(Date.parse(value+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+export const validateTrainingPlan:Validator<TrainingPlan>=(v,p='Training plan')=>{
+  const plan=rawTrainingPlan(v,p);
+  if(plan.endOn<plan.startOn)fail(p,'end date cannot be before start date');
+  if(!plan.phases.length)fail(p,'add at least one training phase');
+  uniqueIds(plan.phases,`${p}.phases`);
+  if(new Set(plan.goalIds).size!==plan.goalIds.length)fail(p,'linked goals must be unique');
+  if(new Set(plan.setlistIds).size!==plan.setlistIds.length)fail(p,'linked setlists must be unique');
+  const ordered=[...plan.phases].sort((a,b)=>a.startOn.localeCompare(b.startOn)||a.endOn.localeCompare(b.endOn)||a.id.localeCompare(b.id));
+  if(ordered[0]!.startOn!==plan.startOn||ordered.at(-1)!.endOn!==plan.endOn)fail(p,'phases must cover the full plan date range');
+  for(let i=0;i<ordered.length;i++){
+    const phase=ordered[i]!;
+    if(phase.endOn<phase.startOn)fail(p,'phase end date cannot be before its start');
+    if(phase.startOn<plan.startOn||phase.endOn>plan.endOn)fail(p,'phase dates must stay inside the training plan');
+    if(new Set(phase.focuses.map(row=>row.skillId)).size!==phase.focuses.length)fail(p,'phase focus skills must be unique');
+    if(i>0&&phase.startOn!==nextDate(ordered[i-1]!.endOn))fail(p,'training phases must be contiguous without gaps or overlaps');
+  }
+  return plan;
+};
+
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
 export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
@@ -213,6 +244,15 @@ export function validateData(input:unknown):Data {
       if(g.songPartId){const part=song?.parts?.find(p=>p.id===g.songPartId);if(!part||part.profileId!==g.profileId)fail('Goal','song part must belong to the goal profile');}
     }
     for(const setlist of d.setlists)for(const id of setlist.songIds)if(!songs.has(id))fail('Setlist','song does not exist');
+    const goals=new Map(d.goals.map(goal=>[goal.id,goal])),setlists=new Map(d.setlists.map(setlist=>[setlist.id,setlist]));
+    const trainingPlans=d.trainingPlans??[],activeTrainingPlans=trainingPlans.filter(plan=>plan.status==='active');
+    if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');
+    for(const plan of trainingPlans){
+      const profile=requireProfile(plan.profileId);
+      for(const goalId of plan.goalIds){const goal=goals.get(goalId);if(!goal){fail('Training plan','linked goal does not exist');continue;}if(goal.profileId&&goal.profileId!==plan.profileId)fail('Training plan','linked goal belongs to a different profile');}
+      for(const setlistId of plan.setlistIds)if(!setlists.has(setlistId))fail('Training plan','linked setlist does not exist');
+      for(const phase of plan.phases)for(const focus of phase.focuses)if(!isSkillForInstrument(focus.skillId,profile.instrumentType))fail('Training plan','phase focus does not belong to this profile');
+    }
     for(const s of d.songs)for(const part of s.parts??[]){const p=requireProfile(part.profileId);if(p.instrumentType!==part.instrumentType)fail('Song part','instrument identity must match its profile');}
     if(d.practiceModelVersion===1&&(!d.practiceStates||!d.priorityCycles))fail('Practice model','version 1 requires practice states and priority cycles');
     const states=d.practiceStates??[];if(new Set(states.map(s=>`${s.profileId}/${s.targetKey}`)).size!==states.length)fail('Practice states','one state per profile and target is required');for(const state of states)assertPracticeStateReferences(state,d);

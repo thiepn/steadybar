@@ -3,6 +3,7 @@ import { store } from '../app/store.js';
 import { activeProfile } from '../domain/profiles.js';
 import { buildWeeklyReview, type WeeklyFocusSelection, type WeeklyFocusSuggestion } from '../domain/weekly-review.js';
 import { skillDefinition } from '../domain/skill-graph.js';
+import { activeTrainingContext } from '../domain/training-plan.js';
 import type { PriorityCycle } from '../domain/practice-state.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -21,9 +22,9 @@ function cycleItems(cycle:PriorityCycle):HTMLElement[]{
 }
 
 export function weeklyReviewPage():Page{
-  const data=store.view(),profile=activeProfile(store.snapshot()),review=buildWeeklyReview(data,{profileId:profile.id}),current=review.diagnostics.comparison.current,previous=review.diagnostics.comparison.previous;
+  const data=store.view(),profile=activeProfile(store.snapshot()),review=buildWeeklyReview(data,{profileId:profile.id}),training=activeTrainingContext(store.snapshot(),profile.id),current=review.diagnostics.comparison.current,previous=review.diagnostics.comparison.previous;
   const page=el('div',{class:'page weekly-review-page'},pageHeader('7-day review','Weekly Review',`${formatDate(review.window.from)} → ${formatDate(review.window.to)} · Review evidence first, then choose what should shape the next seven days.`,[
-    link('Full Progress','/progress','button secondary','progress'),
+    link('Training Cycles','/cycles','button secondary','routine'),link('Full Progress','/progress','button secondary','progress'),
   ]));
 
   const summary=el('section',{class:'panel weekly-summary'},sectionHeader('This week','Rolling seven-day window'),
@@ -40,6 +41,12 @@ export function weeklyReviewPage():Page{
     el('div',{class:'split'},el('strong',{},insight.title),badge(insight.tone==='attention'?'Attention':insight.tone==='positive'?'Positive':'Context',insight.tone==='positive'?'accent':'neutral')),
     el('p',{},insight.detail),el('p',{class:'muted small'},insight.evidence)))));
   page.append(el('div',{class:'two-column wide-left weekly-top'},summary,signals));
+  if(training){
+    page.append(el('section',{class:'panel weekly-training-context'},sectionHeader('Long-term training cycle',training.phase?`${training.plan.name} · ${training.phase.name}`:training.plan.name,[link('Open cycle','/cycles/'+training.plan.id,'button secondary','arrow')]),
+      el('div',{class:'stats-strip inset-stats'},stat('Phase',training.phase?.name??'Outside phase window'),stat('Weekly target',training.phase?`${training.phase.weeklyMinutes} min`:`${training.plan.baselineWeeklyMinutes} min`),stat('Emphasis',training.phase?titleCase(training.phase.emphasis):'—')),
+      training.phase?el('p',{class:'muted small'},'Phase focus · '+(training.phase.focuses.map(row=>skillDefinition(row.skillId)?.label??row.skillId).join(' · ')||'No explicit skill focus')):el('p',{class:'muted small'},'The active cycle is currently outside its dated phase window.'),
+      el('p',{class:'field-hint'},'This long-term phase contributes a modest, explainable Priority signal. Weekly priorities remain stronger when you apply them.')));
+  }
 
   const proposal=el('section',{class:'panel weekly-focus-panel'},sectionHeader('Next 7 days focus',review.focus.length?'Suggested from current evidence':'No automatic focus proposal'));
   if(!review.focus.length){
