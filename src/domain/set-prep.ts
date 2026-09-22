@@ -132,7 +132,7 @@ function componentIssues(
   return issues.sort((a,b)=>rank[a.readiness]-rank[b.readiness]||kindRank(a.kind)-kindRank(b.kind)||a.label.localeCompare(b.label));
 }
 
-function assessSong(data:Data,setPosition:number,song:Song,profileId:string,states:Map<string,PracticeState>,now:number):SetPrepSongAssessment {
+function assessSong(setPosition:number,song:Song,profileId:string,states:Map<string,PracticeState>,now:number):SetPrepSongAssessment {
   const info=arrangement(song,profileId),wholeTarget:PracticeTargetRef={kind:'song',songId:song.id,...(info.partId?{partId:info.partId}:{})};
   const whole=readinessForState(stateFor(states,wholeTarget),now),issues=componentIssues(states,song,profileId,now,whole.readiness);
   const weak=issues.some(issue=>issue.readiness==='needs-work'),unknown=issues.some(issue=>issue.readiness==='unassessed');
@@ -160,7 +160,7 @@ function assessSong(data:Data,setPosition:number,song:Song,profileId:string,stat
 export function assessSetlist(data:Data,setlist:Setlist,profileId:string=activeProfile(data).id,options:{now?:Date|string|number;today?:string}={}):SetPrepAssessment {
   const now=toMillis(options.now),today=options.today??localDate(new Date(now)),window=setPrepWindow(setlist,today),states=stateMap(data,profileId);
   const ordered:SetPrepSongAssessment[]=[];
-  setlist.songIds.forEach((songId,setPosition)=>{const song=data.songs.find(row=>row.id===songId);if(song)ordered.push(assessSong(data,setPosition,song,profileId,states,now));});
+  setlist.songIds.forEach((songId,setPosition)=>{const song=data.songs.find(row=>row.id===songId);if(song)ordered.push(assessSong(setPosition,song,profileId,states,now));});
   const counts={ready:0,usable:0,needsWork:0,unassessed:0};
   for(const item of ordered){
     if(item.readiness==='ready')counts.ready++;
