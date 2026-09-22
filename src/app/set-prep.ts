@@ -7,7 +7,9 @@ import { store } from './store.js';
 export async function prepareSetPrepPlan(setlist:Setlist,minutes:number,mode:SetPrepMode='focused'):Promise<DailyPlan>{
   let prepared!:DailyPlan;
   await store.workspace(data=>{
-    const build=buildSetPrepPlan(data,setlist,{profileId:activeProfile(data).id,minutes,mode});
+    const current=data.setlists.find(row=>row.id===setlist.id);
+    if(!current)throw new Error('This setlist no longer exists.');
+    const build=buildSetPrepPlan(data,current,{profileId:activeProfile(data).id,minutes,mode});
     prepared=structuredClone(build.plan);
     return applySetPrepPlan(data,build);
   });
