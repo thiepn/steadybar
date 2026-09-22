@@ -6,7 +6,10 @@ const RECORDING_STORE='recordingAssets';
 
 export interface RecordingAsset {
   id:string;
-  blob:Blob;
+  bytes?:ArrayBuffer;
+  // 2.14 initially wrote Blob values. Keep this optional legacy field so an
+  // already-created Firefox/Chromium media database remains readable.
+  blob?:Blob;
   mimeType:string;
   sizeBytes:number;
   createdAt:string;
@@ -36,14 +39,22 @@ async function database():Promise<IDBDatabase>{
   try{return await opening;}finally{if(pending===opening)pending=undefined;}
 }
 export async function saveRecordingAsset(id:string,blob:Blob,createdAt:string):Promise<void>{
+  // Persist bytes instead of a Blob object. WebKit's IndexedDB implementation can
+  // reject Blob structured-cloning even though Firefox/Chromium accept it.
+  // ArrayBuffer is portable across the supported browser engines and the public
+  // API still returns a Blob reconstructed with the original MIME type.
+  const bytes=await blob.arrayBuffer();
   const db=await database(),tx=db.transaction(RECORDING_STORE,'readwrite'),done=complete(tx);
-  tx.objectStore(RECORDING_STORE).put({id,blob,mimeType:blob.type||'application/octet-stream',sizeBytes:blob.size,createdAt} satisfies RecordingAsset);
+  tx.objectStore(RECORDING_STORE).put({id,bytes,mimeType:blob.type||'application/octet-stream',sizeBytes:blob.size,createdAt} satisfies RecordingAsset);
   await done;
 }
 export async function getRecordingAsset(id:string):Promise<Blob|undefined>{
   const db=await database(),tx=db.transaction(RECORDING_STORE,'readonly'),done=complete(tx);
   const row=await request(tx.objectStore(RECORDING_STORE).get(id)) as RecordingAsset|undefined;
-  await done;return row?.blob;
+  await done;
+  if(!row)return undefined;
+  if(row.bytes)return new Blob([row.bytes],{type:row.mimeType||'application/octet-stream'});
+  return row.blob;
 }
 export async function deleteRecordingAsset(id:string):Promise<void>{
   const db=await database(),tx=db.transaction(RECORDING_STORE,'readwrite'),done=complete(tx);
