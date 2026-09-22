@@ -99,7 +99,7 @@ export function activePracticePage():Page{
   const cues=el('details',{class:'focus-drawer active-cues'},el('summary',{},'Practice cues'),el('div',{class:'focus-drawer-body'},cuesText));
   const note=()=>{const current=practice.session!.blocks[practice.session!.activeBlockIndex]!;formDialog('Quick practice note',[textarea('note','What did you notice?',current.notes,4)],async data=>{await practice.note(formText(data,'note'));notify('Practice note saved.');},'Save note');};
   const timingClick=()=>{
-    const current=resolvedTiming(store.snapshot().settings.metronome),currentGap=`${current.gapClickBars}:${current.gapSilentBars}`;
+    const block=practice.session!.blocks[practice.session!.activeBlockIndex]!,base=store.snapshot().settings.metronome,current=block.timingClickSnapshot??resolvedTiming(base),currentGap=`${current.gapClickBars}:${current.gapSilentBars}`;
     const gaps:[string,string][]=[['3:1','3 bars click → 1 silent'],['2:2','2 bars click → 2 silent'],['1:3','1 bar click → 3 silent'],['1:1','1 bar click → 1 silent']];
     if(!gaps.some(([value])=>value===currentGap))gaps.push([currentGap,`${current.gapClickBars} bars click → ${current.gapSilentBars} silent`]);
     formDialog('Timing click',[
@@ -171,7 +171,7 @@ export function activePracticePage():Page{
       text(status,phase==='running'?'Practicing':phase==='countin'?'Count-in':phase==='paused'?'Paused':'Ready');
       text(start.querySelector('span')!,phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start');
       start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
-      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));text(timingButton.querySelector('span')!,`Timing click · ${timingClickLabel(store.snapshot().settings.metronome)}`);
+      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));text(timingButton.querySelector('span')!,`Timing click · ${timingClickLabel({...store.snapshot().settings.metronome,timing:block.timingClickSnapshot})}`);
       const hasTempo=!block.protocolSnapshot||!!protocolPulse(block.protocolSnapshot),tempoRating=!block.protocolSnapshot||block.protocolSnapshot.kind==='tempo';
       main.classList.toggle('without-tempo',!hasTempo);page.classList.toggle('protocol-practice',!!block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo');
       mount(tempoReadout,readouts,null,hasTempo);mount(beats,main,taskHost,hasTempo);mount(metro,controls,null,hasTempo);
