@@ -251,6 +251,7 @@ input.metronome-bpm:hover {border-color:var(--border-strong)}
 .metronome-beat.accent-2 {border-top:3px solid var(--accent);padding-top:4px}.metronome-beat.accent-0 {border-style:dashed}
 .button.metronome-beat.on {background:var(--accent);color:var(--on-accent);border-color:var(--accent)}.metronome-beat.on small {color:var(--on-accent)}
 .accent-help {text-align:center;font-size:11px}.meter-workspace>.field-hint {margin-top:12px}
+.metronome-training {border-top:1px solid var(--border);padding-top:18px;margin-top:18px}.metronome-training .section-heading {margin-bottom:12px}.metronome-training .section-heading p {font-size:11px}.timing-mode-grid {grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.timing-mode-grid>.field {margin-bottom:8px}.timing-mode-grid select,.ramp-grid input {min-width:0}.timing-presets {gap:6px;margin:2px 0 8px}.timing-presets>.button {font-size:11px;min-height:38px}.ramp-grid {grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.ramp-grid>.field {margin-bottom:8px}.tempo-ramp>.actions {margin-top:2px}.tempo-ramp>.actions>.button {min-height:40px}
 .volume-row {display:flex;align-items:center;gap:12px;border-top:1px solid var(--border);padding-top:16px;margin-top:18px;font-size:12px}
 .volume-row>.field {flex:1;min-width:80px;margin:0}.volume-row>.button {font-size:12px;padding-inline:8px}
 .metronome-side .section-heading {gap:6px}.preset-row {display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);padding:10px 0}
@@ -388,7 +389,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .metronome-grid {grid-template-columns:minmax(0,1fr);gap:24px}.metronome-main {padding:16px}.metronome-side .panel {margin-bottom:16px}.metronome-page .page-heading {margin-bottom:20px}
   input.metronome-bpm {font-size:88px;height:108px;letter-spacing:-5px}.tempo-display {margin:8px 0}.standalone-tempo-steps {gap:4px}.button.tempo-step {font-size:12px;min-height:40px}
   .metronome-transport {gap:10px;margin:12px 0 20px}.metronome-play {font-size:12px}.tap-tempo>.button {font-size:12px}.tap-tempo>.small {font-size:10px}.metronome-config {grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:8px}.metronome-config>.field:last-child {grid-column:1 / -1}.metronome-config .field:last-child {display:grid;grid-template-columns:1fr 1fr;align-items:center;margin-bottom:12px}.metronome-config select {font-size:13px;min-height:44px}.metronome-config label {font-size:11px}.meter-workspace {padding-top:16px}
-  .metronome-beats {gap:5px}.button.metronome-beat {min-width:40px;min-height:52px;max-width:70px}.volume-row {gap:8px;flex-wrap:wrap}.volume-row>.field {min-width:110px;flex-basis:50%}.volume-row>.button {font-size:11px}.accent-help {font-size:10px}
+  .metronome-beats {gap:5px}.button.metronome-beat {min-width:40px;min-height:52px;max-width:70px}.timing-mode-grid,.ramp-grid {grid-template-columns:repeat(2,minmax(0,1fr))}.timing-mode-grid>.field,.ramp-grid>.field {margin-bottom:6px}.timing-presets>.button {flex:1 1 calc(50% - 6px);min-height:44px}.metronome-training {padding-top:16px;margin-top:16px}.volume-row {gap:8px;flex-wrap:wrap}.volume-row>.field {min-width:110px;flex-basis:50%}.volume-row>.button {font-size:11px}.accent-help {font-size:10px}
   .active-page {padding:10px 16px calc(24px + env(safe-area-inset-bottom))}.practice-header {gap:4px;padding-bottom:10px}.practice-header>.actions {gap:4px}.practice-header .button {font-size:11px;padding:6px;gap:4px;min-height:44px}.practice-header .button>svg {width:14px;height:14px}.practice-header>.button {white-space:nowrap}
   .active-grid {display:block;margin-top:16px}.practice-queue {margin-top:28px}.practice-identity {margin-bottom:12px}.active-title {font-size:23px}.practice-state {margin-bottom:6px}.active-sticking {font-size:13px;margin-top:5px}.practice-state .eyebrow,.status-label {font-size:10px}
   .practice-readouts {gap:16px;padding:12px 0}.time-readout {padding-right:16px}.active-time {font-size:42px;letter-spacing:-2px}.active-timer {gap:4px;margin:7px 0 12px}.timer-target {font-size:11px}
@@ -559,7 +560,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-drawer .rating-buttons{grid-template-columns:repeat(5,minmax(0,1fr))}
 .focus-limitations{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .focus-limitations .practice-limitation{display:flex;align-items:center;gap:6px;min-height:40px;font-size:11px}
-.focus-tool-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.focus-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .focus-tool-grid>.button{min-height:44px;padding-inline:6px;font-size:11px}
 .focus-queue{display:grid;gap:0}
 .focus-queue .queue-block{padding-inline:4px}
