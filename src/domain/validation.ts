@@ -15,7 +15,13 @@ export { ValidationError, dateOnly, type Validator } from './schema.js';
 const entity = { id, createdAt: iso, updatedAt: iso };
 const meter = obj({ beats:num(1,16,true), beatUnit:one(4,8) });
 const subdivision = one(1,2,3,4);
-const baseMetronome = obj({ bpm, meter, subdivision, accents:arr(one(0,1,2),16), countIn:one(0,1,2,4), volume:num(0,1) });
+const timingClick = obj({
+  mode: one('standard','two-four','sparse','one-per-bar','gap'),
+  sparseEvery: one(2,3,4),
+  gapClickBars: num(1,16,true),
+  gapSilentBars: num(1,16,true),
+});
+const baseMetronome = obj({ bpm, meter, subdivision, accents:arr(one(0,1,2),16), countIn:one(0,1,2,4), volume:num(0,1), timing:optional(timingClick) });
 export const validateMetronome: Validator<MetronomeConfig> = (v,p = 'Metronome') => {
   const config = baseMetronome(v,p);
   if (config.accents.length !== config.meter.beats) fail(p,'accent count must match the meter');
