@@ -70,7 +70,7 @@ test('hold repeats the latest explicit challenge without silently stacking anoth
 
 test('reduce steps back the same challenge axis that just failed',()=>{
   const d=modern(),exercise=tempoExercise(d),timing={mode:'gap',sparseEvery:2,gapClickBars:2,gapSilentBars:2};
-  addProgressionHistory(d,exercise,{engineVersion:1,direction:'advance',dimension:'gap-click',level:2,summary:'Gap click',cue:'Keep playing.',timingClick:timing},{timingClick});
+  addProgressionHistory(d,exercise,{engineVersion:1,direction:'advance',dimension:'gap-click',level:2,summary:'Gap click',cue:'Keep playing.',timingClick:timing},{timingClick:timing});
   d.practiceStates=[exerciseState(exercise,{challenge:'reduce',latestResult:'not-yet',limitations:['timing']})];
   const plan=buildExerciseProgression(d,exercise);
   assert.equal(plan.direction,'reduce');assert.equal(plan.dimension,'gap-click');assert.equal(plan.level,1);
@@ -95,9 +95,9 @@ test('Phase 7 one-click-per-bar evidence is inherited instead of being mistaken 
 });
 
 test('Autopilot-style strict budgets never expand duration',()=>{
-  const d=modern();
-  const exercise=d.exercises.find(e=>e.protocol?.kind==='fretboard');
-  assert.ok(exercise);
+  const d=modern(),base=d.exercises[0];
+  const exercise={...structuredClone(base),id:'strict-duration-fixture',name:'Strict duration fixture',protocol:{kind:'fretboard',tuning:[40,45,50,55,59,64],strings:[1,2],minFret:0,maxFret:5,target:12},defaultSeconds:300};
+  d.exercises.push(exercise);
   d.practiceStates=[exerciseState(exercise,{mastery:'stabilize',tempo:undefined})];
   const plan=buildExerciseProgression(d,exercise,{seconds:240,strictDuration:true});
   assert.equal(plan.targetSeconds,undefined);
