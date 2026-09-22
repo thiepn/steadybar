@@ -89,6 +89,8 @@ export const validateRoutineBlock: Validator<RoutineBlock> = (v,p='Block') => {
   if(block.type==='song-section' && !block.songSectionId)fail(p,'a section block needs a section ID');
   if(block.progression&&block.type!=='exercise')fail(p,'exercise progression can only belong to an exercise block');
   if(block.setPrep&&!['song','song-section'].includes(block.type))fail(p,'set-prep metadata belongs only to repertoire blocks');
+  if(block.setPrep&&block.prescription?.generatedBy!=='set-prep')fail(p,'set-prep metadata requires a set-prep prescription');
+  if(block.prescription?.generatedBy==='set-prep'&&!block.setPrep)fail(p,'set-prep prescriptions require set-prep metadata');
   return block;
 };
 const rawRoutine = obj({ ...entity, profileId:optional(id), name, description:text(), blocks:arr(validateRoutineBlock,200), scheduledDays:arr(num(0,6,true),7), tags:arr(text(80),50), builtin:bool, archived:bool });
@@ -122,6 +124,8 @@ export const validateSession: Validator<PracticeSession> = (v,p = 'Session') => 
     if(b.protocolState && b.protocolState.clean>b.protocolState.total)fail(p,'clean count exceeds attempts');
     if(b.progressionSnapshot&&b.type!=='exercise')fail(p,'exercise progression evidence must belong to an exercise block');
     if(b.setPrepSnapshot&&!['song','song-section'].includes(b.type))fail(p,'set-prep evidence must belong to a repertoire block');
+    if(b.setPrepSnapshot&&b.prescriptionSnapshot?.generatedBy!=='set-prep')fail(p,'set-prep evidence requires a set-prep prescription');
+    if(b.prescriptionSnapshot?.generatedBy==='set-prep'&&!b.setPrepSnapshot)fail(p,'set-prep session prescriptions require set-prep evidence');
     if(b.completed && b.skipped)fail(p,'a block cannot be both completed and skipped');
     if(new Set(b.tempoAttempts.map(a=>a.id)).size!==b.tempoAttempts.length)fail(p,'attempt IDs must be unique within a block');
   }
@@ -180,6 +184,13 @@ export function validateData(input:unknown):Data {
       }
     }
     const exercises=new Map(d.exercises.map(e=>[e.id,e])),songs=new Map(d.songs.map(s=>[s.id,s]));
+    for(const plan of d.dailyPlans){
+      if(plan.generation?.kind==='set-prep'){
+        for(const block of plan.blocks){
+          if(!block.setPrep||block.setPrep.setlistId!==plan.generation.setlistId||block.setPrep.stage!==plan.generation.setPrepStage||block.setPrep.mode!==plan.generation.setPrepMode)fail('Daily plan','set-prep blocks must match their plan generation metadata');
+        }
+      }
+    }
     for(const r of [...d.routines,...d.dailyPlans]){requireProfile(r.profileId);for(const b of r.blocks){
       if(b.protocol)assertProtocolCompatible(b.protocol,requireProfile(r.profileId));
       const effective=b.protocol??(b.exerciseId&&exercises.has(b.exerciseId)?exerciseProtocol(exercises.get(b.exerciseId)!):undefined);
