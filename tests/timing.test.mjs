@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { ScheduleClock, resolvedTiming, timingClickLabel } from '../dist/app/audio/scheduler.js';
 import { DEFAULT_METRONOME } from '../dist/app/domain/models.js';
 import { validateMetronome } from '../dist/app/domain/validation.js';
+import { seedData } from '../dist/app/db/seed.js';
+import { createSession } from '../dist/app/practice/logic.js';
 
 function config(overrides={}) {
   return {
@@ -74,6 +76,16 @@ test('timing mode changes wait for the next bar boundary',()=>{
   const next=clock.next();
   assert.equal(next.beat,0);assert.equal(next.accent,2);
   assert.equal(clock.next().accent,0);
+});
+
+
+test('new tempo blocks snapshot click difficulty independently from settings',()=>{
+  const data=seedData();
+  data.settings.metronome.timing={mode:'gap',sparseEvery:2,gapClickBars:2,gapSilentBars:2};
+  const session=createSession([{id:'timing-evidence',type:'free',title:'Timing evidence',targetSeconds:60,bpm:80,notes:'',order:0}],data);
+  assert.deepEqual(session.blocks[0].timingClickSnapshot,data.settings.metronome.timing);
+  data.settings.metronome.timing.mode='standard';
+  assert.equal(session.blocks[0].timingClickSnapshot.mode,'gap');
 });
 
 test('invalid timing configuration is rejected',()=>{
