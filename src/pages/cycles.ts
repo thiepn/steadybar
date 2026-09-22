@@ -8,10 +8,9 @@ import { calculateTotalPracticeTime, filterSessions, goalProgress } from '../dom
 import type { Page } from '../app/navigation.js';
 import { navigate } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, checkbox, confirmAction, empty, field, formDialog, formNumber, formText, input, link, notify, pageHeader, progressBar, sectionHeader, select, stat, textarea } from '../ui/components.js';
-import { duration, formatDate, localDate, titleCase } from '../domain/utils.js';
+import { badge, button, checkbox, confirmAction, empty, formDialog, formNumber, formText, input, link, notify, pageHeader, progressBar, sectionHeader, select, stat, textarea } from '../ui/components.js';
+import { formatDate, localDate, titleCase } from '../domain/utils.js';
 
-const DAY=86400000;
 const phaseKinds:[TrainingPhaseKind,string][]=[
   ['foundation','Foundation'],['build','Build'],['deload','Reduced-load consolidation'],['integrate','Integrate'],
   ['simulate','Simulate'],['taper','Taper'],['consolidate','Consolidate'],['custom','Custom'],
