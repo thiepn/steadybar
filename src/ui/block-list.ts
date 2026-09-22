@@ -65,6 +65,7 @@ export function blockList(blocks:RoutineBlock[],onChange:(blocks:RoutineBlock[])
       draggingId='';
     });
     if(protocol){const cue=protocol.kind==='tempo'?protocol.sticking:protocolSummary(protocol);if(cue)title.append(el('p',{class:protocol.kind==='tempo'?'block-cue sticking':'block-cue'},cue));}
+    if(block.progression)title.append(el('p',{class:'block-cue block-progression'},'Next challenge · '+block.progression.summary));
     list.append(row);
   });
   list.append(el('div',{class:'block-add'},button('Add block',()=>editBlock(undefined,async block=>change(rows=>[...rows,block])),'ghost','plus')));
