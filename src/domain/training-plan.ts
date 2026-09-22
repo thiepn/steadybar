@@ -62,7 +62,7 @@ function allocateDays(total:number,specs:PhaseSpec[]):number[]{
   let assigned=result.reduce((a,b)=>a+b,0);
   const fractional=raw.map((value,index)=>({index,fraction:value-Math.floor(value)})).sort((a,b)=>b.fraction-a.fraction||a.index-b.index);
   let cursor=0;
-  while(assigned<total){result[fractional[cursor%fractional.length]!.index]++;assigned++;cursor++;}
+  while(assigned<total){const row=fractional[cursor%fractional.length]!.index;result[row]=(result[row]??0)+1;assigned++;cursor++;}
   while(assigned>total){
     const row=[...result.keys()].sort((a,b)=>result[b]!-result[a]!||b-a).find(index=>result[index]!>1);
     if(row===undefined)break;result[row]!--;assigned--;
