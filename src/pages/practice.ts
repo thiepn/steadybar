@@ -8,12 +8,13 @@ import { openAppearance } from '../ui/appearance.js';
 import { store } from '../app/store.js';
 import { navigate, type Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { button, confirmAction, empty, field, formDialog, formText, link, notify, pageHeader, sectionHeader, textarea } from '../ui/components.js';
+import { button, confirmAction, empty, field, formDialog, formText, link, notify, pageHeader, sectionHeader, select, textarea } from '../ui/components.js';
 import { selectRoutineDialog, trainerDialog } from '../ui/editors.js';
 import { exerciseBlock, freeBlock, launchPractice } from '../practice/launch.js';
 import { practice } from '../practice/controller.js';
 import { duration, clock, localDate } from '../domain/utils.js';
-import { RATINGS } from '../domain/models.js';
+import { RATINGS, type TimingClickConfig } from '../domain/models.js';
+import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
 import type { LimitationTag, PracticeResult } from '../domain/practice-state.js';
 import { trainerLabel } from '../domain/trainer.js';
 import { routineDuration } from '../domain/analytics.js';
@@ -97,12 +98,28 @@ export function activePracticePage():Page{
   const cuesText=el('p',{class:'pre-line'});
   const cues=el('details',{class:'focus-drawer active-cues'},el('summary',{},'Practice cues'),el('div',{class:'focus-drawer-body'},cuesText));
   const note=()=>{const current=practice.session!.blocks[practice.session!.activeBlockIndex]!;formDialog('Quick practice note',[textarea('note','What did you notice?',current.notes,4)],async data=>{await practice.note(formText(data,'note'));notify('Practice note saved.');},'Save note');};
+  const timingClick=()=>{
+    const current=resolvedTiming(store.snapshot().settings.metronome),currentGap=`${current.gapClickBars}:${current.gapSilentBars}`;
+    const gaps:[string,string][]=[['3:1','3 bars click → 1 silent'],['2:2','2 bars click → 2 silent'],['1:3','1 bar click → 3 silent'],['1:1','1 bar click → 1 silent']];
+    if(!gaps.some(([value])=>value===currentGap))gaps.push([currentGap,`${current.gapClickBars} bars click → ${current.gapSilentBars} silent`]);
+    formDialog('Timing click',[
+      select('mode','Click mode',[['standard','Standard'],['two-four','2 & 4 only'],['sparse','Sparse click'],['one-per-bar','One click per bar'],['gap','Gap click · silent bars']],current.mode),
+      select('sparse','Sparse density',[['2','Every 2 beats'],['3','Every 3 beats'],['4','Every 4 beats']],String(current.sparseEvery)),
+      select('gap','Gap progression',gaps,currentGap),
+      el('p',{class:'field-hint'},'Count-in remains fully audible. Changes apply to the click pattern without changing the practice block or mastery result.'),
+    ],async form=>{
+      const [gapClickBars,gapSilentBars]=formText(form,'gap').split(':').map(Number);
+      const timing:TimingClickConfig={mode:formText(form,'mode') as TimingClickConfig['mode'],sparseEvery:Number(formText(form,'sparse')) as 2|3|4,gapClickBars:gapClickBars||3,gapSilentBars:gapSilentBars||1};
+      await practice.setTimingClick(timing);notify(`Click pattern · ${timingClickLabel({...store.snapshot().settings.metronome,timing})}.`);
+    },'Use click pattern');
+  };
+  const timingButton=button('Timing click',timingClick,'ghost','pulse');
   const trainerButton=button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress');
   const limitations=el('details',{class:'focus-drawer practice-limitations'},el('summary',{},'What limited it? · optional'),el('div',{class:'focus-drawer-body focus-limitations'},limitationChecks));
   const tools=el('details',{class:'focus-drawer focus-tools'},
     el('summary',{},'Tools & block options'),
     el('div',{class:'focus-drawer-body focus-tool-grid'},
-      button('Quick note',note,'ghost','note'),trainerButton,restart,skip,finishUnrated));
+      button('Quick note',note,'ghost','note'),timingButton,trainerButton,restart,skip,finishUnrated));
   const queueDrawer=el('details',{class:'focus-drawer focus-queue-drawer'},el('summary',{},'Session queue'),el('div',{class:'focus-drawer-body'},queue));
 
   const identity=el('section',{class:'practice-identity focus-identity'},
@@ -154,7 +171,7 @@ export function activePracticePage():Page{
       text(status,phase==='running'?'Practicing':phase==='countin'?'Count-in':phase==='paused'?'Paused':'Ready');
       text(start.querySelector('span')!,phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start');
       start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
-      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));
+      text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));text(timingButton.querySelector('span')!,`Timing click · ${timingClickLabel(store.snapshot().settings.metronome)}`);
       const hasTempo=!block.protocolSnapshot||!!protocolPulse(block.protocolSnapshot),tempoRating=!block.protocolSnapshot||block.protocolSnapshot.kind==='tempo';
       main.classList.toggle('without-tempo',!hasTempo);page.classList.toggle('protocol-practice',!!block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo');
       mount(tempoReadout,readouts,null,hasTempo);mount(beats,main,taskHost,hasTempo);mount(metro,controls,null,hasTempo);
@@ -173,7 +190,7 @@ export function activePracticePage():Page{
       queue.replaceChildren(...session.blocks.map((b,i)=>el('div',{class:`queue-block ${i===session.activeBlockIndex?'current':''}`},el('span',{class:'queue-number'},b.completed?'✓':b.skipped?'—':String(i+1).padStart(2,'0')),el('div',{},el('strong',{},b.titleSnapshot),el('span',{class:'muted small'},`${duration(b.targetSeconds)}${b.initialBpm===undefined?'':` · ${b.initialBpm} BPM`}`)))));
       window.scrollTo({top:0,behavior:'smooth'});
     }
-    Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',!!practice.beat&&practice.beat.beat===i&&(phase==='running'||phase==='countin')));
+    Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',!!practice.beat&&practice.beat.accent>0&&practice.beat.beat===i&&(phase==='running'||phase==='countin')));
     tick();
   }
   const onKey=(event:KeyboardEvent)=>{
