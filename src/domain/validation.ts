@@ -8,7 +8,7 @@ import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPr
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
-import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
+import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeRecording, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
 export { ValidationError, dateOnly, type Validator } from './schema.js';
@@ -212,9 +212,25 @@ export const validateWeeklySchedule:Validator<WeeklySchedule>=(v,p='Weekly sched
 };
 
 
+const rawPracticeRecording=obj({
+  ...entity,recordingVersion:one(1),profileId:id,assetId:id,title:name,
+  durationSeconds:num(0.01,86400),mimeType:text(200,1),sizeBytes:num(1,10_000_000_000,true),
+  sessionId:optional(id),blockId:optional(id),sourceType:one('exercise','song','song-section','free'),
+  sourceExerciseId:optional(id),sourceSongId:optional(id),sourceSongSectionId:optional(id),
+  bpm:optional(bpm),attemptNumber:num(1,100000,true),rating:optional(one(1,2,3,4,5)),
+  note:text(),tags:arr(text(80),50),markedBest:bool,milestone:bool,favorite:bool,
+});
+export const validatePracticeRecording:Validator<PracticeRecording>=(v,p='Practice recording')=>{
+  const recording=rawPracticeRecording(v,p);
+  if(recording.sourceType==='exercise'&&!recording.sourceExerciseId)fail(p,'exercise recordings need an exercise reference');
+  if(recording.sourceType==='song'&&!recording.sourceSongId)fail(p,'song recordings need a song reference');
+  if(recording.sourceType==='song-section'&&(!recording.sourceSongId||!recording.sourceSongSectionId))fail(p,'song-section recordings need song and section references');
+  return recording;
+};
+
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
 export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
@@ -283,6 +299,9 @@ export function validateData(input:unknown):Data {
     const weeklySchedules=d.weeklySchedules??[];
     if(new Set(weeklySchedules.map(schedule=>schedule.profileId+'/'+schedule.weekStart)).size!==weeklySchedules.length)fail('Weekly schedules','one schedule per profile and week is allowed');
     for(const schedule of weeklySchedules)requireProfile(schedule.profileId);
+    const recordings=d.recordings??[];
+    for(const recording of recordings)requireProfile(recording.profileId);
+    if(new Set(recordings.map(recording=>recording.assetId)).size!==recordings.length)fail('Practice recordings','audio asset IDs must be unique');
     const trainingPlans=d.trainingPlans??[],activeTrainingPlans=trainingPlans.filter(plan=>plan.status==='active');
     if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');
     for(const plan of trainingPlans){
