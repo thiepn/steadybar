@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.8.0 — Exercise Progression Engine — 2026-09-22
+
+- Add a deterministic Exercise Progression Engine on top of the existing Mastery/Retention `reduce / hold / advance` signal instead of inventing a second mastery model.
+- Progress exercises across one challenge dimension at a time: tempo, duration, metronome subdivision support, click density, gap click, accent pattern, dynamics, percussion orchestration, memory demand, and musical context.
+- Keep progression conservative: unseen/early-learning material establishes or holds a baseline; advancement requires the existing separated solid evidence; repeated established failure reduces difficulty.
+- Base tempo changes on proven Working/Peak evidence before authored or historical fallback values, so failed high-speed experiments cannot become the next prescribed tempo.
+- Inherit Phase 7 timing evidence, including sparse, one-click-per-bar and gap-click difficulty, when deciding what to progress next.
+- Store an optional immutable progression snapshot on each generated exercise block so History can reconstruct exactly what challenge was attempted.
+- Clear stale generated progression evidence whenever the user manually changes BPM, timing-click mode, protocol, duration, or tempo-trainer configuration.
+- Add **Next challenge** actions to exercise pages while preserving the ordinary baseline **Start practice** path; surface challenge cues in Today, Focus Player and History.
+- Apply progression to Autopilot exercise blocks without changing its exact 5/10/15/20/30/45-minute budget allocation; ramp-in slots cannot automatically escalate difficulty.
+- Do not automatically escalate voice exercises; vocal work remains on its explicit range/rest-aware practice path.
+- Keep all new persistence fields optional, so older sessions, settings and backup envelopes remain valid without an IndexedDB or backup-format migration.
+- Add deterministic unit and browser coverage for one-axis progression, reduce/hold/advance behavior, timing inheritance, accent progression, exact Autopilot budgets, voice safety, immutable snapshots and responsive UI.
+
 ## 2.7.0 — Metronome & Timing Training — 2026-09-22
 
 - Add first-class timing-click modes to the Web Audio scheduler: Standard, 2 & 4, Sparse, One click per bar, and Gap click.
