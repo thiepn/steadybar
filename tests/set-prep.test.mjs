@@ -142,6 +142,16 @@ test('applying set prep replaces Today atomically and stamps selected targets wi
   assert.doesNotThrow(()=>validateData(next));
 });
 
+test('set-prep plan metadata cannot drift away from its generated blocks',()=>{
+  const d=modern(),p=d.settings.activeProfileId,s=song(),sl=setlist([s.id],'2026-09-27');
+  d.songs=[s];d.setlists=[sl];
+  const build=buildSetPrepPlan(d,sl,{profileId:p,minutes:10,mode:'focused',now:at,today});
+  const broken=structuredClone(build.plan);broken.blocks[0].setPrep.mode='run-through';
+  assert.throws(()=>validateData({...d,dailyPlans:[broken]}),/set-prep blocks must match/i);
+  const orphan=structuredClone(build.plan);delete orphan.blocks[0].setPrep;
+  assert.throws(()=>validateData({...d,dailyPlans:[orphan]}),/set-prep prescriptions require/i);
+});
+
 test('set-prep skip bookkeeping is independent from mastery and resets after a completed generated block',()=>{
   const d=modern(),p=d.settings.activeProfileId,s=song(),target={kind:'song',songId:s.id},base=state(p,target,{scheduling:{lastScheduledAt:at,consecutiveSkips:1,manualPriority:0}});
   const snapshot={engineVersion:1,setlistId:'set-1',setlistName:'Sunday Set',performanceDate:'2026-09-27',stage:'simulate',mode:'focused',role:'song',setPosition:0};
