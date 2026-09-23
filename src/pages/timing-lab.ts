@@ -36,7 +36,7 @@ function resultCard(result:TimingLabResult,allowDelete=false):HTMLElement{
     const plot=el('div',{class:'timing-offset-plot','aria-hidden':'true'},el('div',{class:'timing-zero-line'}));
     for(const hit of result.hits){
       const x=result.durationSeconds?clamp(hit.elapsedMs/(result.durationSeconds*1000)*100,0,100):0;
-      const y=50+clamp(hit.offsetMs/limit,-1,1)*42;
+      const y=50-clamp(hit.offsetMs/limit,-1,1)*42;
       plot.append(el('span',{class:`timing-hit-dot ${hit.offsetMs<-5?'early':hit.offsetMs>5?'late':'centered'}`,style:`left:${x}%;top:${y}%`}));
     }
     card.append(el('div',{class:'timing-plot-wrap'},el('div',{class:'split'},el('strong',{},'Offset over time'),el('span',{class:'muted small'},'up = late · down = early')),plot));
