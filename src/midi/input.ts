@@ -34,7 +34,7 @@ interface MidiAccessLike {
   inputs:Map<string,MidiInputLike>;
   onstatechange:((event:unknown)=>void)|null;
 }
-type MidiNavigator=Navigator&{requestMIDIAccess?:(options?:{sysex?:boolean;software?:boolean})=>Promise<MidiAccessLike>};
+type MidiNavigator=Navigator&{requestMIDIAccess?:(options?:{sysex?:boolean})=>Promise<MidiAccessLike>};
 
 export function parseMidiNoteMessage(event:MidiMessageLike):Omit<MidiNoteEvent,'time'>|undefined{
   const data=event.data;if(!data||data.length<3)return undefined;
@@ -60,7 +60,7 @@ export class MidiInputManager {
     const request=(navigator as MidiNavigator).requestMIDIAccess;
     if(!request)throw new Error('Web MIDI is not supported by this browser. Use a Chromium-based browser for MIDI drum input.');
     try{
-      this.access=await request.call(navigator,{sysex:false,software:false});
+      this.access=await request.call(navigator,{sysex:false});
       this.access.onstatechange=()=>this.stateListener?.();
       return this.inputs();
     }catch(error){
