@@ -22,6 +22,20 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## MIDI Drum Lab — 2.17.0
+
+Steadybar now supports electronic drum kits and MIDI pads through a dedicated **MIDI Drum Lab**. Live note-on timestamps are normalized from the browser's high-resolution MIDI clock onto the same AudioContext clock as the metronome, then analyzed with the same deterministic grid-matching core used by Timing Lab.
+
+Connect a Web MIDI input, keep the General MIDI drum defaults or teach Steadybar custom pad notes, optionally filter one MIDI channel, then run a timed test. Results include signed early/late bias, mean absolute timing error, spread, drift, misses/extras, unmapped-note counts, MIDI velocity median/spread/range and per-mapped-voice summaries.
+
+For honest analysis, users explicitly choose both an **analysis lane** and an **expected-hit pattern**. `Snare + 2 & 4` is suitable for a backbeat lane; `Hi-hat + Every subdivision` works for repeated subdivision lanes; `All mapped notes` is intended for single-stroke/pad exercises. Without an authored note-by-note drum score, Steadybar does not claim complete groove-note correctness.
+
+Device mappings are saved per practice profile. The app stores drum-voice identity only and does not infer left/right hand or foot. MIDI velocity is a device-specific 1–127 value—not acoustic dB, stick force or a universal dynamics score.
+
+Live Web MIDI availability depends on browser/platform support and is strongest in Chromium-based browsers. Firefox/WebKit can still read saved MIDI history and use the rest of Steadybar normally. Structured MIDI data uses database schema v10 while the backup envelope remains v4.
+
+See [MIDI Drum Lab architecture and limitations](docs/MIDI-LAB.md).
+
 ## Timing Lab — 2.16.0
 
 Steadybar now includes a local **Timing Lab** for microphone-based onset analysis. The metronome and microphone detector share the same Web Audio clock, so expected grid positions and detected attacks are compared on one audio-time reference instead of through UI timers.
@@ -195,7 +209,7 @@ Strict TypeScript, native DOM components, IndexedDB, Web Audio, local SVG charts
 
 Data belongs to the browser profile and origin. Another device, browser, port or domain does not share it. Export backups regularly and before moving domains. Restore supports validated transactional **replacement**, not merge. Reset and replacement require confirmation and initiate a safety-backup download; verify that your browser saved it.
 
-Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 4** and the same `music-practice-os` format identifier. Version-1, version-2 and version-3 backups remain importable. The physical structured-workspace IndexedDB version is 9; practice state, priority cycles, weekly schedules, recording metadata and Timing Lab results are stored separately from immutable session history. Recording audio blobs live in the separate local media database described above. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
+Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 4** and the same `music-practice-os` format identifier. Version-1, version-2 and version-3 backups remain importable. The physical structured-workspace IndexedDB version is 10; practice state, priority cycles, weekly schedules, recording metadata, Timing Lab results, MIDI device mappings and MIDI performance results are stored separately from immutable session history. Recording audio blobs live in the separate local media database described above. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
 
 Active sessions checkpoint every five seconds. Recovery excludes unknown crash downtime; up to the last checkpoint interval may be missing. Backgrounding pauses practice. Keep the app foregrounded for reliable audio; OS suspension and hardware/Bluetooth latency are outside its timing guarantees.
 
