@@ -38,6 +38,24 @@ test('low evidence cannot produce a Progress decision even if a stale challenge 
   assert.equal(row.decision,'hold');
 });
 
+test('strong skill evidence cannot leak Progress confidence onto a fresh target in the same skill',()=>{
+  const d=modern(),groups=new Map();
+  for(const exercise of d.exercises){
+    if(!exercise.primarySkillId)continue;
+    const rows=groups.get(exercise.primarySkillId)??[];rows.push(exercise);groups.set(exercise.primarySkillId,rows);
+  }
+  const rows=[...groups.values()].find(items=>items.length>=3);assert.ok(rows,'Need three exercises in one skill domain');
+  const [a,b,fresh]=rows;
+  d.practiceStates=[
+    targetState(a,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:4,recent:{solid:2,usable:0,notYet:0}}),
+    targetState(b,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:4,recent:{solid:2,usable:0,notYet:0}}),
+  ];
+  const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:12});
+  const skill=intelligence.skills.find(row=>row.skillId===fresh.primarySkillId);assert.ok(skill);assert.equal(skill.confidence,'high');
+  const row=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);assert.ok(row);
+  assert.equal(row.confidence,'low');assert.equal(row.decision,'hold');
+});
+
 test('explicit reduce state becomes Repair plus Regress and is urgent',()=>{
   const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
   d.practiceStates=[targetState(exercise,{challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2},limitations:['timing']})];
