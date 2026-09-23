@@ -89,7 +89,7 @@ function focusSignalContext(data:Data,profileId:string,now:number,today:string):
 function focusSuggestions(data:Data,profileId:string,intelligence:PracticeIntelligence,now:number,today:string):WeeklyFocusSuggestion[]{
   const profile=data.profiles?.find(row=>row.id===profileId);if(!profile)return [];
   const allowed=new Set(skillDefinitionsFor(profile.instrumentType).map(row=>row.id)),signals=focusSignalContext(data,profileId,now,today);
-  const rows=intelligence.skills.filter(row=>allowed.has(row.skillId)&&(row.evidence.targetCount>0||row.band==='now')).slice(0,3);
+  const rows=intelligence.skills.filter(row=>allowed.has(row.skillId)&&(row.evidence.evidenceCount>0||row.band==='now')).slice(0,3);
   const roles:WeeklyFocusRole[]=['primary','secondary','support'],weights=([3,2,1] as const);
   return rows.map((skill,index)=>{
     const signal=signals.get(skill.skillId),reasons=[...skill.reasons,...(signal?.reasons??[])].filter((value,i,array)=>array.indexOf(value)===i).slice(0,3);
