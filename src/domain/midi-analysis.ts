@@ -116,6 +116,7 @@ export function expectedMidiGrid(
   const grid=buildExpectedTimingGrid(config,startTime,durationSeconds);
   if(pattern==='subdivision')return grid;
   if(pattern==='beat')return grid.filter(hit=>hit.part===0);
+  if(config.meter.beats<4)throw new Error('2 & 4 backbeat analysis requires a meter with at least four beats.');
   return grid.filter(hit=>hit.part===0&&(hit.beat===1||hit.beat===3));
 }
 
