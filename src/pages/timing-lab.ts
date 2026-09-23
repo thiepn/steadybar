@@ -54,7 +54,7 @@ export function timingLabPage():Page{
   let disposed=false;
 
   const page=el('div',{class:'page timing-lab-page'},pageHeader('Microphone diagnostics','Timing Lab',`${profile.name} · Compare detected attacks with the Web Audio timing grid.`,[
-    link('Metronome','/metronome','button secondary','pulse'),link('Progress','/progress','button secondary','progress'),
+    link('Metronome','/metronome','button secondary','pulse'),link('MIDI Lab','/midi-lab','button secondary','pulse'),link('Progress','/progress','button secondary','progress'),
   ]));
   const bpm=input('timingBpm','BPM',config.bpm,'number',{min:20,max:300,step:1,required:true});
   const subdivision=select('timingSubdivision','Subdivision',subdivisions,String(config.subdivision));
