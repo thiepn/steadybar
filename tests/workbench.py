@@ -702,6 +702,34 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(session['song'],fixture['song']);self.assertEqual(session['section'],fixture['section'])
         self.assertIn(guide_title,session['title']);self.assertGreater(len(session['notes']),80)
 
+    def test_65_practice_intelligence_today_action_uses_normal_daily_plan(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),exercise=d.exercises.find(e=>e.primarySkillId),now=new Date().toISOString();
+          const target={kind:'exercise',exerciseId:exercise.id},key='exercise|'+exercise.id;
+          d.practiceStates=[{id:'qa-intelligence-state',createdAt:now,updatedAt:now,profileId:exercise.profileId,targetKey:key,target,mastery:'build',latestResult:'not-yet',limitations:['timing'],challenge:'reduce',evidenceCount:3,recent:{solid:0,usable:0,notYet:2},scheduling:{consecutiveSkips:0,manualPriority:0},engine:{version:2,derivedAt:now}}];
+          d.dailyPlans=[];await load('db/database.js').replaceData(d);await store.refresh();return {id:exercise.id,name:exercise.name};
+        })()""")
+        self.route('/')
+        expect(self.page.get_by_role('heading',name='What matters now',exact=True)).to_be_visible()
+        row=self.page.locator('.today-intelligence-row').filter(has_text=fixture['name']).first
+        expect(row).to_be_visible()
+        expect(row.get_by_text('Regress',exact=True)).to_be_visible()
+        row.get_by_role('button',name='Add to Today',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),p=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate());
+              return p?{count:p.blocks.length,exerciseId:p.blocks[0]?.exerciseId}:null;
+            })()""")
+            if plan and plan['count']>0:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan);self.assertEqual(plan['exerciseId'],fixture['id'])
+        self.route('/review')
+        expect(self.page.get_by_role('heading',name='Practice intelligence',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Regress',exact=True).first).to_be_visible()
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
