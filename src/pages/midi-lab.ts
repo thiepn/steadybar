@@ -108,7 +108,16 @@ export function midiLabPage():Page{
   const connectDevices=async()=>{
     status.textContent='Requesting MIDI access…';
     const rows=await midiInput.request();renderDevices(rows);
-    removeStateListener();removeStateListener=midiInput.onStateChange(next=>renderDevices(next));
+    removeStateListener();removeStateListener=midiInput.onStateChange(next=>{
+      if(active){
+        const current=selected;
+        if(current&&!next.some(row=>row.id===current.id)){
+          resetTransport();status.textContent='The active MIDI input disconnected. The test was canceled and no result was saved.';notify(status.textContent,'error');
+        }
+        return;
+      }
+      if(!learning)renderDevices(next);
+    });
   };
   const connectButton=button(supported?'Connect / refresh MIDI':'Web MIDI unavailable',connectDevices,'primary','pulse');
   connectButton.disabled=!supported;
