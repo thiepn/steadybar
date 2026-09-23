@@ -18,7 +18,7 @@ const dataset=type=>{const p=profile(type),c=starterContent(p),data=migratePract
 const block=e=>({id:'b',profileId:e.profileId,type:'exercise',exerciseId:e.id,title:e.name,targetSeconds:60,bpm:protocolPulse(exerciseProtocol(e))?.bpm,notes:'',order:0});
 const result=extra=>({id:'r',timestamp:at,note:'',source:'self-report',...extra});
 const complete=(data,e,r)=>{const s=createSession([block(e)],data);s.blocks[0].outcomes=r?[r]:[];s.blocks[0].actualActiveSeconds=60;return finishBlock(s);};
-const baseCounts={drums:30,guitar:30,bass:25,piano:30,voice:25};
+const baseCounts={drums:36,guitar:36,bass:31,piano:36,voice:31};
 for(const type of Object.keys(baseCounts)){
  test(`${type}: original starter library validates with distinct skills and protocols`,()=>{
   const d=dataset(type);assert.equal(d.exercises.length,baseCounts[type]);assert.ok(new Set(d.exercises.map(e=>e.skillArea)).size>=5);
@@ -73,7 +73,7 @@ test('historical attribution buckets cannot become the selected practice workspa
  const d=dataset('guitar'),historical={id:'profile-earlier',name:'Earlier practice',instrumentType:'custom',family:'general',level:'beginner',focusAreas:[],defaultSessionMinutes:30,archived:false,createdAt:at,updatedAt:at,attribution:'unresolved-history'};
  d.profiles.push(historical);d.settings.activeProfileId=historical.id;d.settings.primaryProfileId=historical.id;
  const repaired=migratePracticeData(d);assert.equal(repaired.settings.activeProfileId,d.profiles[0].id);assert.equal(repaired.settings.primaryProfileId,d.profiles[0].id);
- assert.equal(activeProfile(repaired).id,d.profiles[0].id);assert.equal(practiceProfiles(repaired).length,1);assert.equal(profileView(repaired).exercises.length,30);
+ assert.equal(activeProfile(repaired).id,d.profiles[0].id);assert.equal(practiceProfiles(repaired).length,1);assert.equal(profileView(repaired).exercises.length,36);
  assert.equal(repaired.profiles.find(p=>p.id===historical.id).attribution,'unresolved-history');
  assert.deepEqual(repaired,migratePracticeData(repaired));
 });
@@ -89,7 +89,7 @@ test('practice profiles preserve multiple ordered focus areas',()=>{
  const p=profile('guitar');p.focusAreas=['Fretboard','Chords & rhythm','Reading'];assert.deepEqual(validateProfile(p).focusAreas,p.focusAreas);
 });
 test('non-drum upgrades preserve drum history and provision the selected discipline',()=>{
- const d=seedData(at);d.settings.instrument='Vocals';d.sessions=[finishBlock(createSession(d.routines[0].blocks,d))];const m=validateData(migratePracticeData(d));assert.equal(m.settings.activeProfileId,'profile-voice');assert.equal(m.sessions[0].profileId,'profile-drums');assert.equal(profileView(m).exercises.length,25);assert.equal(profileView(m).sessions.length,0);
+ const d=seedData(at);d.settings.instrument='Vocals';d.sessions=[finishBlock(createSession(d.routines[0].blocks,d))];const m=validateData(migratePracticeData(d));assert.equal(m.settings.activeProfileId,'profile-voice');assert.equal(m.sessions[0].profileId,'profile-drums');assert.equal(profileView(m).exercises.length,31);assert.equal(profileView(m).sessions.length,0);
 });
 test('unattributable legacy free practice is visible under Earlier practice, not guessed',()=>{
  const d=seedData(at);d.sessions=[finishBlock(createSession([{id:'free',type:'free',title:'Earlier solo work',targetSeconds:60,bpm:85,notes:'Original note',order:0}],d))];const m=validateData(migratePracticeData(d));assert.equal(m.sessions[0].profileId,'profile-earlier');assert.equal(m.profiles.find(p=>p.id==='profile-earlier').attribution,'unresolved-history');assert.equal(m.sessions[0].blocks[0].notes,'Original note');
