@@ -1,4 +1,4 @@
-import type { Exercise, Routine, RoutineBlock } from '../domain/models.js';
+import type { Data, Exercise, Routine, RoutineBlock } from '../domain/models.js';
 import type { Experience, PracticeProfile, PracticeProtocol } from '../domain/practice-types.js';
 import { definition } from '../domain/profiles.js';
 import { defaultProtocol, exerciseProtocol, protocolPulse, pulse } from '../domain/protocols.js';
@@ -199,4 +199,18 @@ export function starterContent(profile:PracticeProfile):{exercises:Exercise[];ro
     routines.push({profileId:profile.id,createdAt:timestamp,updatedAt:timestamp,builtin:true,archived:false,tags:['starter'],id:`${profile.id}.routine-${minutes}`,name:`${minutes}-Minute ${label} Practice`,description:profile.instrumentType==='voice'?'Includes rest, listening and reflection. Adjust pitch bounds before singing.':'Technique, musicianship, repertoire and a short review.',blocks,scheduledDays:[]});
   }
   return {exercises,routines};
+}
+
+
+/** Add newly shipped built-ins without overwriting existing user-edited rows. */
+export function reconcileStarterContent(input:Data):Data {
+  if(input.schemaVersion!==2)return input;
+  const data=structuredClone(input),exerciseIds=new Set(data.exercises.map(row=>row.id)),routineIds=new Set(data.routines.map(row=>row.id));
+  for(const profile of data.profiles??[]){
+    if(profile.attribution==='unresolved-history')continue;
+    const content=starterContent(profile);
+    for(const exercise of content.exercises)if(!exerciseIds.has(exercise.id)){data.exercises.push(exercise);exerciseIds.add(exercise.id);}
+    for(const routine of content.routines)if(!routineIds.has(routine.id)){data.routines.push(routine);routineIds.add(routine.id);}
+  }
+  return data;
 }
