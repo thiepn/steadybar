@@ -18,11 +18,12 @@ function fileInput(label:string):HTMLInputElement{
 }
 
 export function repertoireAudioPage(trackId:string):Page{
-  let track=(store.snapshot().audioTracks??[]).find(row=>row.id===trackId);
-  if(!track)return {node:empty('Local track not found.','The track metadata no longer exists.',link('Songs','/songs','button primary'))};
-  const song=store.snapshot().songs.find(row=>row.id===track!.songId);
+  const initialTrack=(store.snapshot().audioTracks??[]).find(row=>row.id===trackId);
+  if(!initialTrack)return {node:empty('Local track not found.','The track metadata no longer exists.',link('Songs','/songs','button primary'))};
+  let track=initialTrack;
+  const song=store.snapshot().songs.find(row=>row.id===track.songId);
   if(!song)return {node:empty('Song not found.','The track points to a song that no longer exists.',link('Songs','/songs','button primary'))};
-  const part=track.songPartId?song.parts?.find(row=>row.id===track!.songPartId):undefined;
+  const part=track.songPartId?song.parts?.find(row=>row.id===track.songPartId):undefined;
   const sections=part?.sections??song.sections;
   const player=new RepertoireTrackPlayer();
   let markA=0,markB=track.durationSeconds,loaded=false,disposed=false;
