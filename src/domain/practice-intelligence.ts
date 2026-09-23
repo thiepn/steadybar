@@ -13,6 +13,7 @@ export const PRACTICE_INTELLIGENCE_ENGINE_VERSION=1 as const;
 export type IntelligenceAction='repair'|'retest'|'stabilize'|'apply'|'maintain'|'explore';
 export type IntelligenceConfidence='low'|'medium'|'high';
 export type RecommendationBand='now'|'soon'|'later';
+export type ProgressionDecision='progress'|'hold'|'consolidate'|'regress';
 
 export interface SkillEvidenceSummary {
   targetCount:number;
@@ -33,6 +34,7 @@ export interface SkillAssessment {
   action:IntelligenceAction;
   band:RecommendationBand;
   confidence:IntelligenceConfidence;
+  decision:ProgressionDecision;
   reasons:string[];
   examples:string[];
   evidence:SkillEvidenceSummary;
@@ -45,6 +47,7 @@ export interface PracticeRecommendation {
   band:RecommendationBand;
   action:IntelligenceAction;
   confidence:IntelligenceConfidence;
+  decision:ProgressionDecision;
   reasons:string[];
   evidence:string[];
   skillIds:string[];
@@ -118,6 +121,23 @@ function unique(values:string[],limit=5):string[]{
 function actionBand(action:IntelligenceAction):RecommendationBand{
   return action==='repair'||action==='retest'?'now':action==='stabilize'||action==='apply'?'soon':'later';
 }
+function skillDecision(action:IntelligenceAction,confidenceLevel:IntelligenceConfidence,evidence:Pick<SkillEvidenceSummary,'reduce'|'advance'|'solid'|'usable'|'dueReviews'>):ProgressionDecision{
+  if(confidenceLevel==='low')return 'hold';
+  if(evidence.reduce>0)return 'regress';
+  if(evidence.dueReviews>0)return 'hold';
+  if(evidence.advance>0&&evidence.solid>0)return 'progress';
+  if(action==='apply')return 'progress';
+  if(action==='repair'||action==='stabilize'||evidence.usable>0)return 'consolidate';
+  return 'hold';
+}
+function targetDecision(state:PracticeState|undefined,action:IntelligenceAction,confidenceLevel:IntelligenceConfidence,progression?:ExerciseProgression):ProgressionDecision{
+  if(confidenceLevel==='low')return 'hold';
+  if(state?.challenge==='reduce'||progression?.direction==='reduce')return 'regress';
+  if(state?.mastery==='retest'||action==='retest')return 'hold';
+  if(state?.challenge==='advance'||progression?.direction==='advance'||action==='apply')return 'progress';
+  if(action==='repair'||action==='stabilize'||state?.latestResult==='usable')return 'consolidate';
+  return 'hold';
+}
 function factorEvidence(candidate:PriorityCandidate):string[]{
   return candidate.factors
     .filter(row=>meaningfulFactorCodes.has(row.code)&&row.points!==0)
@@ -183,11 +203,13 @@ function skillAssessments(
     if(action==='explore')reasons.push('Structured evidence is still sparse; establish a baseline before increasing difficulty.');
     const urgent=rows.flatMap(row=>row.factors.filter(factor=>factor.points>0&&urgentFactors.has(factor.code)).map(factor=>factor.detail));
     reasons.unshift(...urgent);
+    const confidenceLevel=confidence(evidenceCount,evaluated.length);
+    const evidence={targetCount:rows.length,evaluatedTargets:evaluated.length,evidenceCount,notYet,usable,solid,dueReviews,reduce,advance,neglected,recurringLimitations:limitations};
     return {
-      skillId:definition.id,label:definition.label,action,band,confidence:confidence(evidenceCount,evaluated.length),
+      skillId:definition.id,label:definition.label,action,band,confidence:confidenceLevel,decision:skillDecision(action,confidenceLevel,evidence),
       reasons:unique(reasons,4),
       examples:rows.slice(0,3).map(row=>row.label),
-      evidence:{targetCount:rows.length,evaluatedTargets:evaluated.length,evidenceCount,notYet,usable,solid,dueReviews,reduce,advance,neglected,recurringLimitations:limitations},
+      evidence,
     };
   }).sort((a,b)=>bandOrder[a.band]-bandOrder[b.band]||actionOrder[a.action]-actionOrder[b.action]||confidenceOrder[a.confidence]-confidenceOrder[b.confidence]||b.evidence.evidenceCount-a.evidence.evidenceCount||a.label.localeCompare(b.label));
 }
@@ -210,9 +232,10 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
     if(exercise)progression=buildExerciseProgression(data,exercise);
     if(progression)evidence.push('Next progression · '+progression.summary);
   }
+  const confidenceLevel=assessment?.confidence??confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0);
   return {
     source:'practice-target',target:structuredClone(candidate.target),targetKey:candidate.targetKey,label:candidate.label,
-    band,action,confidence:assessment?.confidence??confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0),
+    band,action,confidence:confidenceLevel,decision:targetDecision(candidate.state,action,confidenceLevel,progression),
     reasons:unique([...(assessment?.reasons??[]),...factorEvidence(candidate)],4),
     evidence:unique(evidence,6),skillIds:[...candidate.skillIds],...(progression?{progression}:{}),
   };
@@ -236,7 +259,7 @@ function guidedRecommendation(data:Data,profileId:string,skills:SkillAssessment[
   ];
   return {
     source:'lesson',target:targetRef,targetKey:practiceTargetKey(targetRef),label:target.course.title+' · '+target.lesson.title,
-    band,action,confidence:confidence(attempts.length,attempts.length?1:0),reasons,
+    band,action,confidence:confidence(attempts.length,attempts.length?1:0),decision:attempts.length?(action==='repair'||action==='stabilize'?'consolidate':action==='apply'?'progress':'hold'):'hold',reasons,
     evidence:[status,attempts.length+` review attempt${attempts.length===1?'':'s'}`,target.course.title],
     skillIds:skill?[skill.id]:[],
   };
