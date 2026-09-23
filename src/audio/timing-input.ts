@@ -59,7 +59,7 @@ export class MicrophoneTimingInput {
       this.stream=stream;this.source=source;this.node=node;this.silent=silent;this.levels=[];this.onHit=onHit;
       node.port.onmessage=event=>{
         const message=event.data as {type?:string;time?:number;strength?:number;peak?:number};
-        if(message.type==='hit'&&Number.isFinite(message.time)&&Number.isFinite(message.strength))this.onHit?.({time:message.time!,strength:message.strength!});
+        if(message.type==='hit'&&Number.isFinite(message.time)&&Number.isFinite(message.strength))this.onHit?.({time:message.time!,strength:clamp(message.strength!,0,1)});
         if(message.type==='level'&&Number.isFinite(message.peak))this.levels.push(message.peak!);
       };
     }catch(error){
