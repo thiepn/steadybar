@@ -1,13 +1,14 @@
 import type { Data } from './models.js';
 import type { PriorityCycle, PriorityItem } from './practice-state.js';
 import type { AutopilotSessionIntent } from './autopilot.js';
-import { buildPracticeDiagnostics, type PracticeDiagnostics } from './practice-diagnostics.js';
+import type { PracticeDiagnostics } from './practice-diagnostics.js';
+import { buildPracticeIntelligence, type PracticeIntelligence } from './practice-intelligence.js';
 import { activeProfile } from './profiles.js';
 import { rankPracticeTargets, type PriorityCandidate, type PriorityFactorCode } from './priority-engine.js';
 import { skillDefinition, skillDefinitionsFor } from './skill-graph.js';
 import { localDate, uuid } from './utils.js';
 
-export const WEEKLY_REVIEW_ENGINE_VERSION=1 as const;
+export const WEEKLY_REVIEW_ENGINE_VERSION=2 as const;
 
 export type WeeklyFocusRole='primary'|'secondary'|'support';
 
@@ -27,10 +28,11 @@ export interface WeeklyFocusSuggestion {
   signalCodes:PriorityFactorCode[];
 }
 export interface WeeklyReview {
-  engineVersion:1;
+  engineVersion:2;
   profileId:string;
   window:WeeklyReviewWindow;
   diagnostics:PracticeDiagnostics;
+  intelligence:PracticeIntelligence;
   focus:WeeklyFocusSuggestion[];
   suggestedIntent:AutopilotSessionIntent;
   suggestedIntentReason:string;
@@ -148,10 +150,11 @@ function intentForFocus(focus:WeeklyFocusSuggestion[]):{intent:AutopilotSessionI
 
 export function buildWeeklyReview(data:Data,options:WeeklyReviewOptions={}):WeeklyReview{
   const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,today=options.today??localDate(new Date(now)),window=reviewWindow(today);
-  const diagnostics=buildPracticeDiagnostics(data,{from:window.from,to:window.to,now}),focus=focusSuggestions(data,profileId,diagnostics,now,today),intent=intentForFocus(focus);
+  const intelligence=buildPracticeIntelligence(data,{profileId,from:window.from,to:window.to,now,today}),diagnostics=intelligence.diagnostics;
+  const focus=focusSuggestions(data,profileId,diagnostics,now,today),intent=intentForFocus(focus);
   const cycles=(data.priorityCycles??[]).filter(cycle=>cycle.profileId===profileId).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||b.createdAt.localeCompare(a.createdAt));
   return {
-    engineVersion:WEEKLY_REVIEW_ENGINE_VERSION,profileId,window,diagnostics,focus,suggestedIntent:intent.intent,suggestedIntentReason:intent.reason,
+    engineVersion:WEEKLY_REVIEW_ENGINE_VERSION,profileId,window,diagnostics,intelligence,focus,suggestedIntent:intent.intent,suggestedIntentReason:intent.reason,
     ...(cycles.find(cycle=>cycle.status==='active')?{activeCycle:structuredClone(cycles.find(cycle=>cycle.status==='active')!)}:{}),
     recentCycles:cycles.filter(cycle=>cycle.status!=='active').slice(0,5).map(cycle=>structuredClone(cycle)),
   };
