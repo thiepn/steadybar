@@ -65,7 +65,7 @@ export function buildPracticeLoadCalibration(data:Data,profileId:string,targetWe
   suggestedPracticeDays=Math.max(suggestedPracticeDays,Math.ceil(suggestedWeeklyMinutes/180));
   suggestedPracticeDays=Math.min(suggestedPracticeDays,Math.max(1,Math.floor(suggestedWeeklyMinutes/5)));
 
-  const fallbackRank=new Map(FALLBACK_WEEKDAY_PRIORITY.map((value,index)=>[value,index]));
+  const fallbackRank=new Map<number,number>(FALLBACK_WEEKDAY_PRIORITY.map((value,index)=>[value,index] as [number,number]));
   const preferredWeekdays=weekdayStats.sort((a,b)=>
     b.days-a.days||b.seconds-a.seconds||(fallbackRank.get(a.index)??99)-(fallbackRank.get(b.index)??99)
   ).map(row=>row.index);
