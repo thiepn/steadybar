@@ -192,7 +192,7 @@ class Courses(e2e.MusicPracticeTests):
         self.page.reload(wait_until='networkidle')
         expect(self.page.get_by_role('heading',name=self.lesson['title'],exact=True)).to_be_visible()
         data=self.state();self.assertEqual(data['settings']['activeProfileId'],result['profile']);self.assertEqual([e['id'] for e in data['exercises']],sorted(result['exerciseIds']))
-        self.assertEqual(data['courseProgress'],[]);self.assertEqual(data['sessions'][0],result['session']);self.assertEqual(self.read("load('db/database.js').openDatabase().then(d=>d.version)"),9)
+        self.assertEqual(data['courseProgress'],[]);self.assertEqual(data['sessions'][0],result['session']);self.assertEqual(self.read("load('db/database.js').openDatabase().then(d=>d.version)"),10)
     def matrix(self,kind):
         self.begin(kind);self.route('/courses');expect(self.page.locator('.course-card')).to_have_count(1 if kind=='custom' else 3)
         lessons=self.read(f"load('learning/catalog.js').COURSES.filter(c=>c.instrument==={json.dumps(kind)}).flatMap(c=>c.lessons)")
