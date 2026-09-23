@@ -106,6 +106,7 @@ test('executable exercise recommendation preserves the progression snapshot and 
   const block=recommendationBlock(d,row);assert.ok(block);
   assert.equal(block.type,'exercise');assert.equal(block.exerciseId,exercise.id);
   assert.deepEqual(block.progression,row.progression);
+  assert.equal(block.prescription.target.kind,'exercise');assert.equal(block.prescription.target.exerciseId,exercise.id);assert.equal(block.prescription.generatedBy,'manual');
   assert.equal(recommendationHref(row),'/library/'+exercise.id);
 });
 
@@ -115,7 +116,16 @@ test('transition recommendation builds a bounded section block without inventing
   const row={source:'practice-target',target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-i|shared|t',label:'Transition Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
   const block=recommendationBlock(d,row);assert.ok(block);
   assert.equal(block.type,'song-section');assert.equal(block.songId,song.id);assert.equal(block.songSectionId,'a');assert.equal(block.targetSeconds,300);
+  assert.equal(block.prescription.target.kind,'song-transition');assert.equal(block.prescription.target.transitionId,'t');assert.equal(block.prescription.intent,'build');assert.equal(block.prescription.generatedBy,'manual');
   assert.match(block.title,/Lift/);assert.match(block.notes,/Keep beat one clear/);
+});
+
+test('recommendation action maps to the correct practice context without automatic execution provenance',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'retest',latestResult:'solid',evidenceCount:3,nextReviewAt:'2026-09-22T09:00:00.000Z',recent:{solid:2,usable:0,notYet:0}})];
+  const row=recommendationFor(d,exercise);assert.ok(row);assert.equal(row.action,'retest');
+  const block=recommendationBlock(d,row);assert.ok(block?.prescription);
+  assert.equal(block.prescription.intent,'retest');assert.equal(block.prescription.generatedBy,'manual');assert.deepEqual(block.prescription.reasons,['user-request']);
 });
 
 test('explicit recommendationLimit is bounded and never expands beyond twelve',()=>{
