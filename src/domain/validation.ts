@@ -8,7 +8,7 @@ import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPr
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
-import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeRecording, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TimingLabResult, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
+import type { Backup, Data, Exercise, Goal, MetronomeConfig, MidiDeviceProfile, MidiPerformanceResult, PracticeRecording, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TimingLabResult, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
 export { ValidationError, dateOnly, type Validator } from './schema.js';
@@ -255,6 +255,53 @@ export const validateTimingLabResult:Validator<TimingLabResult>=(v,p='Timing Lab
   return result;
 };
 
+const midiVoice=one('kick','snare','rim','hihat-closed','hihat-open','hihat-pedal','tom-high','tom-mid','tom-low','ride','ride-bell','crash','other');
+const midiMapping=obj({note:num(0,127,true),voice:midiVoice,label:text(80,1),enabled:bool});
+const rawMidiDeviceProfile=obj({
+  ...entity,profileId:id,deviceKey:text(300,1),inputId:optional(text(300,1)),manufacturer:text(200),name:text(200,1),
+  channel:optional(num(1,16,true)),mappings:arr(midiMapping,128),
+});
+export const validateMidiDeviceProfile:Validator<MidiDeviceProfile>=(v,p='MIDI device profile')=>{
+  const profile=rawMidiDeviceProfile(v,p);
+  if(new Set(profile.mappings.map(row=>row.note)).size!==profile.mappings.length)fail(p,'MIDI note mappings must be unique');
+  return profile;
+};
+const midiHit=obj({
+  index:num(0,100000,true),elapsedMs:num(0,3600000),offsetMs:num(-1000,1000),
+  note:num(0,127,true),velocity:num(1,127,true),channel:num(1,16,true),voice:midiVoice,label:text(80,1),
+  bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),
+});
+const midiVoiceSummary=obj({
+  voice:midiVoice,label:text(80,1),count:num(1,10000,true),medianVelocity:num(1,127),velocitySpread:num(0,127),
+  meanAbsoluteErrorMs:num(0,1000),timingSpreadMs:num(0,1000),
+});
+const rawMidiPerformanceResult=obj({
+  ...entity,midiAnalysisVersion:one(1),profileId:id,
+  sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),deviceProfileId:optional(id),
+  deviceKey:text(300,1),deviceNameSnapshot:text(200,1),manufacturerSnapshot:text(200),
+  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),matchWindowMs:num(10,500),
+  expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
+  misses:num(0,10000,true),extras:num(0,10000,true),unmappedCount:num(0,10000,true),
+  meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),driftMsPerMinute:num(-100000,100000),
+  confidence:one('low','medium','high'),
+  velocityMean:num(0,127),velocityMedian:num(0,127),velocitySpread:num(0,127),velocityMin:num(0,127),velocityMax:num(0,127),velocityRange:num(0,127),
+  hits:arr(midiHit,10000),voices:arr(midiVoiceSummary,128),
+});
+export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p='MIDI performance result')=>{
+  const result=rawMidiPerformanceResult(v,p);
+  if(result.matchedCount!==result.hits.length)fail(p,'matched MIDI hit count must equal stored matched hits');
+  if(result.matchedCount>result.expectedCount||result.matchedCount>result.detectedCount)fail(p,'matched MIDI hit count exceeds available events');
+  if(result.misses!==result.expectedCount-result.matchedCount)fail(p,'MIDI miss count must equal expected minus matched hits');
+  if(result.extras!==result.detectedCount-result.matchedCount)fail(p,'MIDI extra count must equal detected minus matched hits');
+  if(result.velocityMax<result.velocityMin||result.velocityRange!==result.velocityMax-result.velocityMin)fail(p,'MIDI velocity range is inconsistent');
+  for(const hit of result.hits){
+    if(hit.beat>=result.meter.beats)fail(p,'MIDI hit beat exceeds the stored meter');
+    if(hit.part>=result.subdivision)fail(p,'MIDI hit subdivision part exceeds the stored subdivision');
+  }
+  if(result.voices.reduce((sum,row)=>sum+row.count,0)!==result.matchedCount)fail(p,'MIDI voice summary count must equal matched hits');
+  return result;
+};
+
 const rawPracticeRecording=obj({
   ...entity,recordingVersion:one(1),profileId:id,assetId:id,title:name,
   durationSeconds:num(0.01,86400),mimeType:text(200,1),sizeBytes:num(1,10_000_000_000,true),
@@ -273,7 +320,7 @@ export const validatePracticeRecording:Validator<PracticeRecording>=(v,p='Practi
 
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
 export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), timingResults:optional(arr(validateTimingLabResult,100000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), timingResults:optional(arr(validateTimingLabResult,100000)), midiDeviceProfiles:optional(arr(validateMidiDeviceProfile,1000)), midiResults:optional(arr(validateMidiPerformanceResult,100000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
@@ -346,6 +393,10 @@ export function validateData(input:unknown):Data {
     for(const recording of recordings)requireProfile(recording.profileId);
     const timingResults=d.timingResults??[];
     for(const result of timingResults)requireProfile(result.profileId);
+    const midiDeviceProfiles=d.midiDeviceProfiles??[],midiResults=d.midiResults??[];
+    for(const profile of midiDeviceProfiles)requireProfile(profile.profileId);
+    for(const result of midiResults)requireProfile(result.profileId);
+    if(new Set(midiDeviceProfiles.map(profile=>profile.profileId+'/'+profile.deviceKey)).size!==midiDeviceProfiles.length)fail('MIDI device profiles','one mapping profile per practice profile and device is allowed');
     if(new Set(recordings.map(recording=>recording.assetId)).size!==recordings.length)fail('Practice recordings','audio asset IDs must be unique');
     const trainingPlans=d.trainingPlans??[],activeTrainingPlans=trainingPlans.filter(plan=>plan.status==='active');
     if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');
