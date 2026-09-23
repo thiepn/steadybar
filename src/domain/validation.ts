@@ -185,6 +185,7 @@ const weeklyScheduleLoadCalibration=obj({
   windowStart:dateOnly,windowEnd:dateOnly,
   observedSessions:num(0,100000,true),observedActiveDays:num(0,42,true),observedActiveWeeks:num(0,6,true),
   typicalActiveDayMinutes:num(5,180,true),medianActiveWeekMinutes:num(0,1260,true),
+  baselineWeeklyMinutes:num(5,1260,true),targetSource:one('training-plan','weekly-goal','profile-default'),
   suggestedWeeklyMinutes:num(5,1260,true),suggestedPracticeDays:num(1,7,true),
   preferredWeekdays:arr(num(0,6,true),7),
   loadAdjusted:optional(bool),patternAdjusted:optional(bool),
