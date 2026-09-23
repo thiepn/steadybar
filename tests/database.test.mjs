@@ -257,8 +257,10 @@ test('older version-4 backups without MIDI collections restore with empty MIDI s
 });
 
 test('repertoire audio metadata and cues persist through the v11 repository and backup restore',async()=>{
-  await db.initializeDatabase();const data=await db.readData(),song=data.songs[0],now='2026-09-23T14:00:00.000Z';
-  const track={id:'audio-track',createdAt:now,updatedAt:now,songId:song.id,assetId:'audio-asset',title:'Practice mix',fileName:'practice.wav',mimeType:'audio/wav',sizeBytes:4096,durationSeconds:120,cues:[{id:'cue-1',sectionId:song.sections[0]?.id,label:song.sections[0]?.name??'Verse',startSeconds:10,endSeconds:30,order:0}],lastPlaybackRate:.8};
+  await db.initializeDatabase();const now='2026-09-23T14:00:00.000Z';
+  const song={id:'audio-song',createdAt:now,updatedAt:now,title:'Audio fixture',artist:'',bpm:100,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'audio-section',name:'Verse',bars:8,notes:'',order:0}]};
+  await db.put('songs',song);
+  const track={id:'audio-track',createdAt:now,updatedAt:now,songId:song.id,assetId:'audio-asset',title:'Practice mix',fileName:'practice.wav',mimeType:'audio/wav',sizeBytes:4096,durationSeconds:120,cues:[{id:'cue-1',sectionId:song.sections[0].id,label:song.sections[0].name,startSeconds:10,endSeconds:30,order:0}],lastPlaybackRate:.8};
   await db.put('audioTracks',track);assert.equal((await db.get('audioTracks',track.id)).lastPlaybackRate,.8);
   const backup=createBackup(await db.readData());assert.equal(backup.version,4);assert.equal(backup.data.audioTracks.length,1);assert.equal(backup.data.audioTracks[0].assetId,'audio-asset');
   await db.resetWorkspace();assert.deepEqual((await db.readData()).audioTracks,[]);
