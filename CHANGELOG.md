@@ -15,6 +15,9 @@
 - Add **Start** / **Add to Today** controls to Progress recommendations and a compact **What matters now** panel on Today.
 - Add progression-decision badges to Progress and Weekly Review.
 - Route Autopilot v2 target ordering through the unified Practice Intelligence ordering rather than raw priority score alone.
+- Make Autopilot slot composition role-aware without undoing the unified ranking: slot fit is applied first, then Practice Intelligence order, with raw Priority score only a final tie-break.
+- Gate executable exercise progression so a Hold/Consolidate/Retest recommendation cannot accidentally execute a raw `advance` snapshot.
+- Carry explicit recommendation profile ownership into shared-song execution instead of depending on the globally active profile at click time.
 - Route Weekly Review focus ordering through the same intelligence skill assessments while still neutralizing the currently active Priority Cycle to prevent self-reinforcement.
 - Keep the existing Priority Engine factors as explainable context rather than replacing them with an opaque score.
 - Keep Voice on the existing rest-aware manual/routine path; Practice Intelligence may summarize Voice evidence, but Autopilot v2 still does not automatically schedule Voice practice.
