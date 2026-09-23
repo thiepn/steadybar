@@ -23,7 +23,7 @@ function song(){
   ],transitions:[{id:'v-c',fromSectionId:'verse',toSectionId:'chorus',name:'Lift',notes:'Do not rush the fill.'}]};
 }
 
-test('voice stays on the existing rest-aware routine path in Autopilot v1',()=>{
+test('voice stays on the existing rest-aware routine path while Autopilot v2 remains disabled for voice',()=>{
   const legacy=seedData(at);legacy.settings.instrument='Vocals';
   const voice=migratePracticeModel(migratePracticeData(legacy));
   assert.throws(()=>buildAutopilotPlan(voice,{minutes:15,intent:'balanced',now:at,today}),/does not schedule voice practice yet/i);
