@@ -36,10 +36,18 @@ export class MicrophoneTimingInput {
     this.stop();
     if(!MicrophoneTimingInput.supported())throw new Error('Timing Lab needs microphone access and AudioWorklet support in this browser.');
     await ensureWorklet(context);
-    const stream=await navigator.mediaDevices.getUserMedia({
-      audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1},
-      video:false,
-    });
+    let stream:MediaStream;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({
+        audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1},
+        video:false,
+      });
+    }catch(error){
+      if(error instanceof DOMException&&error.name==='NotAllowedError')throw new Error('Microphone access was denied. Allow microphone access for Steadybar, then retry Timing Lab.');
+      if(error instanceof DOMException&&error.name==='NotFoundError')throw new Error('No microphone is available for Timing Lab.');
+      if(error instanceof DOMException&&error.name==='NotReadableError')throw new Error('The microphone is busy or unavailable. Close other audio apps and retry.');
+      throw new Error(error instanceof Error?`Microphone could not start: ${error.message}`:'Microphone could not start.');
+    }
     try{
       const source=context.createMediaStreamSource(stream);
       const node=new AudioWorkletNode(context,'steadybar-timing-onset',{
