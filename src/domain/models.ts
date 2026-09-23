@@ -132,6 +132,7 @@ export interface WeeklyScheduleLoadCalibration {
   windowStart: string; windowEnd: string;
   observedSessions: number; observedActiveDays: number; observedActiveWeeks: number;
   typicalActiveDayMinutes: number; medianActiveWeekMinutes: number;
+  baselineWeeklyMinutes: number; targetSource: 'training-plan' | 'weekly-goal' | 'profile-default';
   suggestedWeeklyMinutes: number; suggestedPracticeDays: number;
   preferredWeekdays: number[];
   loadAdjusted?: boolean; patternAdjusted?: boolean;
