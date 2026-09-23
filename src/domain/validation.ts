@@ -8,7 +8,7 @@ import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPr
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
-import type { Backup, Data, Exercise, Goal, MetronomeConfig, MidiDeviceProfile, MidiPerformanceResult, PracticeRecording, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TimingLabResult, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
+import type { Backup, Data, Exercise, Goal, MetronomeConfig, MidiDeviceProfile, MidiPerformanceResult, PracticeRecording, PracticeSession, Preset, RepertoireAudioTrack, Routine, RoutineBlock, Settings, Setlist, Song, TimingLabResult, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
 export { ValidationError, dateOnly, type Validator } from './schema.js';
@@ -302,6 +302,24 @@ export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p
   return result;
 };
 
+const repertoireAudioCue=obj({
+  id,label:text(120,1),sectionId:optional(id),startSeconds:num(0,86400),endSeconds:num(.01,86400),order:num(0,10000,true),
+});
+const rawRepertoireAudioTrack=obj({
+  ...entity,songId:id,songPartId:optional(id),assetId:id,title:text(200,1),fileName:text(500,1),mimeType:text(200,1),
+  sizeBytes:num(1,10_000_000_000,true),durationSeconds:num(.01,86400),cues:arr(repertoireAudioCue,500),lastPlaybackRate:num(.5,1.5),
+});
+export const validateRepertoireAudioTrack:Validator<RepertoireAudioTrack>=(v,p='Repertoire audio track')=>{
+  const track=rawRepertoireAudioTrack(v,p);
+  if(new Set(track.cues.map(cue=>cue.id)).size!==track.cues.length)fail(p,'audio cue IDs must be unique');
+  if(new Set(track.cues.map(cue=>cue.sectionId).filter(Boolean)).size!==track.cues.filter(cue=>cue.sectionId).length)fail(p,'only one saved cue per section is allowed for a track');
+  for(const cue of track.cues){
+    if(cue.endSeconds<=cue.startSeconds)fail(p,'audio cue end must be after its start');
+    if(cue.endSeconds>track.durationSeconds+.05)fail(p,'audio cue exceeds the track duration');
+  }
+  return track;
+};
+
 const rawPracticeRecording=obj({
   ...entity,recordingVersion:one(1),profileId:id,assetId:id,title:name,
   durationSeconds:num(0.01,86400),mimeType:text(200,1),sizeBytes:num(1,10_000_000_000,true),
@@ -320,7 +338,7 @@ export const validatePracticeRecording:Validator<PracticeRecording>=(v,p='Practi
 
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
 export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), timingResults:optional(arr(validateTimingLabResult,100000)), midiDeviceProfiles:optional(arr(validateMidiDeviceProfile,1000)), midiResults:optional(arr(validateMidiPerformanceResult,100000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), timingResults:optional(arr(validateTimingLabResult,100000)), midiDeviceProfiles:optional(arr(validateMidiDeviceProfile,1000)), midiResults:optional(arr(validateMidiPerformanceResult,100000)), audioTracks:optional(arr(validateRepertoireAudioTrack,10000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
@@ -393,11 +411,18 @@ export function validateData(input:unknown):Data {
     for(const recording of recordings)requireProfile(recording.profileId);
     const timingResults=d.timingResults??[];
     for(const result of timingResults)requireProfile(result.profileId);
-    const midiDeviceProfiles=d.midiDeviceProfiles??[],midiResults=d.midiResults??[];
+    const midiDeviceProfiles=d.midiDeviceProfiles??[],midiResults=d.midiResults??[],audioTracks=d.audioTracks??[];
     for(const profile of midiDeviceProfiles)requireProfile(profile.profileId);
     for(const result of midiResults)requireProfile(result.profileId);
+    for(const track of audioTracks){
+      const song=songs.get(track.songId);if(!song)fail('Repertoire audio','song does not exist');
+      if(track.songPartId&&!song.parts?.some(part=>part.id===track.songPartId))fail('Repertoire audio','song part does not exist');
+      const sectionIds=new Set([...(song.sections??[]).map(section=>section.id),...(song.parts??[]).flatMap(part=>part.sections.map(section=>section.id))]);
+      for(const cue of track.cues)if(cue.sectionId&&!sectionIds.has(cue.sectionId))fail('Repertoire audio','cue section does not exist');
+    }
     if(new Set(midiDeviceProfiles.map(profile=>profile.profileId+'/'+profile.deviceKey)).size!==midiDeviceProfiles.length)fail('MIDI device profiles','one mapping profile per practice profile and device is allowed');
     if(new Set(recordings.map(recording=>recording.assetId)).size!==recordings.length)fail('Practice recordings','audio asset IDs must be unique');
+    if(new Set(audioTracks.map(track=>track.assetId)).size!==audioTracks.length)fail('Repertoire audio','track asset IDs must be unique');
     const trainingPlans=d.trainingPlans??[],activeTrainingPlans=trainingPlans.filter(plan=>plan.status==='active');
     if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');
     for(const plan of trainingPlans){
