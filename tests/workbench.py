@@ -621,7 +621,7 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_text('High measurement confidence',exact=True).first).to_be_visible()
         expect(self.page.get_by_text('Velocity median',exact=True).first).to_be_visible()
         expect(self.page.get_by_text('16/16 matched',exact=True).first).to_be_visible()
-        expect(self.page.get_by_text('Snare',exact=True).first).to_be_visible()
+        expect(self.page.locator('.midi-voice-row').get_by_text('Snare',exact=True).first).to_be_visible()
         supported=self.page.evaluate("typeof navigator.requestMIDIAccess==='function'")
         if supported:
             expect(self.page.get_by_role('button',name='Connect / refresh MIDI',exact=True)).to_be_enabled()
