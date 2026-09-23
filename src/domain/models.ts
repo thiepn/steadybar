@@ -195,6 +195,7 @@ export interface TimingLabResult extends Entity {
   confidence: TimingLabConfidence;
   hits: TimingLabMatchedHit[];
 }
+export type MidiExpectedPattern = 'subdivision' | 'beat' | 'two-four';
 export type MidiDrumVoice =
   | 'kick' | 'snare' | 'rim' | 'hihat-closed' | 'hihat-open' | 'hihat-pedal'
   | 'tom-high' | 'tom-mid' | 'tom-low' | 'ride' | 'ride-bell' | 'crash' | 'other';
@@ -250,6 +251,7 @@ export interface MidiPerformanceResult extends Entity {
   subdivision: Subdivision;
   timingClick: TimingClickConfig;
   durationSeconds: number;
+  expectedPattern: MidiExpectedPattern;
   analyzedVoice?: MidiDrumVoice;
   matchWindowMs: number;
   expectedCount: number;
