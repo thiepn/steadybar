@@ -33,12 +33,12 @@ const extras: [string,Category,string,string][] = [
   ['Linear Coordination','coordination','R L K R L K','Play one limb at a time, using K for kick. Begin with equal spacing; add accents only when the pattern is stable.'],
   ['Accent Grid','timing','R L R L  R L R L','Move one accent through an otherwise quiet stream of alternating strokes. The unaccented notes must remain evenly spaced.'],
   ['Left-Hand Lead','technique','L R L R  L R L R','Lead alternating strokes with the left hand. Keep the sound and motion balanced; mirror the exercise with the right hand.'],
-  ['Section Role Map','repertoire','','Choose two song sections and define the essential hi-hat/cymbal source, snare role, kick anchors, and dynamic level for each. Repeat the same choices before adding fills.'],
+  ['Section Role Map','groove','','Choose two song sections and define the essential hi-hat/cymbal source, snare role, kick anchors, and dynamic level for each. Repeat the same choices before adding fills.'],
   ['Backbeat Consistency Window','timing','','Play eight bars with a stable snare backbeat and simple kick anchors. Mark any bar where the pulse changes after a stronger backbeat, then repair only that window.'],
   ['Fill Return Window','coordination','','Practice one bar before a fill, the fill itself, and one bar after it. Keep the next beat one more important than fill complexity.'],
   ['Cymbal Texture Switch','groove','','Move between closed hi-hat, open hi-hat, and ride at planned section boundaries while keeping the kick and snare pattern unchanged.'],
   ['Ghost-Note Pocket Window','technique','','Add quiet ghost notes only after the backbeat and hi-hat pulse are stable. Compare a sparse version with the decorated version at the same tempo.'],
-  ['Complete Take Recovery','repertoire','','Play a complete bounded song section without stopping for small errors. Choose one transition or timing repair afterward, then retake the same section.'],
+  ['Complete Take Recovery','timing','','Play a complete bounded song section without stopping for small errors. Choose one transition or timing repair afterward, then retake the same section.'],
 ];
 export function seedData(timestamp = nowISO()): Data {
   const base = { createdAt:timestamp, updatedAt:timestamp, instrument:'Drums', accents:'', defaultBpm:80, minBpm:20, maxBpm:300, meter:{beats:4,beatUnit:4 as const}, subdivision:1 as const, notes:'', builtin:true, archived:false };
