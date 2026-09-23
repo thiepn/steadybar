@@ -1,5 +1,5 @@
 import type { Data, ExerciseProgression } from './models.js';
-import type { LimitationTag, MasteryState, PracticeTargetRef } from './practice-state.js';
+import type { LimitationTag, PracticeState, PracticeTargetRef } from './practice-state.js';
 import { buildPracticeDiagnostics, type PracticeDiagnostics } from './practice-diagnostics.js';
 import { buildExerciseProgression } from './progression-engine.js';
 import { rankPracticeTargets, type PriorityCandidate, type PriorityFactorCode } from './priority-engine.js';
@@ -150,7 +150,7 @@ function skillAssessments(
   const dueKeys=new Set(diagnostics.dueReviews.map(row=>row.targetKey));
   return definitions.map(definition=>{
     const rows=candidates.filter(candidate=>candidate.skillIds.includes(definition.id));
-    const states=rows.map(row=>row.state).filter((state):state is NonNullable<typeof state>=>!!state);
+    const states=rows.map(row=>row.state).filter((state):state is PracticeState=>!!state);
     const evaluated=states.filter(state=>!!state.latestResult);
     const evidenceCount=states.reduce((sum,state)=>sum+state.evidenceCount,0);
     const notYet=evaluated.filter(state=>state.latestResult==='not-yet').length;
