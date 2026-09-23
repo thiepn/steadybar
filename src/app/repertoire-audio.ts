@@ -39,6 +39,7 @@ export async function replaceRepertoireTrackFile(trackId:string,file:File):Promi
     await store.save('audioTracks',next,false);return next;
   }catch(error){
     if(backup)await saveRepertoireTrackAsset(current.assetId,backup,current.createdAt).catch(()=>{});
+    else await deleteRepertoireTrackAsset(current.assetId).catch(()=>{});
     throw error;
   }
 }
