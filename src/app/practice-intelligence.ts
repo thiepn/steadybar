@@ -1,8 +1,22 @@
 import type { Data, RoutineBlock } from '../domain/models.js';
-import type { PracticeRecommendation } from '../domain/practice-intelligence.js';
+import { PRACTICE_INTELLIGENCE_ENGINE_VERSION, type IntelligenceAction, type PracticeRecommendation } from '../domain/practice-intelligence.js';
+import type { PracticeIntent, PracticePrescription } from '../domain/practice-state.js';
 import { applyExerciseProgression } from '../domain/progression-engine.js';
 import { exerciseBlock } from '../practice/launch.js';
 import { uuid } from '../domain/utils.js';
+
+const recommendationIntent:Record<IntelligenceAction,PracticeIntent>={
+  repair:'build',retest:'retest',stabilize:'stabilize',apply:'apply',maintain:'maintain',explore:'learn',
+};
+function recommendationPrescription(row:PracticeRecommendation):PracticePrescription{
+  return {
+    target:structuredClone(row.target),
+    intent:recommendationIntent[row.action],
+    reasons:['user-request'],
+    generatedBy:'manual',
+    engineVersion:PRACTICE_INTELLIGENCE_ENGINE_VERSION,
+  };
+}
 
 export function recommendationHref(row:PracticeRecommendation):string|undefined{
   const target=row.target;
@@ -20,7 +34,7 @@ export function recommendationBlock(data:Data,row:PracticeRecommendation):Routin
   const target=row.target;
   if(target.kind==='exercise'){
     const exercise=data.exercises.find(item=>item.id===target.exerciseId);if(!exercise)return undefined;
-    const base=exerciseBlock(exercise);
+    const base={...exerciseBlock(exercise),prescription:recommendationPrescription(row)};
     return row.progression?applyExerciseProgression(base,row.progression):base;
   }
   if(target.kind==='song'||target.kind==='song-section'||target.kind==='song-transition'){
@@ -28,7 +42,7 @@ export function recommendationBlock(data:Data,row:PracticeRecommendation):Routin
     const part=target.partId?song.parts?.find(item=>item.id===target.partId):undefined,sections=part?.sections??song.sections;
     const make=(sectionId:string|undefined,seconds:number,title:string,notes=''):RoutineBlock=>{
       const section=sections.find(item=>item.id===sectionId);
-      return {id:uuid(),type:section?'song-section':'song',profileId:part?.profileId??data.settings.activeProfileId,songPartId:part?.id,songId:song.id,songSectionId:section?.id,title,targetSeconds:seconds,bpm:section?.bpmOverride||song.bpm,notes,order:0};
+      return {id:uuid(),type:section?'song-section':'song',profileId:part?.profileId??data.settings.activeProfileId,songPartId:part?.id,songId:song.id,songSectionId:section?.id,title,targetSeconds:seconds,bpm:section?.bpmOverride||song.bpm,notes,prescription:recommendationPrescription(row),order:0};
     };
     if(target.kind==='song')return make(undefined,600,song.title);
     if(target.kind==='song-section'){
