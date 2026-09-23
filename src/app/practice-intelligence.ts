@@ -45,7 +45,7 @@ export function recommendationBlock(data:Data,row:PracticeRecommendation):Routin
     const part=target.partId?song.parts?.find(item=>item.id===target.partId):undefined,sections=part?.sections??song.sections;
     const make=(sectionId:string|undefined,seconds:number,title:string,notes=''):RoutineBlock=>{
       const section=sections.find(item=>item.id===sectionId);
-      return {id:uuid(),type:section?'song-section':'song',profileId:part?.profileId??data.settings.activeProfileId,songPartId:part?.id,songId:song.id,songSectionId:section?.id,title,targetSeconds:seconds,bpm:section?.bpmOverride||song.bpm,notes,prescription:recommendationPrescription(row),order:0};
+      return {id:uuid(),type:section?'song-section':'song',profileId:part?.profileId??row.profileId,songPartId:part?.id,songId:song.id,songSectionId:section?.id,title,targetSeconds:seconds,bpm:section?.bpmOverride||song.bpm,notes,prescription:recommendationPrescription(row),order:0};
     };
     if(target.kind==='song')return make(undefined,600,song.title);
     if(target.kind==='song-section'){
