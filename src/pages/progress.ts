@@ -2,7 +2,8 @@ import { learningSummary } from '../ui/learning.js';
 import { activeProfile } from '../domain/profiles.js';
 import { exerciseProtocol } from '../domain/protocols.js';
 import { protocolResults, summarizeResults } from '../domain/protocol-analytics.js';
-import { buildPracticeDiagnostics, type DiagnosticInsight, type TrendDirection } from '../domain/practice-diagnostics.js';
+import type { DiagnosticInsight, TrendDirection } from '../domain/practice-diagnostics.js';
+import { buildPracticeIntelligence, type PracticeRecommendation } from '../domain/practice-intelligence.js';
 import { observeCharts } from '../ui/charts.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
@@ -14,6 +15,19 @@ import { dayChart, lineChart } from '../ui/charts.js';
 
 const trendLabel=(value:TrendDirection)=>value==='up'?'Higher':value==='down'?'Lower':value==='steady'?'Similar':'No comparison';
 const trendClass=(value:TrendDirection)=>value==='up'?'trend-up':value==='down'?'trend-down':value==='steady'?'trend-steady':'trend-unavailable';
+const intelligenceAction=(value:string)=>({repair:'Repair',retest:'Retest',stabilize:'Stabilize',apply:'Apply',maintain:'Maintain',explore:'Explore'})[value]??titleCase(value);
+function recommendationHref(row:PracticeRecommendation):string|undefined{
+  const target=row.target;
+  switch(target.kind){
+    case 'exercise':return '/library/'+target.exerciseId;
+    case 'song':
+    case 'song-section':
+    case 'song-transition':return target.partId?'/songs/'+target.songId+'/parts/'+target.partId:'/songs/'+target.songId;
+    case 'lesson':return '/courses/'+target.courseId+'/'+target.lessonId+'/'+target.profileId;
+    case 'skill':return undefined;
+  }
+}
+
 
 function comparisonCard(label:string,current:string,previous:string|undefined,trend:TrendDirection):HTMLElement{
   return el('div',{class:'diagnostic-comparison-card'},
@@ -47,9 +61,27 @@ export function progressPage():Page{
     else end=undefined;
     content.replaceChildren();if(start&&end&&start>end){content.append(el('p',{class:'form-error',role:'alert'},'The start date must come before the end date.'));return;}
     const sessions=filterSessions(data.sessions,start,end),total=calculateTotalPracticeTime(sessions),days=practiceByDay(sessions).filter(d=>d.seconds>0),distribution=calculatePracticeDistribution(sessions),attempts=exerciseAttempts(sessions,exercise.value),best=calculateBestCleanBpm(attempts),highest=calculateHighestAttemptedBpm(attempts);
-    const diagnostics=buildPracticeDiagnostics(data,{from:start,to:end});
+    const intelligence=buildPracticeIntelligence(store.snapshot(),{profileId:profile.id,from:start,to:end}),diagnostics=intelligence.diagnostics;
     content.append(el('div',{class:'stats-strip'},stat('Active practice',duration(total)),stat('Recorded sessions',sessions.length),stat('Average session',duration(calculateAverageSessionLength(sessions))),stat('Active days',days.length)));
     if(!sessions.length){content.append(empty('No sessions in this range.','Choose a wider date range or start a session today.',link('Practice','/practice','button secondary','play')));return;}
+
+    const intelligencePanel=el('section',{class:'panel intelligence-panel'},sectionHeader('Practice intelligence','What the current evidence suggests doing next · no hidden score'));
+    const skillRows=intelligence.skills.filter(row=>row.evidence.evidenceCount||row.band==='now').slice(0,4);
+    if(!skillRows.length)intelligencePanel.append(el('p',{class:'muted'},'Structured evidence is still sparse. Use normal practice or a guided lesson to establish a baseline.'));
+    else for(const row of skillRows)intelligencePanel.append(el('article',{class:'intelligence-skill-row'},
+      el('div',{class:'split'},el('strong',{},row.label),el('div',{class:'tag-row'},badge(intelligenceAction(row.action),row.band==='now'?'accent':'neutral'),badge(titleCase(row.confidence)+' evidence'))),
+      row.reasons[0]?el('p',{class:'small'},row.reasons[0]):null,
+      el('p',{class:'muted small'},`${row.evidence.evidenceCount} evidence event${row.evidence.evidenceCount===1?'':'s'} · ${row.evidence.notYet} Not Yet · ${row.evidence.usable} Usable · ${row.evidence.solid} Solid`)));
+    const next=el('div',{class:'intelligence-next'},el('h3',{},'Recommended targets'));
+    for(const row of intelligence.recommendations.slice(0,5)){
+      const href=recommendationHref(row),title=href?link(row.label,href,'text-link'):el('strong',{},row.label);
+      next.append(el('article',{class:'intelligence-target-row'},
+        el('div',{class:'split'},title,el('div',{class:'tag-row'},badge(titleCase(row.band),row.band==='now'?'accent':'neutral'),badge(intelligenceAction(row.action)))),
+        row.reasons[0]?el('p',{class:'muted small'},row.reasons[0]):null,
+        row.progression?el('p',{class:'field-hint'},'Next progression · '+row.progression.summary):null));
+    }
+    intelligencePanel.append(next,el('p',{class:'field-hint'},'Recommendations combine current mastery state, recent evaluations, review timing, explicit goals/priorities, repertoire urgency and the existing progression engine. Evidence confidence describes quantity and coverage, not musical ability.'));
+    content.append(intelligencePanel);
 
     const comparison=el('section',{class:'panel diagnostic-panel'},sectionHeader('Trend comparison',diagnostics.comparison.previous?'Against the immediately preceding equal-length window':'Select a bounded range to compare with the previous period'));
     comparison.append(el('div',{class:'diagnostic-comparison-grid'},
