@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.20.0 — Advanced Practice Intelligence: Unified Weakness Detection, Progression Decisions & Recommendation Engine — 2026-09-23
+
+- Add a single runtime-only **Practice Intelligence** engine over the existing PracticeState, diagnostics, Priority, progression, guided-learning and repertoire signals.
+- Add explicit practice actions: **Repair, Retest, Stabilize, Apply, Maintain, Explore**.
+- Add separate evidence-gated progression decisions: **Progress, Hold, Consolidate, Regress**.
+- Prevent low-evidence targets from receiving a Progress decision even if stale or partial state appears to request advancement.
+- Map explicit progression-engine `reduce` decisions to Regress and due-retention/retest states to Hold.
+- Let sufficiently evidenced `advance` states produce Progress while Usable/build-stage work remains Consolidate.
+- Aggregate skill-level weakness from current target states, repeated Not Yet results, recurring limitation tags, due reviews, progression directions and neglect signals.
+- Keep recommendation explanations inspectable: every target carries reasons, structured evidence text, evidence confidence, and the existing exercise progression snapshot when applicable.
+- Default the recommendation set to a focused maximum of five targets; explicit callers can request up to twelve for inspection.
+- Add an executable recommendation adapter that converts exercise/song/section/transition targets into the existing normal practice blocks. Exercise recommendations preserve the current progression snapshot.
+- Add **Start** / **Add to Today** controls to Progress recommendations and a compact **What matters now** panel on Today.
+- Add progression-decision badges to Progress and Weekly Review.
+- Route Autopilot v2 target ordering through the unified Practice Intelligence ordering rather than raw priority score alone.
+- Route Weekly Review focus ordering through the same intelligence skill assessments while still neutralizing the currently active Priority Cycle to prevent self-reinforcement.
+- Keep the existing Priority Engine factors as explainable context rather than replacing them with an opaque score.
+- Keep Voice on the existing rest-aware manual/routine path; Practice Intelligence may summarize Voice evidence, but Autopilot v2 still does not automatically schedule Voice practice.
+- Add deterministic unit coverage for low-evidence Hold, explicit Regress, due-retest Hold, Consolidate, Progress, intelligent ordering, executable blocks and recommendation limits.
+- Add browser coverage proving a Today recommendation can add the same normal exercise block to the DailyPlan and that Weekly Review exposes the same progression decision.
+- No new persistent store, schema migration or backup-envelope change is required. Database remains schema v11 and backup envelope v4.
 ## 2.19.0 — Curriculum Expansion, Exercise Library, Guided Courses & Repertoire Training Content — 2026-09-23
 
 - Expand Learn from **16 courses / 94 lessons / 188 tasks** to **22 courses / 118 lessons / 236 runnable tasks**.
