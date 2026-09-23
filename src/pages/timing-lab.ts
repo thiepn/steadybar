@@ -79,10 +79,10 @@ export function timingLabPage():Page{
     if(!active)return;
     const testConfig=runningConfig;if(!testConfig)throw new Error('The active timing test configuration was lost.');
     const durationSeconds=runningDuration,threshold=runningThreshold,inputOffsetMs=runningOffset;
-    const start=startAudioTime,end=endAudioTime||start+durationSeconds,windowMs=timingMatchWindowMs(testConfig);
+    const start=startAudioTime,end=endAudioTime||start+durationSeconds,windowMs=timingMatchWindowMs(testConfig),wasMeasured=measurementStarted;
     const relevant=detected.filter(hit=>hit.time>=start-windowMs/1000&&hit.time<=end+windowMs/1000);
     resetTransport();
-    if(!save||!measurementStarted||!start){status.textContent='Test canceled. No result was saved.';return;}
+    if(!save||!wasMeasured||!start){status.textContent='Test canceled. No result was saved.';return;}
     const expected=buildExpectedTimingGrid(testConfig,start,durationSeconds),analysis=analyzeTiming(expected,relevant,inputOffsetMs,windowMs);
     const saved=await saveTimingLabResult({profileId:profile.id,config:testConfig,durationSeconds,threshold,inputOffsetMs,analysis});
     status.textContent=`Saved · ${saved.matchedCount} of ${saved.expectedCount} expected hits matched.`;
