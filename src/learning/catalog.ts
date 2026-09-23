@@ -1,7 +1,8 @@
 import type { Course } from './types.js';
+import { PHASE19_COURSES } from './catalog-phase19.js';
 
 /** Original teaching content. External sources benchmark coverage, not endorse these courses. */
-export const COURSES:readonly Course[] = [
+const BASE_COURSES:readonly Course[] = [
   {
     "id": "drums-foundation",
     "revision": 1,
@@ -7650,3 +7651,4 @@ export const COURSES:readonly Course[] = [
     ]
   }
 ];
+export const COURSES:readonly Course[]=[...BASE_COURSES,...PHASE19_COURSES];
