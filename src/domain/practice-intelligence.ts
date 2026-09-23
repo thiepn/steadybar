@@ -108,9 +108,6 @@ function confidence(evidenceCount:number,evaluatedTargets:number):IntelligenceCo
   if(evidenceCount>=2||evaluatedTargets>=1)return 'medium';
   return 'low';
 }
-function candidateDomains(candidate:PriorityCandidate):string[]{
-  return candidate.skillIds.map(id=>skillDefinition(id)?.domain).filter((value):value is string=>!!value);
-}
 function relevantLimitation(tag:LimitationTag,skillId:string):boolean{
   const domain=skillDefinition(skillId)?.domain;
   return !!domain&&LIMITATION_DOMAINS[tag].includes(domain);
@@ -241,7 +238,7 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
   };
 }
 
-function guidedRecommendation(data:Data,profileId:string,skills:SkillAssessment[],now:number):PracticeRecommendation|undefined{
+function guidedRecommendation(data:Data,profileId:string,now:number):PracticeRecommendation|undefined{
   const profile=data.profiles?.find(row=>row.id===profileId);if(!profile)return undefined;
   const target=learningTarget(data,profile,new Date(now));if(!target)return undefined;
   const progress=progressFor(data,profileId,target.course.id),record=recordFor(progress,target.lesson.id),status=lessonStatus(target.course,record,new Date(now));
@@ -288,7 +285,7 @@ export function buildPracticeIntelligence(data:Data,options:PracticeIntelligence
   const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,generatedAt=new Date(now).toISOString();
   const diagnostics=buildPracticeDiagnostics(profileView(data,profileId),{from:options.from,to:options.to,now});
   const raw=rankPracticeTargets(data,profileId,{now,today:options.today}),skills=skillAssessments(data,profileId,raw,diagnostics),rows=candidateRows(data,profileId,skills,now,options.today);
-  const recommendations=rows.map(row=>row.recommendation),guided=guidedRecommendation(data,profileId,skills,now);
+  const recommendations=rows.map(row=>row.recommendation),guided=guidedRecommendation(data,profileId,now);
   if(guided)recommendations.push(guided);
   recommendations.sort((a,b)=>bandOrder[a.band]-bandOrder[b.band]||actionOrder[a.action]-actionOrder[b.action]||confidenceOrder[a.confidence]-confidenceOrder[b.confidence]||a.label.localeCompare(b.label));
   const limit=Math.max(1,Math.min(12,options.recommendationLimit??5));
