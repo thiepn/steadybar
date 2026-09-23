@@ -22,6 +22,18 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Curriculum, exercise library & repertoire training — 2.19.0
+
+Steadybar's guided catalog now contains **22 original courses, 118 lessons and 236 runnable lesson tasks**. Drums, Guitar, Bass, Piano and Voice each progress through **Foundations → Skill development → Ensemble application → Repertoire laboratory**. Custom profiles now have a second general practice-method course rather than being left with Foundation only.
+
+The new Repertoire laboratory lessons focus on applying existing skills to real material: section-role/texture maps, transition windows, dynamics or note-length control, complete takes, targeted repairs and comparable retakes. They use the same self-check/evidence/review model as every other guided lesson; elapsed time is still not treated as automatic proficiency.
+
+The built-in exercise library now contains **170 exercises across the five principal instruments**, with additional repertoire drills for section mapping, contextual transitions, arrangement contrast and take → repair → retake work. Existing workspaces receive missing new built-ins automatically at startup, but Steadybar never overwrites an existing exercise/routine row with the same stable ID, preserving user edits and archives.
+
+Song pages also include **Repertoire training** cards tailored to the active instrument. Starting one creates an ordinary song or song-section practice block; adding one to Today uses the same normal planning/history model. These guides provide structure, not automatic musical scoring.
+
+See [Phase 19 curriculum architecture and content contract](docs/CURRICULUM-2.19.md).
+
 ## Local audio repertoire practice — 2.18.0
 
 Songs can now carry **browser-local audio tracks** for repertoire work. Import an audio file on the Song page, open its local player, slow it down or speed it up from 50–150%, set A/B boundaries, and save loop boundaries directly to existing song sections.
@@ -150,7 +162,7 @@ The standalone metronome also has a configurable **Tempo ramp** (start BPM, incr
 
 ## Guided courses — 2.1.0
 
-Open **Learn** to follow an actual teaching sequence: **16 original courses, 94 lessons and 188 runnable lesson tasks**. Drums, Guitar, Bass, Piano and Voice each have Foundations (8 lessons), Skill development (6) and Ensemble application (4). The Custom profile has a four-lesson practice-method course, not fictitious instrument-specific tuition.
+The original 2.1 release introduced **16 courses, 94 lessons and 188 runnable tasks**. The current 2.19 catalog has **22 courses, 118 lessons and 236 tasks**: the five principal instruments add a four-lesson Repertoire laboratory after Ensemble application, and Custom adds a four-lesson Development course without pretending to provide specialist technique tuition for every instrument.
 
 | Instrument | Course progression |
 |---|---|
@@ -181,7 +193,7 @@ See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architec
 | Voice | User-bounded pitch/pattern references, interval reproduction, syllables, ease/fatigue self-reviews, and no compulsory BPM. |
 | Custom | Eight instrument families with compatible protocols; not a promise of a specialist curriculum. |
 
-There are **140 starter exercises** across the five principal instruments and profile-specific **15/30/45/60-minute templates**, alongside the preserved older drum routines. Edit any template or create your own task. A routine is a suggestion, not a required schedule.
+There are **170 starter exercises** across the five principal instruments and profile-specific **15/30/45/60-minute templates**, alongside the preserved older drum routines. Edit any template or create your own task. A routine is a suggestion, not a required schedule.
 
 Shared infrastructure includes daily plans, reusable routines, metronome, sessions, pause/resume, recovery, notes, history, goals, command search and safe offline updates. Songs can have separate instrument parts, section lists, arrangement notes and readiness; setlists remain shared. Profile switching never rewrites an active or historical session. Archive profiles rather than deleting their history.
 
