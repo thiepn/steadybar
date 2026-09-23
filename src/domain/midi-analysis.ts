@@ -1,5 +1,5 @@
 import type {
-  MetronomeConfig,MidiDeviceProfile,MidiDrumMapping,MidiDrumVoice,
+  MetronomeConfig,MidiDeviceProfile,MidiDrumMapping,MidiDrumVoice,MidiExpectedPattern,
   MidiPerformanceMatchedHit,MidiPerformanceResult,MidiVoiceSummary,TimingLabConfidence,
 } from './models.js';
 import { buildExpectedTimingGrid, matchTimingEvents, timingMatchWindowMs, type TimingExpectedHit } from './timing-analysis.js';
@@ -107,6 +107,18 @@ function voiceSummaries(hits:MidiPerformanceMatchedHit[]):MidiVoiceSummary[]{
   }).sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
 }
 
+export function expectedMidiGrid(
+  config:Pick<MetronomeConfig,'bpm'|'meter'|'subdivision'>,
+  startTime:number,
+  durationSeconds:number,
+  pattern:MidiExpectedPattern,
+):TimingExpectedHit[]{
+  const grid=buildExpectedTimingGrid(config,startTime,durationSeconds);
+  if(pattern==='subdivision')return grid;
+  if(pattern==='beat')return grid.filter(hit=>hit.part===0);
+  return grid.filter(hit=>hit.part===0&&(hit.beat===1||hit.beat===3));
+}
+
 export function analyzeMidiPerformance(
   config:Pick<MetronomeConfig,'bpm'|'meter'|'subdivision'>,
   startTime:number,
@@ -115,8 +127,9 @@ export function analyzeMidiPerformance(
   profile:Pick<MidiDeviceProfile,'channel'|'mappings'>,
   matchWindowMs=timingMatchWindowMs(config),
   voiceFilter?:MidiDrumVoice,
+  expectedPattern:MidiExpectedPattern='subdivision',
 ):MidiPerformanceAnalysis{
-  const expected:TimingExpectedHit[]=buildExpectedTimingGrid(config,startTime,durationSeconds);
+  const expected:TimingExpectedHit[]=expectedMidiGrid(config,startTime,durationSeconds,expectedPattern);
   const endTime=startTime+durationSeconds,windowSeconds=matchWindowMs/1000;
   const windowedEvents=events.filter(event=>event.time>=startTime-windowSeconds&&event.time<=endTime+windowSeconds);
   const {mapped,unmappedCount}=mapMidiEvents(windowedEvents,profile);
