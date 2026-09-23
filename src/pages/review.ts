@@ -15,6 +15,7 @@ import { duration, formatDate, titleCase } from '../domain/utils.js';
 const roleLabel=(value:string)=>value==='primary'?'Primary':value==='secondary'?'Secondary':'Support';
 const weightLabel=(value:number)=>value===3?'Primary':value===2?'Secondary':'Support';
 const intelligenceAction=(value:string)=>({repair:'Repair',retest:'Retest',stabilize:'Stabilize',apply:'Apply',maintain:'Maintain',explore:'Explore'})[value]??titleCase(value);
+const decisionLabel=(value:string)=>({progress:'Progress',hold:'Hold',consolidate:'Consolidate',regress:'Regress'})[value]??titleCase(value);
 function resultMix(value:{solid:number;usable:number;notYet:number;total:number}):string{
   return value.total?`${value.solid} Solid · ${value.usable} Usable · ${value.notYet} Not Yet`:'No evaluated blocks';
 }
@@ -50,12 +51,12 @@ export function weeklyReviewPage():Page{
   if(!intelligentSkills.length)intelligence.append(el('p',{class:'muted'},'No skill-linked recommendations are available yet.'));
   else{
     for(const skill of intelligentSkills)intelligence.append(el('article',{class:'weekly-intelligence-row'},
-      el('div',{},el('div',{class:'tag-row'},badge(intelligenceAction(skill.action),skill.band==='now'?'accent':'neutral'),badge(titleCase(skill.confidence)+' evidence')),el('strong',{},skill.label),
+      el('div',{},el('div',{class:'tag-row'},badge(intelligenceAction(skill.action),skill.band==='now'?'accent':'neutral'),badge(decisionLabel(skill.decision),skill.decision==='progress'?'accent':'neutral'),badge(titleCase(skill.confidence)+' evidence')),el('strong',{},skill.label),
         skill.reasons[0]?el('p',{class:'small'},skill.reasons[0]):null,
         el('p',{class:'muted small'},`${skill.evidence.evidenceCount} evidence event${skill.evidence.evidenceCount===1?'':'s'} · ${skill.evidence.evaluatedTargets} evaluated target${skill.evidence.evaluatedTargets===1?'':'s'}`)),
       skill.examples.length?el('p',{class:'muted small'},'Examples · '+skill.examples.join(' · ')):null));
   }
-  intelligence.append(el('p',{class:'field-hint'},'Repair / Retest / Stabilize / Apply / Maintain / Explore are deterministic actions derived from recorded states, evaluations, review timing and explicit priorities. Evidence confidence describes quantity/coverage, not ability.'));
+  intelligence.append(el('p',{class:'field-hint'},'Repair / Retest / Stabilize / Apply / Maintain / Explore describe the next practice action. Progress / Hold / Consolidate / Regress is the separate evidence-gated progression decision. Evidence confidence describes quantity/coverage, not ability.'));
   page.append(intelligence);
   if(training){
     page.append(el('section',{class:'panel weekly-training-context'},sectionHeader('Long-term training cycle',training.phase?`${training.plan.name} · ${training.phase.name}`:training.plan.name,[link('Open cycle','/cycles/'+training.plan.id,'button secondary','arrow')]),
