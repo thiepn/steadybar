@@ -44,6 +44,9 @@ test('low evidence cannot produce a Progress decision even if a stale challenge 
   const row=recommendationFor(d,exercise);assert.ok(row);
   assert.equal(row.confidence,'low');
   assert.equal(row.decision,'hold');
+  assert.equal(row.progression?.direction,'hold');
+  const block=recommendationBlock(d,row);assert.ok(block);
+  assert.equal(block.progression?.direction,'hold');
 });
 
 test('strong skill evidence cannot leak Progress confidence onto a fresh target in the same skill',()=>{
@@ -113,10 +116,19 @@ test('executable exercise recommendation preserves the progression snapshot and 
   assert.equal(recommendationHref(row),'/library/'+exercise.id);
 });
 
+test('shared-song executable recommendation uses recommendation profile ownership rather than active settings',()=>{
+  const d=modern(),owner='profile-other',song={id:'song-owner',createdAt:at,updatedAt:at,title:'Owned Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[]};
+  d.songs=[song];
+  const row={source:'practice-target',profileId:owner,target:{kind:'song',songId:song.id},targetKey:'song|song-owner|shared',label:'Owned Song',band:'soon',action:'explore',confidence:'low',decision:'hold',reasons:[],evidence:[],skillIds:[]};
+  const block=recommendationBlock(d,row);assert.ok(block);
+  assert.equal(block.profileId,owner);
+  assert.notEqual(block.profileId,d.settings.activeProfileId);
+});
+
 test('transition recommendation builds a bounded section block without inventing a second history model',()=>{
   const d=modern(),song={id:'song-i',createdAt:at,updatedAt:at,title:'Transition Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'a',name:'Verse',notes:'',order:0},{id:'b',name:'Chorus',notes:'',order:1}],transitions:[{id:'t',fromSectionId:'a',toSectionId:'b',name:'Lift',notes:'Keep beat one clear.'}]};
   d.songs=[song];
-  const row={source:'practice-target',target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-i|shared|t',label:'Transition Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
+  const row={source:'practice-target',profileId:d.settings.activeProfileId,target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-i|shared|t',label:'Transition Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
   const block=recommendationBlock(d,row);assert.ok(block);
   assert.equal(block.type,'song-section');assert.equal(block.songId,song.id);assert.equal(block.songSectionId,'a');assert.equal(block.targetSeconds,300);
   assert.equal(block.prescription.target.kind,'song-transition');assert.equal(block.prescription.target.transitionId,'t');assert.equal(block.prescription.intent,'build');assert.equal(block.prescription.generatedBy,'manual');
