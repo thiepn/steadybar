@@ -554,18 +554,19 @@ class Workbench(e2e.MusicPracticeTests):
           };
           d.sessions=dates.map(make);d.goals=[];d.trainingPlans=[];d.weeklySchedules=[];d.priorityCycles=[];
           await load('db/database.js').replaceData(d);await store.refresh();
-          return {weekStart:utils.localDate(monday),profileId:profile.id};
+          const round5=value=>Math.max(5,Math.round(value/5)*5),baseline=profile.defaultSessionMinutes*3,lower=round5(baseline*.7),upper=Math.min(1260,round5(baseline*1.3)),observed=round5(120),adaptive=Math.max(Math.min(observed,Math.max(lower,upper)),Math.min(lower,upper));
+          return {weekStart:utils.localDate(monday),profileId:profile.id,baseline,adaptive};
         })()""")
         self.route('/calendar')
         self.page.get_by_role('button',name='Generate week',exact=True).click()
         dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
         expect(dialog.get_by_label('Use recent practice calibration',exact=True)).to_be_checked()
         expect(dialog.get_by_text('Established calibration',exact=False)).to_be_visible()
-        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value('115')
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['adaptive']))
         expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value('3')
 
         dialog.get_by_label('Use recent practice calibration',exact=True).uncheck()
-        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value('90')
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['baseline']))
         expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value('3')
         dialog.get_by_label('Use recent practice calibration',exact=True).check()
         expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value('115')
@@ -576,10 +577,10 @@ class Workbench(e2e.MusicPracticeTests):
           const schedule=load('app/store.js').store.snapshot().weeklySchedules[0];
           return {target:schedule.targetMinutes,kinds:schedule.days.map((d,i)=>d.kind==='practice'?i:-1).filter(i=>i>=0),load:schedule.source.loadCalibration};
         })()""")
-        self.assertEqual(saved['target'],115);self.assertEqual(saved['kinds'],[1,3,5])
+        self.assertEqual(saved['target'],fixture['adaptive']);self.assertEqual(saved['kinds'],[1,3,5])
         self.assertEqual(saved['load']['confidence'],'high');self.assertTrue(saved['load']['loadAdjusted']);self.assertTrue(saved['load']['patternAdjusted'])
         expect(self.page.get_by_text('Load calibration · High',exact=True)).to_be_visible()
-        expect(self.page.get_by_text('Profile-default load adjusted from 90 to 115 min.',exact=True)).to_be_visible()
+        expect(self.page.get_by_text(f"Profile-default load adjusted from {fixture['baseline']} to {fixture['adaptive']} min.",exact=True)).to_be_visible()
 
         self.route('/review')
         expect(self.page.get_by_role('heading',name='Next-week scheduling load',exact=True)).to_be_visible()
