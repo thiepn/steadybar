@@ -75,12 +75,15 @@ export function analyzeTiming(
   if(!expected.length)throw new Error('Timing analysis needs at least one expected hit.');
   const intervalMs=expected.length>1?(expected[1]!.time-expected[0]!.time)*1000:500;
   const window=matchWindowMs??Math.round(Math.min(180,Math.max(35,intervalMs*.45)));
-  const corrected=detected.map((hit,index)=>({index,time:hit.time-inputOffsetMs/1000,strength:hit.strength}));
+  const corrected=detected.map((hit,index)=>({index,time:hit.time-inputOffsetMs/1000,strength:hit.strength})).sort((a,b)=>a.time-b.time||a.index-b.index);
   const candidates:{expectedIndex:number;detectedIndex:number;distanceMs:number}[]=[];
+  let firstCandidate=0;
   for(let e=0;e<expected.length;e++){
-    for(let d=0;d<corrected.length;d++){
-      const distanceMs=(corrected[d]!.time-expected[e]!.time)*1000;
-      if(Math.abs(distanceMs)<=window)candidates.push({expectedIndex:e,detectedIndex:d,distanceMs});
+    const target=expected[e]!,minimum=target.time-window/1000,maximum=target.time+window/1000;
+    while(firstCandidate<corrected.length&&corrected[firstCandidate]!.time<minimum)firstCandidate++;
+    for(let d=firstCandidate;d<corrected.length&&corrected[d]!.time<=maximum;d++){
+      const distanceMs=(corrected[d]!.time-target.time)*1000;
+      candidates.push({expectedIndex:e,detectedIndex:d,distanceMs});
     }
   }
   candidates.sort((a,b)=>Math.abs(a.distanceMs)-Math.abs(b.distanceMs)||a.expectedIndex-b.expectedIndex||a.detectedIndex-b.detectedIndex);
