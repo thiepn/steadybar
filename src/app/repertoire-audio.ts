@@ -75,7 +75,7 @@ export async function saveRepertoireCue(trackId:string,input:{sectionId?:string;
     saved.label=input.label.trim()||saved.label;saved.startSeconds=start;saved.endSeconds=end;saved.sectionId=input.sectionId;
     if(!existing)track.cues.push(saved);
     track.cues.sort((a,b)=>a.order-b.order||a.startSeconds-b.startSeconds);track.updatedAt=nowISO();return data;
-  });
+  },false);
   return saved;
 }
 
@@ -83,5 +83,5 @@ export async function deleteRepertoireCue(trackId:string,cueId:string):Promise<v
   await store.workspace(data=>{
     const track=data.audioTracks?.find(row=>row.id===trackId);if(!track)throw new Error('The local track no longer exists.');
     track.cues=track.cues.filter(cue=>cue.id!==cueId).map((cue,index)=>({...cue,order:index}));track.updatedAt=nowISO();return data;
-  });
+  },false);
 }
