@@ -114,12 +114,14 @@ export function analyzeMidiPerformance(
   events:readonly MidiTimedEvent[],
   profile:Pick<MidiDeviceProfile,'channel'|'mappings'>,
   matchWindowMs=timingMatchWindowMs(config),
+  voiceFilter?:MidiDrumVoice,
 ):MidiPerformanceAnalysis{
   const expected:TimingExpectedHit[]=buildExpectedTimingGrid(config,startTime,durationSeconds);
   const endTime=startTime+durationSeconds,windowSeconds=matchWindowMs/1000;
   const windowedEvents=events.filter(event=>event.time>=startTime-windowSeconds&&event.time<=endTime+windowSeconds);
   const {mapped,unmappedCount}=mapMidiEvents(windowedEvents,profile);
-  const {pairs,corrected}=matchTimingEvents(expected,mapped,0,matchWindowMs);
+  const analyzed=voiceFilter?mapped.filter(event=>event.mapping.voice===voiceFilter):mapped;
+  const {pairs,corrected}=matchTimingEvents(expected,analyzed,0,matchWindowMs);
   const hits:MidiPerformanceMatchedHit[]=pairs.map(pair=>{
     const target=expected[pair.expectedIndex]!,source=corrected[pair.detectedIndex]!;
     return {
@@ -129,7 +131,7 @@ export function analyzeMidiPerformance(
     };
   });
   const offsets=hits.map(hit=>hit.offsetMs),velocities=hits.map(hit=>hit.velocity),average=mean(offsets);
-  const expectedCount=expected.length,detectedCount=relevant.length,matchedCount=hits.length;
+  const expectedCount=expected.length,detectedCount=analyzed.length,matchedCount=hits.length;
   const misses=expectedCount-matchedCount,extras=Math.max(0,detectedCount-matchedCount);
   const velocityMin=velocities.length?Math.min(...velocities):0,velocityMax=velocities.length?Math.max(...velocities):0;
   return {
