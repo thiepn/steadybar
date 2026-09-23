@@ -125,11 +125,23 @@ export interface WeeklyScheduleDay {
   id: string; date: string; kind: WeeklyScheduleDayKind;
   plannedMinutes: number; intent: TrainingEmphasis; note: string;
 }
+export type PracticeLoadConfidence = 'low' | 'medium' | 'high';
+export interface WeeklyScheduleLoadCalibration {
+  engineVersion: 1;
+  confidence: PracticeLoadConfidence;
+  windowStart: string; windowEnd: string;
+  observedSessions: number; observedActiveDays: number; observedActiveWeeks: number;
+  typicalActiveDayMinutes: number; medianActiveWeekMinutes: number;
+  suggestedWeeklyMinutes: number; suggestedPracticeDays: number;
+  preferredWeekdays: number[];
+  loadAdjusted?: boolean; patternAdjusted?: boolean;
+}
 export interface WeeklyScheduleSource {
   engineVersion: 1;
   trainingPlanId?: string; trainingPlanName?: string;
   trainingPhaseIds: string[]; trainingPhaseNames: string[];
   priorityCycleId?: string; priorityCycleName?: string;
+  loadCalibration?: WeeklyScheduleLoadCalibration;
 }
 export interface WeeklySchedule extends Entity {
   profileId: string; weekStart: string; status: 'draft' | 'applied';
