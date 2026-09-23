@@ -20,6 +20,13 @@ test('weekly review uses a rolling seven-day window and previous equal week',()=
   assert.equal(review.intelligence.profileId,p.id);assert.equal(review.intelligence.engineVersion,1);assert.ok(review.intelligence.recommendations.length<=5);
 });
 
+test('fresh profiles do not receive arbitrary weekly focus proposals without evidence or explicit urgency',()=>{
+  const d=modern(),p=activeProfile(d);d.practiceStates=[];d.goals=[];d.priorityCycles=[];d.trainingPlans=[];d.setlists=[];
+  const review=buildWeeklyReview(d,{profileId:p.id,now:at,today});
+  assert.deepEqual(review.focus,[]);
+  assert.equal(review.suggestedIntent,'balanced');
+});
+
 test('building a review is runtime-only and does not mutate active priority cycles',()=>{
   const d=modern(),p=activeProfile(d),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise?.primarySkillId);
   d.priorityCycles=[{id:'cycle',createdAt:at,updatedAt:at,profileId:p.id,name:'Existing',status:'active',startedOn:'2026-09-15',items:[{id:'item',skillId:exercise.primarySkillId,weight:3,note:'Keep this'}]}];
