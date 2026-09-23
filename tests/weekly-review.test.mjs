@@ -17,6 +17,7 @@ test('weekly review uses a rolling seven-day window and previous equal week',()=
   assert.deepEqual(review.window,{from:'2026-09-16',to:'2026-09-22',previousFrom:'2026-09-09',previousTo:'2026-09-15'});
   assert.equal(review.diagnostics.comparison.current.from,'2026-09-16');
   assert.equal(review.diagnostics.comparison.previous?.from,'2026-09-09');
+  assert.equal(review.intelligence.profileId,p.id);assert.equal(review.intelligence.engineVersion,1);assert.ok(review.intelligence.recommendations.length<=5);
 });
 
 test('building a review is runtime-only and does not mutate active priority cycles',()=>{
