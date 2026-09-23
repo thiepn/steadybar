@@ -138,7 +138,7 @@ test('transition recommendation builds a bounded section block without inventing
 test('transition recommendation remains transition evidence after normal session snapshotting',()=>{
   const d=modern(),song={id:'song-evidence',createdAt:at,updatedAt:at,title:'Evidence Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'a',name:'Verse',notes:'',order:0},{id:'b',name:'Chorus',notes:'',order:1}],transitions:[{id:'t',fromSectionId:'a',toSectionId:'b',name:'Lift',notes:''}]};
   d.songs=[song];
-  const row={source:'practice-target',target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-evidence|shared|t',label:'Evidence Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
+  const row={source:'practice-target',profileId:d.settings.activeProfileId,target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-evidence|shared|t',label:'Evidence Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
   const block=recommendationBlock(d,row);assert.ok(block);
   const session=createSession([block],d);session.status='completed';session.endedAt=at;session.blocks[0].completed=true;session.blocks[0].actualActiveSeconds=30;session.blocks[0].endedAt=at;
   const events=evidenceFromSessions({...d,sessions:[session]});
