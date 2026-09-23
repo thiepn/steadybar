@@ -194,9 +194,9 @@ class Courses(e2e.MusicPracticeTests):
         data=self.state();self.assertEqual(data['settings']['activeProfileId'],result['profile']);self.assertEqual([e['id'] for e in data['exercises']],sorted(result['exerciseIds']))
         self.assertEqual(data['courseProgress'],[]);self.assertEqual(data['sessions'][0],result['session']);self.assertEqual(self.read("load('db/database.js').openDatabase().then(d=>d.version)"),11)
     def matrix(self,kind):
-        self.begin(kind);self.route('/courses');expect(self.page.locator('.course-card')).to_have_count(1 if kind=='custom' else 3)
+        self.begin(kind);self.route('/courses');expect(self.page.locator('.course-card')).to_have_count(2 if kind=='custom' else 4)
         lessons=self.read(f"load('learning/catalog.js').COURSES.filter(c=>c.instrument==={json.dumps(kind)}).flatMap(c=>c.lessons)")
-        self.assertEqual(len(lessons),4 if kind=='custom' else 18)
+        self.assertEqual(len(lessons),8 if kind=='custom' else 22)
         if kind=='guitar':self.lesson=self.course['lessons'][1]
         if kind=='drums':self.lesson=self.course['lessons'][2]
         self.open_lesson();results=[]
