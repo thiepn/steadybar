@@ -29,6 +29,8 @@ Practice Intelligence reads those systems and explains what to do next. It does 
 
 The snapshot is rebuilt from workspace data every time.
 
+When a caller does not supply a diagnostic date range (for example Today and Autopilot), recurring-limitation/trend diagnostics are bounded to the most recent **28 calendar days**. This prevents old historical limitation tags from permanently dominating current recommendations. Progress and Weekly Review continue to pass their own explicit ranges.
+
 No Practice Intelligence cache is stored in IndexedDB.
 
 ## Practice actions
