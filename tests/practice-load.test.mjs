@@ -77,6 +77,14 @@ test('profile-default weekly load adapts gradually and is bounded to thirty perc
   assert.equal(schedule.source.loadCalibration?.loadAdjusted,true);
 });
 
+test('manual Calendar minutes are not mislabeled as an accepted adaptive-load suggestion',()=>{
+  const data=modern(),profile=activeProfile(data);addWeeks(data,profile,40);
+  const schedule=buildWeeklySchedule(data,{profileId:profile.id,weekStart:monday,adaptiveLoad:true,targetMinutes:100,now:at});
+  assert.equal(schedule.targetMinutes,100);
+  assert.equal(schedule.source.loadCalibration?.suggestedWeeklyMinutes,115);
+  assert.equal(schedule.source.loadCalibration?.loadAdjusted,false);
+});
+
 test('explicit weekly-minute goals remain authoritative even when recent observed load is lower',()=>{
   const data=modern(),profile=activeProfile(data);addWeeks(data,profile,20);
   data.goals=[{id:'minutes-goal',createdAt:at,updatedAt:at,profileId:profile.id,type:'weekly-minutes',title:'150 minute week',description:'',targetValue:150,unit:'minutes',completed:false}];
