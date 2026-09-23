@@ -23,17 +23,17 @@ function request<T>(req:IDBRequest<T>):Promise<T>{
   return new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
 }
 function complete(tx:IDBTransaction):Promise<void>{
-  return new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onabort=()=>reject(tx.error||new Error('Recording storage transaction failed.'));tx.onerror=()=>reject(tx.error||new Error('Recording storage transaction failed.'));});
+  return new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onabort=()=>reject(tx.error||new Error('Local media storage transaction failed.'));tx.onerror=()=>reject(tx.error||new Error('Local media storage transaction failed.'));});
 }
 async function database():Promise<IDBDatabase>{
   if(connection)return connection;
   if(pending)return pending;
   const opening=new Promise<IDBDatabase>((resolve,reject)=>{
-    if(!globalThis.indexedDB){reject(new Error('Browser storage is unavailable. Recordings cannot be saved on this device.'));return;}
+    if(!globalThis.indexedDB){reject(new Error('Browser storage is unavailable. Local media cannot be saved on this device.'));return;}
     const req=indexedDB.open(MEDIA_DB_NAME,MEDIA_DB_VERSION);
     req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(RECORDING_STORE))db.createObjectStore(RECORDING_STORE,{keyPath:'id'});if(!db.objectStoreNames.contains(TRACK_STORE))db.createObjectStore(TRACK_STORE,{keyPath:'id'});};
-    req.onerror=()=>reject(req.error||new Error('Recording storage could not open.'));
-    req.onblocked=()=>reject(new Error('Close other Steadybar tabs, then retry recording storage.'));
+    req.onerror=()=>reject(req.error||new Error('Local media storage could not open.'));
+    req.onblocked=()=>reject(new Error('Close other Steadybar tabs, then retry local media storage.'));
     req.onsuccess=()=>{const db=req.result;db.onversionchange=()=>{db.close();if(connection===db){connection=undefined;pending=undefined;}};connection=db;resolve(db);};
   });
   pending=opening;
