@@ -49,6 +49,7 @@ export function timingLabPage():Page{
   let config:MetronomeConfig={...structuredClone(snapshot.settings.metronome),countIn:1,timing:resolvedTiming(snapshot.settings.metronome)};
   let active=false,measurementStarted=false,startAudioTime=0,endAudioTime=0,finishTimer:ReturnType<typeof setTimeout>|undefined,tickTimer:ReturnType<typeof setInterval>|undefined;
   let detected:TimingInputHit[]=[];
+  let runningConfig:MetronomeConfig|undefined,runningDuration=0,runningThreshold=0,runningOffset=0;
   let disposed=false;
 
   const page=el('div',{class:'page timing-lab-page'},pageHeader('Microphone diagnostics','Timing Lab',`${profile.name} · Compare detected attacks with the Web Audio timing grid.`,[
@@ -70,11 +71,14 @@ export function timingLabPage():Page{
     return {...config,bpm:Number(bpmInput.value),subdivision:Number(subdivision.querySelector('select')!.value) as Subdivision,countIn:1,timing:{...resolvedTiming(config),mode:clickMode.querySelector('select')!.value as ClickMode}};
   };
   const stopTimers=()=>{clearTimeout(finishTimer);clearInterval(tickTimer);finishTimer=undefined;tickTimer=undefined;};
-  const resetTransport=()=>{active=false;measurementStarted=false;stopTimers();audio.stop();timingInput.stop();startButton.querySelector('span')!.textContent='Start timing test';startButton.setAttribute('aria-pressed','false');live.hidden=true;};
+  const setupFields=[bpm,subdivision,clickMode,durationInput,thresholdInput,offsetInput];
+  const setSetupDisabled=(disabled:boolean)=>{for(const wrapper of setupFields){const control=wrapper.querySelector<HTMLInputElement|HTMLSelectElement>('input,select');if(control)control.disabled=disabled;}if(calibrateButton)calibrateButton.disabled=disabled||!MicrophoneTimingInput.supported();};
+  const resetTransport=()=>{active=false;measurementStarted=false;stopTimers();audio.stop();timingInput.stop();runningConfig=undefined;runningDuration=0;runningThreshold=0;runningOffset=0;setSetupDisabled(false);startButton.querySelector('span')!.textContent='Start timing test';startButton.setAttribute('aria-pressed','false');live.hidden=true;};
 
   const finish=async(save=true)=>{
     if(!active)return;
-    const testConfig=readConfig(),durationSeconds=Number(durationInput.querySelector('input')!.value),threshold=Number(thresholdInput.querySelector('input')!.value),inputOffsetMs=Number(offsetInput.querySelector('input')!.value);
+    const testConfig=runningConfig;if(!testConfig)throw new Error('The active timing test configuration was lost.');
+    const durationSeconds=runningDuration,threshold=runningThreshold,inputOffsetMs=runningOffset;
     const start=startAudioTime,end=endAudioTime||start+durationSeconds,windowMs=timingMatchWindowMs(testConfig);
     const relevant=detected.filter(hit=>hit.time>=start-windowMs/1000&&hit.time<=end+windowMs/1000);
     resetTransport();
@@ -88,11 +92,11 @@ export function timingLabPage():Page{
     if(active){await finish(false);return;}
     if(!MicrophoneTimingInput.supported())throw new Error('Timing Lab needs microphone access and AudioWorklet support.');
     const testConfig=readConfig(),durationSeconds=Number(durationInput.querySelector('input')!.value),threshold=Number(thresholdInput.querySelector('input')!.value);
-    config=testConfig;detected=[];startAudioTime=0;endAudioTime=0;measurementStarted=false;
+    config=testConfig;runningConfig=structuredClone(testConfig);runningDuration=durationSeconds;runningThreshold=threshold;runningOffset=Number(offsetInput.querySelector('input')!.value);detected=[];startAudioTime=0;endAudioTime=0;measurementStarted=false;
     status.textContent='Opening microphone…';
     const context=await audio.prepareContext();
     await timingInput.start(context,threshold,hit=>{detected.push(hit);const target=live.querySelector('.timing-live-hits');if(target)target.textContent=`${detected.length} detected attack${detected.length===1?'':'s'}`;});
-    active=true;startButton.querySelector('span')!.textContent='Cancel timing test';startButton.setAttribute('aria-pressed','true');live.hidden=false;
+    active=true;setSetupDisabled(true);startButton.querySelector('span')!.textContent='Cancel timing test';startButton.setAttribute('aria-pressed','true');live.hidden=false;
     status.textContent='Count-in · measurement starts on the first practice beat.';
     try{
       await audio.start(testConfig,{
