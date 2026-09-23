@@ -8,7 +8,7 @@ import type { ClickMode, MetronomeConfig, Subdivision, TimingLabResult } from '.
 import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, confirmAction, field, input, link, notify, pageHeader, sectionHeader, select, stat } from '../ui/components.js';
+import { badge, button, confirmAction, input, link, notify, pageHeader, sectionHeader, select, stat } from '../ui/components.js';
 import { formatDate, titleCase } from '../domain/utils.js';
 
 const clickModes:[ClickMode,string][]=[
