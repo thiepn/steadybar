@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.17.0 — MIDI Drum Integration, Velocity Dynamics & High-Precision Performance Analysis — 2026-09-23
+
+- Add a dedicated **MIDI Drum Lab** for electronic kits and MIDI pads using the browser Web MIDI API.
+- Normalize high-resolution `MIDIMessageEvent.receivedTime` timestamps onto the same AudioContext clock used by Steadybar's metronome.
+- Ignore note-off and note-on velocity-zero messages and preserve note, velocity and one-based MIDI channel for every measured note-on.
+- Add per-device, per-practice-profile drum-note mapping with common General MIDI drum defaults, optional MIDI-channel filtering and **Learn next note** custom mapping.
+- Match saved device mappings primarily by normalized manufacturer + device name rather than assuming browser MIDI input IDs are permanently stable.
+- Add selectable analysis lanes (`All mapped notes` or one mapped drum voice) so simultaneous groove voices do not have to be treated as timing errors.
+- Add explicit expected-hit patterns: **Every subdivision**, **Beat only**, and **2 & 4 backbeat**. Steadybar does not pretend to know a full drum arrangement when no authored MIDI score exists.
+- Reuse Phase 16's deterministic one-to-one timing-grid matcher for MIDI events rather than introducing a second timing algorithm.
+- Persist signed bias, mean absolute timing error, timing spread, drift, misses, extras, unmapped notes, MIDI velocity mean/median/spread/range and per-voice timing/velocity summaries.
+- Add Low / Medium / High measurement confidence based on matched evidence coverage and extra-event rate.
+- Capture active session/block/exercise context when a MIDI test is launched during an unfinished drum practice session.
+- Bound live event buffers to 20,000 note-ons and refuse to save an overflowed result rather than reporting misleading statistics.
+- Cancel active MIDI tests safely if the selected device disconnects.
+- Add `/midi-lab` navigation, Timing Lab / Progress / drum-practice links and command-search access.
+- Add `midiDeviceProfiles` and `midiResults` IndexedDB stores and bump the structured workspace schema from v9 to v10.
+- Keep backup envelope v4; older backups restore with empty MIDI mappings/results and saved MIDI history remains readable on browsers without live Web MIDI support.
+- Add deterministic MIDI parser/timestamp/mapping/timing/velocity tests plus schema-v10 and cross-browser responsive-history coverage.
+- MIDI velocity is device-relative and is not acoustic loudness or force. Note mapping identifies drum voices only; Steadybar does not infer hand/foot identity, technique quality, health, or full groove-note accuracy without an explicit score.
 ## 2.16.0 — Timing Lab: Microphone-Based Timing Analysis & Precision Diagnostics — 2026-09-23
 
 - Add a dedicated **Timing Lab** that compares microphone-detected attacks against the same Web Audio clock used by Steadybar's metronome.
