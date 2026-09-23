@@ -116,10 +116,10 @@ export function analyzeMidiPerformance(
   matchWindowMs=timingMatchWindowMs(config),
 ):MidiPerformanceAnalysis{
   const expected:TimingExpectedHit[]=buildExpectedTimingGrid(config,startTime,durationSeconds);
-  const {mapped,unmappedCount}=mapMidiEvents(events,profile);
   const endTime=startTime+durationSeconds,windowSeconds=matchWindowMs/1000;
-  const relevant=mapped.filter(event=>event.time>=startTime-windowSeconds&&event.time<=endTime+windowSeconds);
-  const {pairs,corrected}=matchTimingEvents(expected,relevant,0,matchWindowMs);
+  const windowedEvents=events.filter(event=>event.time>=startTime-windowSeconds&&event.time<=endTime+windowSeconds);
+  const {mapped,unmappedCount}=mapMidiEvents(windowedEvents,profile);
+  const {pairs,corrected}=matchTimingEvents(expected,mapped,0,matchWindowMs);
   const hits:MidiPerformanceMatchedHit[]=pairs.map(pair=>{
     const target=expected[pair.expectedIndex]!,source=corrected[pair.detectedIndex]!;
     return {
