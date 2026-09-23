@@ -3,7 +3,7 @@ import { activeProfile } from '../domain/profiles.js';
 import { exerciseProtocol } from '../domain/protocols.js';
 import { protocolResults, summarizeResults } from '../domain/protocol-analytics.js';
 import type { DiagnosticInsight, TrendDirection } from '../domain/practice-diagnostics.js';
-import { buildPracticeIntelligence, type PracticeRecommendation } from '../domain/practice-intelligence.js';
+import { buildPracticeIntelligence } from '../domain/practice-intelligence.js';
 import { recommendationBlock, recommendationHref } from '../app/practice-intelligence.js';
 import { addToday, launchPractice } from '../practice/launch.js';
 import { observeCharts } from '../ui/charts.js';
