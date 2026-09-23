@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.18.0 — Local Audio Practice Engine, Track Import, Looping & Tempo-Controlled Repertoire Practice — 2026-09-23
+
+- Add song/part-attached **local repertoire tracks** stored only in the current browser profile.
+- Add browser-local binary storage for imported track audio in media database v2, separate from structured workspace state.
+- Add structured `audioTracks` metadata/cue persistence and bump the workspace database from schema v10 to v11.
+- Keep backup envelope v4. JSON backups include track metadata and section cues but deliberately exclude audio bytes; restored tracks can be relinked on another browser/device.
+- Add transactional import, relink and delete flows with binary rollback if the metadata commit fails.
+- Reject files larger than 512 MB to avoid unbounded `ArrayBuffer` memory pressure in the current browser-storage implementation.
+- Add a dedicated `/audio/:trackId` repertoire player with seek, local volume, 50–150% playback speed and browser-native pitch preservation when supported.
+- Add a one-bar metronome pre-roll whose tempo follows the current playback-rate-adjusted song tempo.
+- Add A/B loop markers, loop enable/disable, full-track reset and saved per-section loop cues.
+- Add direct **Practice section** and **Add to Today** actions that reuse Steadybar's existing song/section practice blocks instead of creating a second history model.
+- Keep saved audio cues synchronized with song-section edits: removed sections remove their cues and renamed sections update canonical cue labels.
+- Add missing-media recovery behavior and **Relink file** support; replacement files must be long enough for all saved cue endpoints.
+- Add song-page local-audio management for shared arrangements and current instrument parts.
+- Add reset semantics that explicitly clear both recording and repertoire media only after the existing safety JSON backup is created.
+- Add cross-browser native coverage for track binary storage, real WAV metadata probing, playback-rate/loop controls, metadata-only restore behavior and responsive local-audio UI.
+- Playback speed uses the browser media engine. Pitch preservation availability and loop-seek smoothness are browser/device dependent; this release does not claim sample-perfect time stretching or DAW-grade looping.
 ## 2.17.0 — MIDI Drum Integration, Velocity Dynamics & High-Precision Performance Analysis — 2026-09-23
 
 - Add a dedicated **MIDI Drum Lab** for electronic kits and MIDI pads using the browser Web MIDI API.
