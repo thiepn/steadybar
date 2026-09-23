@@ -104,7 +104,7 @@ export function coursesPage(courseId?:string,lessonId?:string,ownerId?:string):P
   const profileId=owner.id;
   if(!course){
     page.append(pageHeader('','Learn',`${owner.name} · Read, practice, apply, self-check and revisit. Courses are self-paced; no lesson is locked.`),learningSummary());
-    if(owner.instrumentType==='custom')page.append(el('p',{class:'learning-safety'},'This is a custom-instrument practice-method course. It does not pretend to provide bespoke technique tuition for every instrument; choose appropriate teacher-approved material.'));
+    if(owner.instrumentType==='custom')page.append(el('p',{class:'learning-safety'},'This is a custom-instrument practice-method curriculum. It does not pretend to provide bespoke technique tuition for every instrument; choose appropriate teacher-approved material.'));
     page.append(el('div',{class:'course-grid'},coursesFor(owner).map(c=>courseCard(c,profileId))),el('p',{class:'learning-footnote'},'All lesson teaching and examples are available offline. “Self-checked” is a personal report, not automatic mastery, a grade or a microphone analysis. Course stages are not equivalent to examination levels.'));
     const unavailable=(data.courseProgress??[]).filter(p=>p.profileId===profileId&&!courseById(p.courseId));
     if(unavailable.length)page.append(el('p',{class:'learning-safety'},`${unavailable.length} earlier course record(s) remain safely in your backup but their teaching content is not installed in this version.`));
