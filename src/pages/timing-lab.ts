@@ -161,6 +161,7 @@ export function timingLabPage():Page{
   return {
     node:page,
     beforeLeave:async()=>!active||await confirmAction('Leave Timing Lab?','The active timing test will be canceled and no result will be saved.','Leave Timing Lab',true),
+    isDirty:()=>active,
     cleanup:()=>{disposed=true;resetTransport();},
   };
 }
