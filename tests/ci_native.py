@@ -192,6 +192,20 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.assertGreater(result['size'],0)
         self.assertFalse(result['existsAfter'])
 
+    def test_21_timing_onset_worklet_loads_on_shared_audio_clock(self):
+        self.onboard()
+        result=self.read("""(async()=>{
+          const engine=load('audio/engine.js').audio,context=await engine.prepareContext();
+          if(!context.audioWorklet||typeof AudioWorkletNode==='undefined')return {supported:false,state:context.state};
+          await context.audioWorklet.addModule(new URL('./timing-onset-worklet.js',location.href).href);
+          const node=new AudioWorkletNode(context,'steadybar-timing-onset',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1],processorOptions:{threshold:.08,cooldownMs:45}});
+          const gain=context.createGain();gain.gain.value=0;node.connect(gain);gain.connect(context.destination);
+          node.disconnect();gain.disconnect();engine.stop();
+          return {supported:true,state:context.state};
+        })()""")
+        self.assertTrue(result['supported'],result)
+        self.assertIn(result['state'],('running','suspended'))
+
     def test_18_countin_excluded_and_cancelled_safely(self):
         self.onboard();self.route('/metronome')
         self.page.get_by_label('Count-in',exact=True).select_option('1')
@@ -238,6 +252,7 @@ if __name__ == '__main__':
         'test_18_countin_excluded_and_cancelled_safely',
         'test_19_drag_reorder_and_keyboard_skip_link',
         'test_20_recording_media_blob_round_trip',
+        'test_21_timing_onset_worklet_loads_on_shared_audio_clock',
     ]
     suite = unittest.TestSuite(NativeOriginSmoke(name) for name in names)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
