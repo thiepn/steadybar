@@ -180,11 +180,21 @@ const weeklyScheduleDay=obj({
   id,date:dateOnly,kind:one('practice','optional','rest'),
   plannedMinutes:num(0,180,true),intent:one('balanced','songs','timing','technique'),note:text(),
 });
+const weeklyScheduleLoadCalibration=obj({
+  engineVersion:one(1),confidence:one('low','medium','high'),
+  windowStart:dateOnly,windowEnd:dateOnly,
+  observedSessions:num(0,100000,true),observedActiveDays:num(0,42,true),observedActiveWeeks:num(0,6,true),
+  typicalActiveDayMinutes:num(5,180,true),medianActiveWeekMinutes:num(0,1260,true),
+  suggestedWeeklyMinutes:num(5,1260,true),suggestedPracticeDays:num(1,7,true),
+  preferredWeekdays:arr(num(0,6,true),7),
+  loadAdjusted:optional(bool),patternAdjusted:optional(bool),
+});
 const weeklyScheduleSource=obj({
   engineVersion:one(1),
   trainingPlanId:optional(id),trainingPlanName:optional(name),
   trainingPhaseIds:arr(id,24),trainingPhaseNames:arr(name,24),
   priorityCycleId:optional(id),priorityCycleName:optional(name),
+  loadCalibration:optional(weeklyScheduleLoadCalibration),
 });
 const rawWeeklySchedule=obj({
   ...entity,profileId:id,weekStart:dateOnly,status:one('draft','applied'),
@@ -208,6 +218,11 @@ export const validateWeeklySchedule:Validator<WeeklySchedule>=(v,p='Weekly sched
   if(target!==schedule.targetMinutes)fail(p,'weekly target must equal the sum of planned practice days');
   if(schedule.source.trainingPhaseIds.length!==schedule.source.trainingPhaseNames.length)fail(p,'training phase source labels must match source IDs');
   if(new Set(schedule.source.trainingPhaseIds).size!==schedule.source.trainingPhaseIds.length)fail(p,'training phase sources must be unique');
+  const calibration=schedule.source.loadCalibration;
+  if(calibration){
+    if(calibration.windowEnd<calibration.windowStart)fail(p,'load-calibration window is invalid');
+    if(calibration.preferredWeekdays.length!==7||new Set(calibration.preferredWeekdays).size!==7)fail(p,'load calibration must rank all seven weekdays exactly once');
+  }
   return schedule;
 };
 
