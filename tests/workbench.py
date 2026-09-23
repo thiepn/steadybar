@@ -695,6 +695,16 @@ class Workbench(e2e.MusicPracticeTests):
         dialog.get_by_role('button',name='Start guide',exact=True).click()
         expect(dialog).to_have_count(0)
         self.page.wait_for_url(re.compile(r'.*#/practice/active
+        session=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {song:b.sourceSongId,section:b.sourceSongSectionId,title:b.titleSnapshot,notes:b.notes};
+        })()""")
+        self.assertEqual(session['song'],fixture['song']);self.assertEqual(session['section'],fixture['section'])
+        self.assertIn(guide_title,session['title']);self.assertGreater(len(session['notes']),80)
+
+
+
+if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
     raise SystemExit(0 if result.wasSuccessful() else 1)
