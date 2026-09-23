@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseMidiNoteMessage,midiTimestampToAudioTime} from '../dist/app/midi/input.js';
-import {analyzeMidiPerformance,defaultMidiMappings,mapMidiEvents,midiDeviceKey} from '../dist/app/domain/midi-analysis.js';
+import {analyzeMidiPerformance,defaultMidiMappings,expectedMidiGrid,mapMidiEvents,midiDeviceKey} from '../dist/app/domain/midi-analysis.js';
 import {buildExpectedTimingGrid} from '../dist/app/domain/timing-analysis.js';
 
 const config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:2};
@@ -64,6 +64,17 @@ test('voice-lane analysis ignores simultaneous mapped voices rather than calling
   assert.equal(snare.matchedCount,expected.length);
   assert.equal(snare.extras,0);
   assert.ok(snare.hits.every(hit=>hit.voice==='snare'));
+});
+
+test('2 & 4 expected pattern creates only backbeat targets for a snare lane',()=>{
+  const start=4,expected=expectedMidiGrid(config,start,8,'two-four');
+  assert.ok(expected.length>0);
+  assert.ok(expected.every(hit=>hit.part===0&&(hit.beat===1||hit.beat===3)));
+  const events=expected.map(hit=>({time:hit.time,note:38,velocity:92,channel:10}));
+  const result=analyzeMidiPerformance(config,start,8,events,profile,80,'snare','two-four');
+  assert.equal(result.expectedCount,expected.length);
+  assert.equal(result.matchedCount,expected.length);
+  assert.equal(result.misses,0);assert.equal(result.extras,0);
 });
 
 test('unmapped notes outside the measured window are excluded from the result',()=>{
