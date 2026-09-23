@@ -230,8 +230,9 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
   if(candidate.state?.mastery==='retest'||candidate.reasons.includes('retention-due')){action='retest';band='now';}
   const evidence=targetStateEvidence(candidate);
   let progression:ExerciseProgression|undefined;
-  if(candidate.target.kind==='exercise'){
-    const exercise=data.exercises.find(row=>row.id===candidate.target.exerciseId);
+  const target=candidate.target;
+  if(target.kind==='exercise'){
+    const exercise=data.exercises.find(row=>row.id===target.exerciseId);
     if(exercise)progression=buildExerciseProgression(data,exercise);
     if(progression)evidence.push('Next progression · '+progression.summary);
   }
@@ -262,7 +263,7 @@ function guidedRecommendation(data:Data,profileId:string,now:number):PracticeRec
   ];
   return {
     source:'lesson',target:targetRef,targetKey:practiceTargetKey(targetRef),label:target.course.title+' · '+target.lesson.title,
-    band,action,confidence:confidence(attempts.length,attempts.length?1:0),decision:attempts.length?(action==='repair'||action==='stabilize'?'consolidate':action==='apply'?'progress':'hold'):'hold',reasons,
+    band,action,confidence:confidence(attempts.length,attempts.length?1:0),decision:attempts.length?(action==='repair'||action==='stabilize'?'consolidate':'hold'):'hold',reasons,
     evidence:[status,attempts.length+` review attempt${attempts.length===1?'':'s'}`,target.course.title],
     skillIds:skill?[skill.id]:[],
   };
