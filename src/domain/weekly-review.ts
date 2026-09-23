@@ -4,7 +4,7 @@ import type { AutopilotSessionIntent } from './autopilot.js';
 import type { PracticeDiagnostics } from './practice-diagnostics.js';
 import { buildPracticeIntelligence, type PracticeIntelligence } from './practice-intelligence.js';
 import { activeProfile } from './profiles.js';
-import { rankPracticeTargets, type PriorityCandidate, type PriorityFactorCode } from './priority-engine.js';
+import { rankPracticeTargets, type PriorityFactorCode } from './priority-engine.js';
 import { skillDefinition, skillDefinitionsFor } from './skill-graph.js';
 import { localDate, uuid } from './utils.js';
 
