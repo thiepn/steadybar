@@ -224,13 +224,21 @@ function associatedAssessment(candidate:PriorityCandidate,skills:SkillAssessment
   const options=skills.filter(skill=>candidate.skillIds.includes(skill.skillId));
   return options.sort((a,b)=>bandOrder[a.band]-bandOrder[b.band]||actionOrder[a.action]-actionOrder[b.action]||confidenceOrder[a.confidence]-confidenceOrder[b.confidence])[0];
 }
+function targetAction(candidate:PriorityCandidate):IntelligenceAction{
+  const state=candidate.state;
+  if(state?.challenge==='reduce'||state?.latestResult==='not-yet')return 'repair';
+  if(state?.mastery==='retest'||candidate.reasons.includes('retention-due'))return 'retest';
+  if(state?.latestResult==='usable'||state&&['learn','build','stabilize'].includes(state.mastery))return 'stabilize';
+  if(state?.mastery==='apply'||candidate.reasons.includes('musical-transfer'))return 'apply';
+  if(state?.mastery==='maintain')return 'maintain';
+  return 'explore';
+}
 function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:SkillAssessment[]):PracticeRecommendation{
   const assessment=associatedAssessment(candidate,skills);
-  let action=assessment?.action??(candidate.state?.mastery==='maintain'?'maintain':'explore');
-  let band=assessment?.band??actionBand(action);
+  const action=targetAction(candidate);
+  let band=actionBand(action);
   if(candidate.factors.some(factor=>factor.points>0&&urgentFactors.has(factor.code)))band='now';
-  if(candidate.state?.challenge==='reduce'){action='repair';band='now';}
-  if(candidate.state?.mastery==='retest'||candidate.reasons.includes('retention-due')){action='retest';band='now';}
+  if(action==='repair'||action==='retest')band='now';
   const evidence=targetStateEvidence(candidate),confidenceLevel=confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0);
   let progression:ExerciseProgression|undefined;
   const target=candidate.target;
@@ -247,7 +255,7 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
   return {
     source:'practice-target',profileId:candidate.profileId,target:structuredClone(candidate.target),targetKey:candidate.targetKey,label:candidate.label,
     band,action,confidence:confidenceLevel,decision,
-    reasons:unique([...(assessment?.reasons??[]),...factorEvidence(candidate)],4),
+    reasons:unique([...factorEvidence(candidate),...(assessment?.reasons??[]).map(reason=>'Skill context · '+reason)],4),
     evidence:unique(evidence,6),skillIds:[...candidate.skillIds],...(progression?{progression}:{}),
   };
 }
