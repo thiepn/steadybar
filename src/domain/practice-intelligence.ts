@@ -42,6 +42,7 @@ export interface SkillAssessment {
 }
 export interface PracticeRecommendation {
   source:'practice-target'|'lesson';
+  profileId:string;
   target:PracticeTargetRef;
   targetKey:string;
   label:string;
@@ -128,17 +129,19 @@ function skillDecision(action:IntelligenceAction,confidenceLevel:IntelligenceCon
   if(confidenceLevel==='low')return 'hold';
   if(evidence.reduce>0)return 'regress';
   if(evidence.dueReviews>0)return 'hold';
-  if(evidence.advance>0&&evidence.solid>0)return 'progress';
+  if(action==='repair'||evidence.usable>0)return 'consolidate';
   if(action==='apply')return 'progress';
-  if(action==='repair'||action==='stabilize'||evidence.usable>0)return 'consolidate';
+  if(evidence.advance>0&&evidence.solid>0)return 'progress';
+  if(action==='stabilize')return 'consolidate';
   return 'hold';
 }
 function targetDecision(state:PracticeState|undefined,action:IntelligenceAction,confidenceLevel:IntelligenceConfidence,progression?:ExerciseProgression):ProgressionDecision{
   if(confidenceLevel==='low')return 'hold';
   if(state?.challenge==='reduce'||progression?.direction==='reduce')return 'regress';
   if(state?.mastery==='retest'||action==='retest')return 'hold';
+  if(action==='repair'||state?.latestResult==='usable')return 'consolidate';
   if(state?.challenge==='advance'||progression?.direction==='advance'||action==='apply')return 'progress';
-  if(action==='repair'||action==='stabilize'||state?.latestResult==='usable')return 'consolidate';
+  if(action==='stabilize')return 'consolidate';
   return 'hold';
 }
 function factorEvidence(candidate:PriorityCandidate):string[]{
@@ -228,18 +231,22 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
   if(candidate.factors.some(factor=>factor.points>0&&urgentFactors.has(factor.code)))band='now';
   if(candidate.state?.challenge==='reduce'){action='repair';band='now';}
   if(candidate.state?.mastery==='retest'||candidate.reasons.includes('retention-due')){action='retest';band='now';}
-  const evidence=targetStateEvidence(candidate);
+  const evidence=targetStateEvidence(candidate),confidenceLevel=confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0);
   let progression:ExerciseProgression|undefined;
   const target=candidate.target;
   if(target.kind==='exercise'){
     const exercise=data.exercises.find(row=>row.id===target.exerciseId);
     if(exercise)progression=buildExerciseProgression(data,exercise);
-    if(progression)evidence.push('Next progression · '+progression.summary);
   }
-  const confidenceLevel=confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0);
+  const decision=targetDecision(candidate.state,action,confidenceLevel,progression);
+  if(target.kind==='exercise'&&progression?.direction==='advance'&&decision!=='progress'){
+    const exercise=data.exercises.find(row=>row.id===target.exerciseId);
+    if(exercise)progression=buildExerciseProgression(data,exercise,{allowAdvance:false});
+  }
+  if(progression)evidence.push('Next progression · '+progression.summary);
   return {
-    source:'practice-target',target:structuredClone(candidate.target),targetKey:candidate.targetKey,label:candidate.label,
-    band,action,confidence:confidenceLevel,decision:targetDecision(candidate.state,action,confidenceLevel,progression),
+    source:'practice-target',profileId:candidate.profileId,target:structuredClone(candidate.target),targetKey:candidate.targetKey,label:candidate.label,
+    band,action,confidence:confidenceLevel,decision,
     reasons:unique([...(assessment?.reasons??[]),...factorEvidence(candidate)],4),
     evidence:unique(evidence,6),skillIds:[...candidate.skillIds],...(progression?{progression}:{}),
   };
@@ -262,7 +269,7 @@ function guidedRecommendation(data:Data,profileId:string,now:number):PracticeRec
     !attempts.length?'This is the next unreviewed guided lesson.':'This lesson remains the current guided learning target.',
   ];
   return {
-    source:'lesson',target:targetRef,targetKey:practiceTargetKey(targetRef),label:target.course.title+' · '+target.lesson.title,
+    source:'lesson',profileId,target:targetRef,targetKey:practiceTargetKey(targetRef),label:target.course.title+' · '+target.lesson.title,
     band,action,confidence:confidence(attempts.length,attempts.length?1:0),decision:attempts.length?(action==='repair'||action==='stabilize'?'consolidate':'hold'):'hold',reasons,
     evidence:[status,attempts.length+` review attempt${attempts.length===1?'':'s'}`,target.course.title],
     skillIds:skill?[skill.id]:[],
