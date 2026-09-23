@@ -192,6 +192,23 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.assertGreater(result['size'],0)
         self.assertFalse(result['existsAfter'])
 
+    def test_22_repertoire_track_media_round_trip(self):
+        self.onboard()
+        result=self.read("""(async()=>{
+          const media=load('db/media.js'),id='qa-repertoire-track';
+          const source=new Blob(['steadybar-local-track'],{type:'audio/wav'});
+          await media.saveRepertoireTrackAsset(id,source,new Date().toISOString());
+          const stored=await media.getRepertoireTrackAsset(id);
+          const before={exists:await media.repertoireTrackAssetExists(id),type:stored?.type,size:stored?.size,text:stored?await stored.text():''};
+          await media.deleteRepertoireTrackAsset(id);
+          return {...before,existsAfter:await media.repertoireTrackAssetExists(id)};
+        })()""")
+        self.assertTrue(result['exists'])
+        self.assertEqual(result['type'],'audio/wav')
+        self.assertEqual(result['text'],'steadybar-local-track')
+        self.assertGreater(result['size'],0)
+        self.assertFalse(result['existsAfter'])
+
     def test_21_timing_onset_worklet_loads_on_shared_audio_clock(self):
         self.onboard()
         result=self.read("""(async()=>{
@@ -253,6 +270,7 @@ if __name__ == '__main__':
         'test_19_drag_reorder_and_keyboard_skip_link',
         'test_20_recording_media_blob_round_trip',
         'test_21_timing_onset_worklet_loads_on_shared_audio_clock',
+        'test_22_repertoire_track_media_round_trip',
     ]
     suite = unittest.TestSuite(NativeOriginSmoke(name) for name in names)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
