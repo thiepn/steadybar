@@ -64,6 +64,26 @@ export interface Song extends Entity {
   title: string; artist: string; bpm: number; meter: Meter; key: string;
   difficulty: 1 | 2 | 3 | 4 | 5; status: SongStatus; notes: string; sections: SongSection[]; transitions?: SongTransition[]; parts?: SongPart[];
 }
+export interface RepertoireAudioCue {
+  id: string;
+  sectionId?: string;
+  label: string;
+  startSeconds: number;
+  endSeconds: number;
+  order: number;
+}
+export interface RepertoireAudioTrack extends Entity {
+  songId: string;
+  songPartId?: string;
+  assetId: string;
+  title: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  durationSeconds: number;
+  cues: RepertoireAudioCue[];
+  lastPlaybackRate: number;
+}
 export interface RoutineBlock {
   lessonSource?: LessonSource;
   id: string; type: 'exercise' | 'song' | 'song-section' | 'free';
@@ -286,7 +306,7 @@ export interface Settings {
 export interface Data {
   schemaVersion?: 2; practiceModelVersion?: 1; profiles?: PracticeProfile[]; courseProgress?: CourseProgress[];
   exercises: Exercise[]; songs: Song[]; routines: Routine[]; dailyPlans: DailyPlan[];
-  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; timingResults?: TimingLabResult[]; midiDeviceProfiles?: MidiDeviceProfile[]; midiResults?: MidiPerformanceResult[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
+  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; timingResults?: TimingLabResult[]; midiDeviceProfiles?: MidiDeviceProfile[]; midiResults?: MidiPerformanceResult[]; audioTracks?: RepertoireAudioTrack[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
   settings: Settings;
 }
 export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3 | 4; exportedAt: string; data: Data }
