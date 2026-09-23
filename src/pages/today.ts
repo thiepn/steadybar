@@ -5,12 +5,14 @@ import { confirmAction, notify, select } from '../ui/components.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { button, empty, link, pageHeader, progressBar, sectionHeader } from '../ui/components.js';
+import { badge, button, empty, link, pageHeader, progressBar, sectionHeader } from '../ui/components.js';
 import { duration, formatDate, isoWeekStart, localDate, metadata } from '../domain/utils.js';
 import { calculateTotalPracticeTime, calculateWeeklySessionCount, filterSessions, finishedSessions, goalProgress, routineDuration, sessionTime } from '../domain/analytics.js';
 import { blockList } from '../ui/block-list.js';
 import { editBlock, editGoal, selectRoutineDialog } from '../ui/editors.js';
-import { launchPractice, routineToday } from '../practice/launch.js';
+import { addToday, launchPractice, routineToday } from '../practice/launch.js';
+import { buildPracticeIntelligence } from '../domain/practice-intelligence.js';
+import { recommendationBlock, recommendationHref } from '../app/practice-intelligence.js';
 import { prepareAutopilotPlan } from '../app/autopilot.js';
 import type { AutopilotSessionIntent } from '../domain/autopilot.js';
 import type { RoutineBlock } from '../domain/models.js';
@@ -30,6 +32,23 @@ export function todayPage(): Page {
   };
   const page = el('div', { class: 'page today-page' }, pageHeader('', 'Today', `${date} · ${profile.name}`,[link('Calendar','/calendar','button secondary','today')]));
   page.append(learningSummary());
+  const intelligence=buildPracticeIntelligence(snapshot,{profileId:profile.id,recommendationLimit:5});
+  const immediate=intelligence.recommendations.filter(row=>row.band==='now'||row.confidence!=='low').slice(0,3);
+  if(immediate.length){
+    const panel=el('section',{class:'panel today-intelligence'},sectionHeader('What matters now','Unified Practice Intelligence · evidence-driven next actions',[link('Why these?','/progress','text-link','arrow')]));
+    for(const row of immediate){
+      const targetBlock=recommendationBlock(snapshot,row),href=recommendationHref(row);
+      const actions=el('div',{class:'actions wrap'});
+      if(targetBlock)actions.append(button('Start',()=>launchPractice([targetBlock]),'secondary','play'),button('Add to Today',()=>addToday(targetBlock),'ghost','plus'));
+      else if(href)actions.append(link(row.source==='lesson'?'Open lesson':'Open target',href,'button secondary','arrow'));
+      panel.append(el('article',{class:'today-intelligence-row'},
+        el('div',{},el('div',{class:'tag-row'},badge(row.band==='now'?'Now':'Soon',row.band==='now'?'accent':'neutral'),badge(({progress:'Progress',hold:'Hold',consolidate:'Consolidate',regress:'Regress'} as Record<string,string>)[row.decision]??row.decision)),el('strong',{},row.label),
+          row.reasons[0]?el('p',{class:'muted small'},row.reasons[0]):null),
+        actions));
+    }
+    panel.append(el('p',{class:'field-hint'},'Recommendations are deterministic suggestions from recorded evidence, explicit goals/priorities, review timing and repertoire context. They never auto-start practice or change your goals.'));
+    page.append(panel);
+  }
   if(scheduled){
     const {schedule,day}=scheduled,calendar='/calendar/'+schedule.weekStart;
     page.append(el('section',{class:`panel today-schedule today-schedule-${day.kind}`},sectionHeader('Calendar',day.kind==='rest'?'Rest day':day.kind==='optional'?'Optional practice':`Planned practice · ${day.plannedMinutes} min`,[link('Open week',calendar,'text-link','arrow')]),
@@ -44,7 +63,7 @@ export function todayPage(): Page {
       if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a voice routine that preserves planned rest and listening. Practice history is unchanged.','Build voice plan'))return;
       await prepareStarterPlan(Number(budget.querySelector('select')!.value));notify('Voice plan ready.');
     },'secondary');
-    page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},'Autopilot v1 is not used for voice yet. This keeps the existing rest-aware voice routine with listening and recovery time.')));
+    page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},'Autopilot is not used for voice yet. This keeps the existing rest-aware voice routine with listening and recovery time.')));
   }else{
     const scheduledMinutes=scheduled&&scheduled.day.kind!=='rest'?scheduled.day.plannedMinutes:undefined;
     const allowed=[...new Set([5,10,15,20,30,45,60,...(scheduledMinutes?[scheduledMinutes]:[])])].sort((a,b)=>a-b),defaultMinutes=scheduledMinutes??allowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);

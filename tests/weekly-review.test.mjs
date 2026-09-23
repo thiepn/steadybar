@@ -17,6 +17,14 @@ test('weekly review uses a rolling seven-day window and previous equal week',()=
   assert.deepEqual(review.window,{from:'2026-09-16',to:'2026-09-22',previousFrom:'2026-09-09',previousTo:'2026-09-15'});
   assert.equal(review.diagnostics.comparison.current.from,'2026-09-16');
   assert.equal(review.diagnostics.comparison.previous?.from,'2026-09-09');
+  assert.equal(review.intelligence.profileId,p.id);assert.equal(review.intelligence.engineVersion,1);assert.ok(review.intelligence.recommendations.length<=5);
+});
+
+test('fresh profiles do not receive arbitrary weekly focus proposals without evidence or explicit urgency',()=>{
+  const d=modern(),p=activeProfile(d);d.practiceStates=[];d.goals=[];d.priorityCycles=[];d.trainingPlans=[];d.setlists=[];
+  const review=buildWeeklyReview(d,{profileId:p.id,now:at,today});
+  assert.deepEqual(review.focus,[]);
+  assert.equal(review.suggestedIntent,'balanced');
 });
 
 test('building a review is runtime-only and does not mutate active priority cycles',()=>{

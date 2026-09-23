@@ -1,0 +1,182 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {seedData} from '../dist/app/db/seed.js';
+import {migratePracticeData} from '../dist/app/db/profile-migration.js';
+import {migratePracticeModel} from '../dist/app/db/practice-model-migration.js';
+import {buildPracticeIntelligence,rankIntelligentPracticeTargets} from '../dist/app/domain/practice-intelligence.js';
+import {practiceTargetKey} from '../dist/app/domain/practice-state.js';
+import {recommendationBlock,recommendationHref} from '../dist/app/app/practice-intelligence.js';
+import {createSession} from '../dist/app/practice/logic.js';
+import {evidenceFromSessions} from '../dist/app/domain/practice-evidence.js';
+
+const at='2026-09-23T10:00:00.000Z',today='2026-09-23';
+function modern(){return migratePracticeModel(migratePracticeData(seedData(at)));}
+function targetState(exercise,overrides={}){
+  const target={kind:'exercise',exerciseId:exercise.id},targetKey=practiceTargetKey(target);
+  return {
+    id:'state-'+exercise.id,createdAt:at,updatedAt:at,profileId:exercise.profileId,targetKey,target,
+    mastery:'build',limitations:[],challenge:'hold',evidenceCount:1,recent:{solid:0,usable:1,notYet:0},
+    scheduling:{consecutiveSkips:0,manualPriority:0},engine:{version:2,derivedAt:at},...overrides,
+  };
+}
+function recommendationFor(d,exercise){
+  return buildPracticeIntelligence(d,{profileId:exercise.profileId,now:at,today,recommendationLimit:12}).recommendations.find(row=>row.target.kind==='exercise'&&row.target.exerciseId===exercise.id);
+}
+
+test('practice intelligence is deterministic, runtime-only and focused to five recommendations by default',()=>{
+  const d=modern(),before=structuredClone(d);
+  const a=buildPracticeIntelligence(d,{now:at,today}),b=buildPracticeIntelligence(d,{now:at,today});
+  assert.deepEqual(a,b);assert.deepEqual(d,before);
+  assert.equal(a.engineVersion,1);
+  assert.ok(a.recommendations.length>0&&a.recommendations.length<=5);
+  assert.deepEqual(a.recommendations.map(row=>row.targetKey),[...new Set(a.recommendations.map(row=>row.targetKey))]);
+});
+
+test('default recommendation diagnostics use a recent 28-day window instead of all historical sessions',()=>{
+  const d=modern(),intelligence=buildPracticeIntelligence(d,{now:at,today});
+  assert.equal(intelligence.diagnostics.comparison.current.from,'2026-08-27');
+  assert.equal(intelligence.diagnostics.comparison.current.to,'2026-09-23');
+});
+
+test('low evidence cannot produce a Progress decision even if a stale challenge says advance',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'discover',challenge:'advance',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}})];
+  d.goals=[{id:'goal-low-evidence',createdAt:at,updatedAt:at,profileId:exercise.profileId,type:'custom',title:'Inspect low evidence',description:'',exerciseId:exercise.id,targetValue:1,unit:'focus',completed:false}];
+  const row=recommendationFor(d,exercise);assert.ok(row);
+  assert.equal(row.confidence,'low');
+  assert.equal(row.decision,'hold');
+  assert.equal(row.progression?.direction,'hold');
+  const block=recommendationBlock(d,row);assert.ok(block);
+  assert.equal(block.progression?.direction,'hold');
+});
+
+test('strong skill evidence cannot leak Progress confidence onto a fresh target in the same skill',()=>{
+  const d=modern(),groups=new Map();
+  for(const exercise of d.exercises){
+    if(!exercise.primarySkillId)continue;
+    const rows=groups.get(exercise.primarySkillId)??[];rows.push(exercise);groups.set(exercise.primarySkillId,rows);
+  }
+  const rows=[...groups.values()].find(items=>items.length>=3);assert.ok(rows,'Need three exercises in one skill domain');
+  const [a,b,fresh]=rows;
+  d.practiceStates=[
+    targetState(a,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:4,recent:{solid:2,usable:0,notYet:0}}),
+    targetState(b,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:4,recent:{solid:2,usable:0,notYet:0}}),
+    targetState(fresh,{mastery:'discover',challenge:'hold',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}}),
+  ];
+  d.goals=[{id:'goal-fresh-sibling',createdAt:at,updatedAt:at,profileId:fresh.profileId,type:'custom',title:'Inspect fresh sibling',description:'',exerciseId:fresh.id,targetValue:1,unit:'focus',completed:false}];
+  const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:12});
+  const skill=intelligence.skills.find(row=>row.skillId===fresh.primarySkillId);assert.ok(skill);assert.equal(skill.confidence,'high');
+  const row=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);assert.ok(row);
+  assert.equal(row.confidence,'low');assert.equal(row.decision,'hold');
+});
+
+test('target action does not inherit Repair from a weak sibling in the same skill',()=>{
+  const d=modern(),groups=new Map();
+  for(const exercise of d.exercises){
+    if(!exercise.primarySkillId)continue;
+    const rows=groups.get(exercise.primarySkillId)??[];rows.push(exercise);groups.set(exercise.primarySkillId,rows);
+  }
+  const rows=[...groups.values()].find(items=>items.length>=2);assert.ok(rows);
+  const [weak,fresh]=rows;
+  d.practiceStates=[
+    targetState(weak,{challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2}}),
+    targetState(fresh,{mastery:'discover',challenge:'hold',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}}),
+  ];
+  const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:12});
+  const weakRow=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===weak.id);
+  const freshRow=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);
+  assert.ok(weakRow&&freshRow);
+  assert.equal(weakRow.action,'repair');assert.equal(weakRow.band,'now');
+  assert.equal(freshRow.action,'explore');assert.equal(freshRow.confidence,'low');assert.equal(freshRow.decision,'hold');
+});
+
+test('explicit reduce state becomes Repair plus Regress and is urgent',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2},limitations:['timing']})];
+  const row=recommendationFor(d,exercise);assert.ok(row);
+  assert.equal(row.action,'repair');assert.equal(row.decision,'regress');assert.equal(row.band,'now');
+  assert.ok(row.progression);assert.equal(row.progression.direction,'reduce');
+});
+
+test('due retest is Hold until cold evidence is refreshed',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'retest',latestResult:'solid',evidenceCount:3,nextReviewAt:'2026-09-22T09:00:00.000Z',recent:{solid:2,usable:0,notYet:0}})];
+  const row=recommendationFor(d,exercise);assert.ok(row);
+  assert.equal(row.action,'retest');assert.equal(row.decision,'hold');assert.equal(row.band,'now');
+});
+
+test('usable build evidence produces Consolidate instead of automatic progression',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'build',latestResult:'usable',evidenceCount:3,recent:{solid:0,usable:2,notYet:0}})];
+  const row=recommendationFor(d,exercise);assert.ok(row);
+  assert.equal(row.action,'stabilize');assert.equal(row.decision,'consolidate');
+});
+
+test('explicit advance with sufficient solid evidence can produce Progress',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:3,recent:{solid:2,usable:0,notYet:0}})];
+  const row=recommendationFor(d,exercise);assert.ok(row);
+  assert.notEqual(row.confidence,'low');assert.equal(row.decision,'progress');
+  assert.ok(row.progression);assert.equal(row.progression.direction,'advance');
+});
+
+test('intelligent ordering promotes repair/retest work ahead of generic unexplored targets',()=>{
+  const d=modern(),withSkills=d.exercises.filter(row=>row.primarySkillId),repair=withSkills[0];assert.ok(repair);
+  d.practiceStates=[targetState(repair,{challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2}})];
+  const ranked=rankIntelligentPracticeTargets(d,repair.profileId,{now:at,today});
+  assert.equal(ranked[0].target.kind,'exercise');assert.equal(ranked[0].target.exerciseId,repair.id);
+});
+
+test('executable exercise recommendation preserves the progression snapshot and canonical target route',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:3,recent:{solid:2,usable:0,notYet:0}})];
+  const row=recommendationFor(d,exercise);assert.ok(row?.progression);
+  const block=recommendationBlock(d,row);assert.ok(block);
+  assert.equal(block.type,'exercise');assert.equal(block.exerciseId,exercise.id);
+  assert.deepEqual(block.progression,row.progression);
+  assert.equal(block.prescription.target.kind,'exercise');assert.equal(block.prescription.target.exerciseId,exercise.id);assert.equal(block.prescription.generatedBy,'manual');
+  assert.equal(recommendationHref(row),'/library/'+exercise.id);
+});
+
+test('shared-song executable recommendation uses recommendation profile ownership rather than active settings',()=>{
+  const d=modern(),owner='profile-other',song={id:'song-owner',createdAt:at,updatedAt:at,title:'Owned Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[]};
+  d.songs=[song];
+  const row={source:'practice-target',profileId:owner,target:{kind:'song',songId:song.id},targetKey:'song|song-owner|shared',label:'Owned Song',band:'soon',action:'explore',confidence:'low',decision:'hold',reasons:[],evidence:[],skillIds:[]};
+  const block=recommendationBlock(d,row);assert.ok(block);
+  assert.equal(block.profileId,owner);
+  assert.notEqual(block.profileId,d.settings.activeProfileId);
+});
+
+test('transition recommendation builds a bounded section block without inventing a second history model',()=>{
+  const d=modern(),song={id:'song-i',createdAt:at,updatedAt:at,title:'Transition Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'a',name:'Verse',notes:'',order:0},{id:'b',name:'Chorus',notes:'',order:1}],transitions:[{id:'t',fromSectionId:'a',toSectionId:'b',name:'Lift',notes:'Keep beat one clear.'}]};
+  d.songs=[song];
+  const row={source:'practice-target',profileId:d.settings.activeProfileId,target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-i|shared|t',label:'Transition Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
+  const block=recommendationBlock(d,row);assert.ok(block);
+  assert.equal(block.type,'song-section');assert.equal(block.songId,song.id);assert.equal(block.songSectionId,'a');assert.equal(block.targetSeconds,300);
+  assert.equal(block.prescription.target.kind,'song-transition');assert.equal(block.prescription.target.transitionId,'t');assert.equal(block.prescription.intent,'build');assert.equal(block.prescription.generatedBy,'manual');
+  assert.match(block.title,/Lift/);assert.match(block.notes,/Keep beat one clear/);
+});
+
+test('transition recommendation remains transition evidence after normal session snapshotting',()=>{
+  const d=modern(),song={id:'song-evidence',createdAt:at,updatedAt:at,title:'Evidence Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'a',name:'Verse',notes:'',order:0},{id:'b',name:'Chorus',notes:'',order:1}],transitions:[{id:'t',fromSectionId:'a',toSectionId:'b',name:'Lift',notes:''}]};
+  d.songs=[song];
+  const row={source:'practice-target',profileId:d.settings.activeProfileId,target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-evidence|shared|t',label:'Evidence Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
+  const block=recommendationBlock(d,row);assert.ok(block);
+  const session=createSession([block],d);session.status='completed';session.endedAt=at;session.blocks[0].completed=true;session.blocks[0].actualActiveSeconds=30;session.blocks[0].endedAt=at;
+  const events=evidenceFromSessions({...d,sessions:[session]});
+  assert.ok(events.some(event=>event.targetKeys.includes('transition|song-evidence|shared|t')));
+});
+
+test('recommendation action maps to the correct practice context without automatic execution provenance',()=>{
+  const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
+  d.practiceStates=[targetState(exercise,{mastery:'retest',latestResult:'solid',evidenceCount:3,nextReviewAt:'2026-09-22T09:00:00.000Z',recent:{solid:2,usable:0,notYet:0}})];
+  const row=recommendationFor(d,exercise);assert.ok(row);assert.equal(row.action,'retest');
+  const block=recommendationBlock(d,row);assert.ok(block?.prescription);
+  assert.equal(block.prescription.intent,'retest');assert.equal(block.prescription.generatedBy,'manual');assert.deepEqual(block.prescription.reasons,['user-request']);
+});
+
+test('explicit recommendationLimit is bounded and never expands beyond twelve',()=>{
+  const d=modern();
+  assert.ok(buildPracticeIntelligence(d,{now:at,today,recommendationLimit:999}).recommendations.length<=12);
+  assert.equal(buildPracticeIntelligence(d,{now:at,today,recommendationLimit:0}).recommendations.length,1);
+});

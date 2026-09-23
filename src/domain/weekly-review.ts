@@ -1,13 +1,14 @@
 import type { Data } from './models.js';
 import type { PriorityCycle, PriorityItem } from './practice-state.js';
 import type { AutopilotSessionIntent } from './autopilot.js';
-import { buildPracticeDiagnostics, type PracticeDiagnostics } from './practice-diagnostics.js';
+import type { PracticeDiagnostics } from './practice-diagnostics.js';
+import { buildPracticeIntelligence, type PracticeIntelligence } from './practice-intelligence.js';
 import { activeProfile } from './profiles.js';
-import { rankPracticeTargets, type PriorityCandidate, type PriorityFactorCode } from './priority-engine.js';
+import { rankPracticeTargets, type PriorityFactorCode } from './priority-engine.js';
 import { skillDefinition, skillDefinitionsFor } from './skill-graph.js';
 import { localDate, uuid } from './utils.js';
 
-export const WEEKLY_REVIEW_ENGINE_VERSION=1 as const;
+export const WEEKLY_REVIEW_ENGINE_VERSION=2 as const;
 
 export type WeeklyFocusRole='primary'|'secondary'|'support';
 
@@ -27,10 +28,11 @@ export interface WeeklyFocusSuggestion {
   signalCodes:PriorityFactorCode[];
 }
 export interface WeeklyReview {
-  engineVersion:1;
+  engineVersion:2;
   profileId:string;
   window:WeeklyReviewWindow;
   diagnostics:PracticeDiagnostics;
+  intelligence:PracticeIntelligence;
   focus:WeeklyFocusSuggestion[];
   suggestedIntent:AutopilotSessionIntent;
   suggestedIntentReason:string;
@@ -49,8 +51,6 @@ export interface WeeklyReviewOptions {
 }
 
 const DAY=86400000;
-const urgentSignals=new Set<PriorityFactorCode>(['upcoming-performance','active-goal','retention-due','recent-weakness']);
-const mediumSignals=new Set<PriorityFactorCode>(['training-phase','musical-transfer','domain-balance','neglected','profile-focus','manual-priority']);
 
 const toMillis=(value:Date|string|number|undefined)=>value===undefined?Date.now():value instanceof Date?value.getTime():typeof value==='number'?value:Date.parse(value);
 function parseDay(value:string):number{
@@ -66,75 +66,39 @@ function reviewWindow(today:string):WeeklyReviewWindow{
 function neutralizeActiveCycle(data:Data,profileId:string):Data{
   return {...data,priorityCycles:(data.priorityCycles??[]).filter(cycle=>!(cycle.profileId===profileId&&cycle.status==='active'))};
 }
-function recurringSkillReasons(diagnostics:PracticeDiagnostics,skillIds:string[]):Map<string,string[]>{
-  const result=new Map<string,string[]>();
-  for(const row of diagnostics.limitations){
-    if(row.count<3||!row.evaluatedBlocks||row.count/row.evaluatedBlocks<.3)continue;
-    for(const skillId of skillIds){
-      const skill=skillDefinition(skillId);if(skill?.domain!==row.tag)continue;
-      const reasons=result.get(skillId)??[];
-      reasons.push(`${skill.label} limitation appeared in ${row.count} of ${row.evaluatedBlocks} evaluated blocks this week.`);
-      result.set(skillId,reasons);
+interface FocusSignalContext {
+  codes:Set<PriorityFactorCode>;
+  reasons:string[];
+  examples:string[];
+}
+function focusSignalContext(data:Data,profileId:string,now:number,today:string):Map<string,FocusSignalContext>{
+  const result=new Map<string,FocusSignalContext>(),candidates=rankPracticeTargets(data,profileId,{now,today});
+  for(const candidate of candidates.slice(0,40)){
+    for(const skillId of candidate.skillIds){
+      const context=result.get(skillId)??{codes:new Set<PriorityFactorCode>(),reasons:[],examples:[]};
+      if(!context.examples.includes(candidate.label)&&context.examples.length<3)context.examples.push(candidate.label);
+      for(const factor of candidate.factors.filter(row=>row.points>0).sort((a,b)=>b.points-a.points||a.code.localeCompare(b.code))){
+        context.codes.add(factor.code);
+        if(!context.reasons.includes(factor.detail)&&context.reasons.length<4)context.reasons.push(factor.detail);
+      }
+      result.set(skillId,context);
     }
   }
   return result;
 }
-
-interface FocusGroup {
-  skillId:string;
-  label:string;
-  bestRank:number;
-  bestScore:number;
-  importance:number;
-  tier:number;
-  reasons:string[];
-  examples:string[];
-  signalCodes:Set<PriorityFactorCode>;
-}
-function signalTier(codes:Set<PriorityFactorCode>,hasRecurring:boolean):number{
-  if(hasRecurring||[...codes].some(code=>urgentSignals.has(code)))return 0;
-  if([...codes].some(code=>mediumSignals.has(code)))return 1;
-  return 2;
-}
-function factorRows(candidate:PriorityCandidate){
-  return candidate.factors.filter(row=>row.points>0).sort((a,b)=>b.points-a.points||a.code.localeCompare(b.code));
-}
-function focusSuggestions(data:Data,profileId:string,diagnostics:PracticeDiagnostics,now:number,today:string):WeeklyFocusSuggestion[]{
+function focusSuggestions(data:Data,profileId:string,intelligence:PracticeIntelligence,now:number,today:string):WeeklyFocusSuggestion[]{
   const profile=data.profiles?.find(row=>row.id===profileId);if(!profile)return [];
-  const definitions=skillDefinitionsFor(profile.instrumentType),allowed=new Set(definitions.map(row=>row.id));
-  const recurring=recurringSkillReasons(diagnostics,[...allowed]);
-  const candidates=rankPracticeTargets(neutralizeActiveCycle(data,profileId),profileId,{now,today});
-  const groups=new Map<string,FocusGroup>();
-  candidates.slice(0,40).forEach((candidate,rank)=>{
-    for(const skillId of candidate.skillIds){
-      if(!allowed.has(skillId))continue;
-      const definition=skillDefinition(skillId),existing=groups.get(skillId)??{
-        skillId,label:definition?.label??skillId,bestRank:rank,bestScore:candidate.score,importance:definition?.defaultImportance??0,tier:2,reasons:[],examples:[],signalCodes:new Set<PriorityFactorCode>(),
-      };
-      existing.bestRank=Math.min(existing.bestRank,rank);existing.bestScore=Math.max(existing.bestScore,candidate.score);
-      if(!existing.examples.includes(candidate.label)&&existing.examples.length<3)existing.examples.push(candidate.label);
-      for(const factor of factorRows(candidate)){
-        existing.signalCodes.add(factor.code);
-        if(!existing.reasons.includes(factor.detail)&&existing.reasons.length<5)existing.reasons.push(factor.detail);
-      }
-      groups.set(skillId,existing);
-    }
-  });
-  for(const [skillId,reasons] of recurring){
-    const definition=skillDefinition(skillId),existing=groups.get(skillId)??{
-      skillId,label:definition?.label??skillId,bestRank:Number.MAX_SAFE_INTEGER,bestScore:0,importance:definition?.defaultImportance??0,tier:2,reasons:[],examples:[],signalCodes:new Set<PriorityFactorCode>(),
+  const allowed=new Set(skillDefinitionsFor(profile.instrumentType).map(row=>row.id)),signals=focusSignalContext(data,profileId,now,today);
+  const rows=intelligence.skills.filter(row=>allowed.has(row.skillId)&&(row.evidence.evidenceCount>0||row.band==='now')).slice(0,3);
+  const roles:WeeklyFocusRole[]=['primary','secondary','support'],weights=([3,2,1] as const);
+  return rows.map((skill,index)=>{
+    const signal=signals.get(skill.skillId),reasons=[...skill.reasons,...(signal?.reasons??[])].filter((value,i,array)=>array.indexOf(value)===i).slice(0,3);
+    return {
+      skillId:skill.skillId,label:skill.label,role:roles[index]!,weight:weights[index]!,
+      reasons,examples:(skill.examples.length?skill.examples:signal?.examples??[]).slice(0,2),
+      signalCodes:[...(signal?.codes??new Set<PriorityFactorCode>())].sort(),
     };
-    for(const reason of reasons)if(!existing.reasons.includes(reason))existing.reasons.unshift(reason);
-    groups.set(skillId,existing);
-  }
-  for(const group of groups.values())group.tier=signalTier(group.signalCodes,recurring.has(group.skillId));
-  const sorted=[...groups.values()].sort((a,b)=>a.tier-b.tier||a.bestRank-b.bestRank||b.bestScore-a.bestScore||b.importance-a.importance||a.label.localeCompare(b.label)).slice(0,3);
-  const roles:WeeklyFocusRole[]=['primary','secondary','support'],weights=( [3,2,1] as const );
-  return sorted.map((group,index)=>({
-    skillId:group.skillId,label:group.label,role:roles[index]!,weight:weights[index]!,
-    reasons:[...(recurring.get(group.skillId)??[]),...group.reasons].filter((value,i,array)=>array.indexOf(value)===i).slice(0,3),
-    examples:group.examples.slice(0,2),signalCodes:[...group.signalCodes].sort(),
-  }));
+  });
 }
 
 function intentForFocus(focus:WeeklyFocusSuggestion[]):{intent:AutopilotSessionIntent;reason:string}{
@@ -148,10 +112,12 @@ function intentForFocus(focus:WeeklyFocusSuggestion[]):{intent:AutopilotSessionI
 
 export function buildWeeklyReview(data:Data,options:WeeklyReviewOptions={}):WeeklyReview{
   const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,today=options.today??localDate(new Date(now)),window=reviewWindow(today);
-  const diagnostics=buildPracticeDiagnostics(data,{from:window.from,to:window.to,now}),focus=focusSuggestions(data,profileId,diagnostics,now,today),intent=intentForFocus(focus);
+  const intelligence=buildPracticeIntelligence(data,{profileId,from:window.from,to:window.to,now,today}),diagnostics=intelligence.diagnostics;
+  const neutral=neutralizeActiveCycle(data,profileId),focusIntelligence=buildPracticeIntelligence(neutral,{profileId,from:window.from,to:window.to,now,today,recommendationLimit:12});
+  const focus=focusSuggestions(neutral,profileId,focusIntelligence,now,today),intent=intentForFocus(focus);
   const cycles=(data.priorityCycles??[]).filter(cycle=>cycle.profileId===profileId).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||b.createdAt.localeCompare(a.createdAt));
   return {
-    engineVersion:WEEKLY_REVIEW_ENGINE_VERSION,profileId,window,diagnostics,focus,suggestedIntent:intent.intent,suggestedIntentReason:intent.reason,
+    engineVersion:WEEKLY_REVIEW_ENGINE_VERSION,profileId,window,diagnostics,intelligence,focus,suggestedIntent:intent.intent,suggestedIntentReason:intent.reason,
     ...(cycles.find(cycle=>cycle.status==='active')?{activeCycle:structuredClone(cycles.find(cycle=>cycle.status==='active')!)}:{}),
     recentCycles:cycles.filter(cycle=>cycle.status!=='active').slice(0,5).map(cycle=>structuredClone(cycle)),
   };

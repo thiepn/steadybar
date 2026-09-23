@@ -7,6 +7,7 @@ import {applyAutopilotPlan,applyAutopilotSessionScheduling,AUTOPILOT_MINUTES,bui
 import {practiceTargetKey} from '../dist/app/domain/practice-state.js';
 import {validateData} from '../dist/app/domain/validation.js';
 import {skillDefinition} from '../dist/app/domain/skill-graph.js';
+import {rankPracticeTargets} from '../dist/app/domain/priority-engine.js';
 
 const at='2026-09-21T18:00:00.000Z',today='2026-09-21';
 
@@ -23,10 +24,25 @@ function song(){
   ],transitions:[{id:'v-c',fromSectionId:'verse',toSectionId:'chorus',name:'Lift',notes:'Do not rush the fill.'}]};
 }
 
-test('voice stays on the existing rest-aware routine path in Autopilot v1',()=>{
+test('voice stays on the existing rest-aware routine path while Autopilot v2 remains disabled for voice',()=>{
   const legacy=seedData(at);legacy.settings.instrument='Vocals';
   const voice=migratePracticeModel(migratePracticeData(legacy));
   assert.throws(()=>buildAutopilotPlan(voice,{minutes:15,intent:'balanced',now:at,today}),/does not schedule voice practice yet/i);
+});
+
+test('balanced primary honors unified Repair urgency even when another target has a higher raw Priority score',()=>{
+  const d=modern(),p=d.settings.activeProfileId,rows=d.exercises.filter(row=>row.primarySkillId);
+  const repair=rows[0],generic=rows.find(row=>row.id!==repair.id);assert.ok(repair&&generic);
+  const repairTarget={kind:'exercise',exerciseId:repair.id};
+  d.practiceStates=[stateFor(repairTarget,p,{
+    challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2},
+    lastPracticedAt:at,scheduling:{lastScheduledAt:at,consecutiveSkips:0,manualPriority:0},
+  })];
+  d.goals=[{id:'goal-priority',createdAt:at,updatedAt:at,profileId:p,type:'custom',title:'Explicit generic goal',description:'',exerciseId:generic.id,targetValue:1,unit:'focus',completed:false}];
+  const raw=rankPracticeTargets(d,p,{now:at,today}),repairRaw=raw.find(row=>row.targetKey===practiceTargetKey(repairTarget)),genericRaw=raw.find(row=>row.target.kind==='exercise'&&row.target.exerciseId===generic.id);
+  assert.ok(repairRaw&&genericRaw);assert.ok(genericRaw.score>repairRaw.score,`expected generic raw score ${genericRaw.score} > repair ${repairRaw.score}`);
+  const build=buildAutopilotPlan(d,{minutes:5,intent:'balanced',now:at,today}),primary=build.selections.find(row=>row.role==='primary');
+  assert.ok(primary);assert.equal(primary.candidate.targetKey,repairRaw.targetKey);
 });
 
 test('short sessions cap genuinely new non-ramp material when familiar alternatives exist',()=>{
@@ -47,7 +63,7 @@ test('all canonical Autopilot budgets allocate exact time with stable slot count
     assert.equal(build.plan.generation.kind,'autopilot');
     assert.equal(build.plan.generation.requestedMinutes,minutes);
     assert.equal(build.plan.generation.sessionIntent,'balanced');
-    assert.equal(build.plan.generation.engineVersion,1);
+    assert.equal(build.plan.generation.engineVersion,2);
     assert.deepEqual(build.plan.blocks.map(b=>b.order),build.plan.blocks.map((_,i)=>i));
   }
 });
