@@ -415,7 +415,7 @@ export function validateData(input:unknown):Data {
     for(const profile of midiDeviceProfiles)requireProfile(profile.profileId);
     for(const result of midiResults)requireProfile(result.profileId);
     for(const track of audioTracks){
-      const song=songs.get(track.songId);if(!song)fail('Repertoire audio','song does not exist');
+      const song=songs.get(track.songId);if(!song){fail('Repertoire audio','song does not exist');continue;}
       const part=track.songPartId?song.parts?.find(part=>part.id===track.songPartId):undefined;
       if(track.songPartId&&!part)fail('Repertoire audio','song part does not exist');
       const sectionIds=new Set((part?.sections??song.sections).map(section=>section.id));
