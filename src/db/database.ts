@@ -4,6 +4,7 @@ import { assertProtocolCompatible } from '../domain/practice-validation.js';
 import { isPracticeProfile } from '../domain/profiles.js';
 import type { PracticeProfile } from '../domain/practice-types.js';
 import { migratePracticeData, normalizeProfileSelection } from './profile-migration.js';
+import { reconcileStarterContent } from './profile-content.js';
 import { migratePracticeModel } from './practice-model-migration.js';
 import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
 import { applyAutopilotSessionScheduling } from '../domain/autopilot.js';
@@ -287,7 +288,7 @@ export async function initializeDatabase():Promise<void> {
     const prefs=rows[STORES.indexOf('settings')]?.[0] as Settings|undefined,profileRows=rows[STORES.indexOf('profiles')] as PracticeProfile[]|undefined;
     if(prefs && profileRows?.length){
       const current=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?prefs:rows[i]])) as unknown as Data;current.schemaVersion=2;current.trainingPlans??=[];current.weeklySchedules??=[];current.recordings??=[];current.timingResults??=[];current.midiDeviceProfiles??=[];current.midiResults??=[];current.audioTracks??=[];
-      const repaired=validateData(migratePracticeModel(normalizeProfileSelection(current)));
+      const repaired=validateData(reconcileStarterContent(migratePracticeModel(normalizeProfileSelection(current))));
       for(const name of STORES){
         const table=tx.objectStore(name),before=name==='settings'?[prefs]:(rows[STORES.indexOf(name)]??[]),after=name==='settings'?[repaired.settings]:(repaired[name]??[]);
         const previous=new Map((before as {id:string}[]).map(row=>[row.id,row])),ids=new Set((after as {id:string}[]).map(row=>row.id));
@@ -297,7 +298,7 @@ export async function initializeDatabase():Promise<void> {
       return;
     }
     const previous=prefs ? Object.fromEntries(STORES.filter(n=>!['profiles','courseProgress','trainingPlans','weeklySchedules','recordings','timingResults','midiDeviceProfiles','midiResults','audioTracks','practiceStates','priorityCycles'].includes(n)).map(name=>[name,name==='settings'?prefs:rows[STORES.indexOf(name)]])) as unknown as Data : seedData();
-    const seed=validateData(migratePracticeModel(migratePracticeData(validateData(previous))));
+    const seed=validateData(reconcileStarterContent(migratePracticeModel(migratePracticeData(validateData(previous)))));
     if(prefs)tx.objectStore('migrationBackups').put({id:'before-practice-profiles-v2',data:previous});
     for(const name of STORES){const table=tx.objectStore(name);table.clear();for(const row of name==='settings'?[seed.settings]:(seed[name]??[]))table.put(row);}
   });
