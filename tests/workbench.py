@@ -555,7 +555,8 @@ class Workbench(e2e.MusicPracticeTests):
           d.sessions=dates.map(make);d.goals=[];d.trainingPlans=[];d.weeklySchedules=[];d.priorityCycles=[];
           await load('db/database.js').replaceData(d);await store.refresh();
           const round5=value=>Math.max(5,Math.round(value/5)*5),baseline=profile.defaultSessionMinutes*3,lower=round5(baseline*.7),upper=Math.min(1260,round5(baseline*1.3)),observed=round5(120),adaptive=Math.max(Math.min(observed,Math.max(lower,upper)),Math.min(lower,upper));
-          return {weekStart:utils.localDate(monday),profileId:profile.id,baseline,adaptive};
+          const standardDays=Math.max(1,Math.min(7,Math.round(baseline/profile.defaultSessionMinutes))),durationDays=Math.max(1,Math.round(adaptive/40)),adaptiveDays=Math.max(1,Math.min(7,Math.round((3+durationDays)/2)));
+          return {weekStart:utils.localDate(monday),profileId:profile.id,baseline,adaptive,standardDays,adaptiveDays};
         })()""")
         self.route('/calendar')
         self.page.get_by_role('button',name='Generate week',exact=True).click()
@@ -563,13 +564,13 @@ class Workbench(e2e.MusicPracticeTests):
         expect(dialog.get_by_label('Use recent practice calibration',exact=True)).to_be_checked()
         expect(dialog.get_by_text('Established calibration',exact=False)).to_be_visible()
         expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['adaptive']))
-        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value('3')
+        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value(str(fixture['adaptiveDays']))
 
         dialog.get_by_label('Use recent practice calibration',exact=True).uncheck()
         expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['baseline']))
-        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value('3')
+        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value(str(fixture['standardDays']))
         dialog.get_by_label('Use recent practice calibration',exact=True).check()
-        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value('115')
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['adaptive']))
         dialog.get_by_role('button',name='Generate schedule',exact=True).click()
         expect(dialog).to_have_count(0)
 
