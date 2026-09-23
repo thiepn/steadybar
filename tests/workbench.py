@@ -694,13 +694,13 @@ class Workbench(e2e.MusicPracticeTests):
         expect(dialog.get_by_label('Song section',exact=True)).to_have_value(fixture['section'])
         dialog.get_by_role('button',name='Start guide',exact=True).click()
         expect(dialog).to_have_count(0)
-        self.page.wait_for_url(re.compile(r'.*#/practice/active("""(()=>{
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        session=self.read("""(()=>{
           const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
           return {song:b.sourceSongId,section:b.sourceSongSectionId,title:b.titleSnapshot,notes:b.notes};
         })()""")
         self.assertEqual(session['song'],fixture['song']);self.assertEqual(session['section'],fixture['section'])
         self.assertIn(guide_title,session['title']);self.assertGreater(len(session['notes']),80)
-
 
 
 if __name__=='__main__':
