@@ -77,6 +77,10 @@ test('2 & 4 expected pattern creates only backbeat targets for a snare lane',()=
   assert.equal(result.misses,0);assert.equal(result.extras,0);
 });
 
+test('2 & 4 expected pattern rejects meters with fewer than four beats',()=>{
+  assert.throws(()=>expectedMidiGrid({bpm:120,meter:{beats:3,beatUnit:4},subdivision:2},4,8,'two-four'),/at least four beats/i);
+});
+
 test('unmapped notes outside the measured window are excluded from the result',()=>{
   const start=10,expected=buildExpectedTimingGrid(config,start,4);
   const events=[
