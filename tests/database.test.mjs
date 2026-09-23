@@ -24,7 +24,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);
+  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
@@ -225,6 +225,19 @@ test('recording metadata persists through the v8 structured repository',async()=
   const now='2026-09-23T08:00:00.000Z',row={id:'repository-recording',createdAt:now,updatedAt:now,recordingVersion:1,profileId:profile.id,assetId:'repository-recording',title:exercise.name,durationSeconds:8.5,mimeType:'audio/webm',sizeBytes:2048,sourceType:'exercise',sourceExerciseId:exercise.id,bpm:100,attemptNumber:1,note:'',tags:[],markedBest:false,milestone:false,favorite:false};
   await db.put('recordings',row);assert.equal((await db.get('recordings',row.id)).assetId,row.assetId);
   assert.equal((await db.readData()).recordings.length,1);
+});
+
+test('Timing Lab results persist through the v9 repository and modern backup restore',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId);
+  const now='2026-09-23T10:00:00.000Z',row={id:'timing-result',createdAt:now,updatedAt:now,timingLabVersion:1,profileId:profile.id,bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:30,threshold:.08,inputOffsetMs:0,matchWindowMs:80,expectedCount:16,detectedCount:16,matchedCount:16,misses:0,extras:0,meanOffsetMs:8,medianOffsetMs:8,meanAbsoluteErrorMs:8,spreadMs:2,driftMsPerMinute:1.5,confidence:'high',hits:Array.from({length:16},(_,index)=>({index,elapsedMs:index*250,offsetMs:8,strength:.5,bar:Math.floor(index/8),beat:Math.floor((index%8)/2),part:index%2}))};
+  await db.put('timingResults',row);assert.equal((await db.get('timingResults',row.id)).meanOffsetMs,8);
+  const backup=createBackup(await db.readData());assert.equal(backup.version,4);assert.equal(backup.data.timingResults.length,1);
+  await db.resetWorkspace();assert.deepEqual((await db.readData()).timingResults,[]);
+  await restoreBackup(backup);const restored=await db.readData();assert.equal(restored.timingResults.length,1);assert.equal(restored.timingResults[0].id,row.id);
+});
+test('older version-4 backups without Timing Lab results restore with an empty timingResults collection',async()=>{
+  await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.timingResults;
+  await restoreBackup(backup);assert.deepEqual((await db.readData()).timingResults,[]);
 });
 
 test('weekly schedules persist through the v7 repository and modern backup restore',async()=>{
