@@ -1,6 +1,6 @@
 import { audio } from '../audio/engine.js';
 import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
-import { deleteMidiDeviceProfile, deleteMidiPerformanceResult, midiProfileFor, saveMidiDeviceProfile, saveMidiPerformanceResult } from '../app/midi-lab.js';
+import { deleteMidiPerformanceResult, midiProfileFor, saveMidiDeviceProfile, saveMidiPerformanceResult } from '../app/midi-lab.js';
 import { store } from '../app/store.js';
 import { activeProfile } from '../domain/profiles.js';
 import { analyzeMidiPerformance, defaultMidiMappings, MIDI_VOICES } from '../domain/midi-analysis.js';
@@ -18,7 +18,6 @@ const clickModes:[ClickMode,string][]=[
 const subdivisions:[string,string][]=[['1','Quarter / beat'],['2','Eighths'],['3','Triplets'],['4','Sixteenths']];
 const channels:[string,string][]=[['','Any MIDI channel'],...Array.from({length:16},(_,i)=>[String(i+1),`Channel ${i+1}`] as [string,string])];
 const voiceOptions:[string,string][]=[['','All mapped notes'],...MIDI_VOICES.map(row=>[row.value,row.label] as [string,string])];
-const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
 const signed=(value:number)=>`${value>0?'+':''}${value.toFixed(1)} ms`;
 const confidenceLabel=(value:MidiPerformanceResult['confidence'])=>value==='high'?'High measurement confidence':value==='medium'?'Medium measurement confidence':'Low measurement confidence';
 
