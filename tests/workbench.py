@@ -655,6 +655,24 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_63_removing_song_section_cleans_only_its_local_audio_cue(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),now=new Date().toISOString(),song='qa-cue-song',section='qa-cue-section',track='qa-cue-track';
+          d.songs=[{id:song,createdAt:now,updatedAt:now,title:'Cue Cleanup Song',artist:'QA',bpm:90,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:section,name:'Verse',bars:8,notes:'',order:0}]}];
+          d.audioTracks=[{id:track,createdAt:now,updatedAt:now,songId:song,assetId:'qa-cue-asset',title:'Cue Mix',fileName:'cue.wav',mimeType:'audio/wav',sizeBytes:4096,durationSeconds:60,cues:[{id:'qa-cue-id',sectionId:section,label:'Verse',startSeconds:5,endSeconds:20,order:0}],lastPlaybackRate:1}];
+          await load('db/database.js').replaceData(d);await store.refresh();return {song,track};
+        })()""")
+        self.route('/songs/'+fixture['song'])
+        self.page.get_by_role('button',name='Remove Verse',exact=True).click()
+        self.confirm('Remove section')
+        state=self.read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),track=d.audioTracks.find(t=>t.id==='qa-cue-track'),song=d.songs.find(s=>s.id==='qa-cue-song');
+          return {track:!!track,cues:track?.cues.length,sections:song?.sections.length};
+        })()""")
+        self.assertTrue(state['track']);self.assertEqual(state['cues'],0);self.assertEqual(state['sections'],0)
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
