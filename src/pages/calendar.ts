@@ -103,7 +103,11 @@ export function calendarPage(requestedWeek?:string):Page{
   if(load)sources.push(badge('Load calibration · '+titleCase(load.confidence)));
   if(sources.length)page.append(el('section',{class:'panel calendar-source'},sectionHeader('Generated from','Snapshots taken when this week was generated'),el('div',{class:'tag-row'},sources),
     load?el('div',{class:'calendar-calibration'},el('p',{},calibrationSummary(load)),el('p',{class:'muted small'},`Evidence window ${formatDate(load.windowStart)} → ${formatDate(load.windowEnd)} · ${load.observedSessions} session${load.observedSessions===1?'':'s'} · ${load.observedActiveWeeks} active week${load.observedActiveWeeks===1?'':'s'}.`),
-      load.loadAdjusted?el('p',{class:'small'},`Profile-default load adjusted from ${load.baselineWeeklyMinutes} to ${schedule.targetMinutes} min.`):el('p',{class:'muted small'},`Weekly load stayed at the ${load.targetSource.replaceAll('-',' ')} target of ${schedule.targetMinutes} min.`),
+      load.loadAdjusted
+        ?el('p',{class:'small'},`Profile-default load adjusted from ${load.baselineWeeklyMinutes} to ${schedule.targetMinutes} min.`)
+        :schedule.targetMinutes!==load.baselineWeeklyMinutes
+          ?el('p',{class:'small'},`Calendar target edited from the ${load.targetSource.replaceAll('-',' ')} baseline of ${load.baselineWeeklyMinutes} to ${schedule.targetMinutes} min.`)
+          :el('p',{class:'muted small'},`Weekly load retained the ${load.targetSource.replaceAll('-',' ')} baseline of ${load.baselineWeeklyMinutes} min.`),
       load.patternAdjusted?el('p',{class:'muted small'},'Practice days were placed using your recent weekday pattern.'):null):null,
     el('p',{class:'field-hint'},'Later changes to a Training Cycle, Priority Cycle or practice history do not silently rewrite this saved week. Regenerate explicitly to use newer planning context.')));
 
