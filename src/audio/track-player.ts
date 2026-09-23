@@ -71,6 +71,7 @@ export class RepertoireTrackPlayer {
   get duration():number{return Number.isFinite(this.audio.duration)?this.audio.duration:0;}
   get paused():boolean{return this.audio.paused;}
   get playbackRate():number{return this.audio.playbackRate;}
+  get loopState():TrackLoop|undefined{return this.loop?{...this.loop}:undefined;}
 
   async load(blob:Blob):Promise<void>{
     this.pause();this.revoke();
