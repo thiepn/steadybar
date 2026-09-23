@@ -28,7 +28,7 @@ function fallbackSessionMinutes(data:Data,profileId:string,baselineWeeklyMinutes
   return clamp(Math.round(profile?.defaultSessionMinutes??Math.max(5,baselineWeeklyMinutes/3)),5,180);
 }
 
-export function buildPracticeLoadCalibration(data:Data,profileId:string,targetWeekStart:string,baselineWeeklyMinutes:number):WeeklyScheduleLoadCalibration{
+export function buildPracticeLoadCalibration(data:Data,profileId:string,targetWeekStart:string,baselineWeeklyMinutes:number,targetSource:WeeklyScheduleLoadCalibration['targetSource']='profile-default'):WeeklyScheduleLoadCalibration{
   const windowEnd=addDays(targetWeekStart,-1),windowStart=addDays(targetWeekStart,-PRACTICE_LOAD_WINDOW_DAYS);
   const sessions=finishedSessions(data.sessions)
     .filter(session=>session.profileId===profileId)
@@ -77,6 +77,7 @@ export function buildPracticeLoadCalibration(data:Data,profileId:string,targetWe
     observedSessions,observedActiveDays:activeDays,observedActiveWeeks:activeWeeks.length,
     typicalActiveDayMinutes,
     medianActiveWeekMinutes,
+    baselineWeeklyMinutes:Math.max(5,Math.round(baselineWeeklyMinutes)),targetSource,
     suggestedWeeklyMinutes,
     suggestedPracticeDays,
     preferredWeekdays,
