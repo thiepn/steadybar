@@ -1,14 +1,15 @@
 import type { DailyPlan, Data, PracticeSession, RoutineBlock, Song, SongSection } from './models.js';
 import { exerciseBpm } from './protocols.js';
 import { applyExerciseProgression, buildExerciseProgression } from './progression-engine.js';
-import { rankPracticeTargets, type PriorityCandidate } from './priority-engine.js';
+import type { PriorityCandidate } from './priority-engine.js';
+import { rankIntelligentPracticeTargets } from './practice-intelligence.js';
 import { skillDefinition } from './skill-graph.js';
 import type { PlanGeneration, PracticeIntent, PracticeReasonCode, PracticeState, PracticeTargetRef } from './practice-state.js';
 import { practiceTargetKey } from './practice-state.js';
 import { activeProfile } from './profiles.js';
 import { advanceISO, localDate, uuid } from './utils.js';
 
-export const AUTOPILOT_ENGINE_VERSION=1 as const;
+export const AUTOPILOT_ENGINE_VERSION=2 as const;
 export const AUTOPILOT_MINUTES=[5,10,15,20,30,45,60] as const;
 export type AutopilotMinutes=(typeof AUTOPILOT_MINUTES)[number];
 export type AutopilotSessionIntent='balanced'|'songs'|'timing'|'technique';
@@ -257,7 +258,7 @@ export function buildAutopilotPlan(data:Data,options:AutopilotOptions):Autopilot
   const profile=data.profiles?.find(p=>p.id===profileId);
   if(profile?.instrumentType==='voice')throw new Error('Autopilot v1 does not schedule voice practice yet. Use a voice routine with planned rest and listening.');
   const generatedAt=iso(options.now),today=options.today??localDate(new Date(time(options.now)));
-  const candidates=rankPracticeTargets(data,profileId,{now:generatedAt,today});
+  const candidates=rankIntelligentPracticeTargets(data,profileId,{now:generatedAt,today});
   const selections=selectSlots(data,candidates,patternForMinutes(minutes),intent);
   const blocks=selections.map(item=>item.block),totalSeconds=blocks.reduce((sum,block)=>sum+block.targetSeconds,0);
   if(totalSeconds!==minutes*60)throw new Error('Autopilot could not allocate the requested session time exactly.');
