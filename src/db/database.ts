@@ -265,7 +265,7 @@ export async function mutateWorkspace(fn:(data:Data)=>Data):Promise<Data>{
   return write([...STORES],async tx=>{
     const rows=await Promise.all(STORES.map(name=>request(tx.objectStore(name).getAll())));
     const current=Object.fromEntries(STORES.map((name,i)=>[name,name==='settings'?rows[i]?.[0]:rows[i]])) as unknown as Data;
-    current.schemaVersion=2;current.practiceModelVersion=1;current.trainingPlans??=[];current.weeklySchedules??=[];current.recordings??=[];current.timingResults??=[];current.midiDeviceProfiles??=[];current.midiResults??=[];current.audioTracks??=[];current.audioTracks??=[];current.practiceStates??=[];current.priorityCycles??=[];
+    current.schemaVersion=2;current.practiceModelVersion=1;current.trainingPlans??=[];current.weeklySchedules??=[];current.recordings??=[];current.timingResults??=[];current.midiDeviceProfiles??=[];current.midiResults??=[];current.audioTracks??=[];current.practiceStates??=[];current.priorityCycles??=[];
     const next=validateData(fn(structuredClone(current)));
     for(const name of STORES){
       const table=tx.objectStore(name),previous=name==='settings'?[current.settings]:(current[name]??[]),after=name==='settings'?[next.settings]:(next[name]??[]);
