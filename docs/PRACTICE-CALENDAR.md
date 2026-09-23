@@ -104,6 +104,23 @@ Default patterns spread one to seven sessions through the week. When fewer than 
 
 All Practice-day minutes are allocated exactly; their sum must equal `targetMinutes`.
 
+
+## Phase 15 calibration extension
+
+Phase 15 keeps this Calendar architecture intact but adds an optional adaptive-load layer before Draft generation.
+
+When **Use recent practice calibration** is enabled, Steadybar inspects the preceding six weeks of recorded active practice for the selected profile. Medium/High evidence can influence:
+
+- profile-default weekly minutes, bounded to ±30% of the baseline;
+- practice-day count when no explicit weekly-session goal exists;
+- weekday placement.
+
+Explicit Training Cycle weekly load and explicit weekly-minute goals remain authoritative. A weekly-session goal remains authoritative for day count.
+
+The exact calibration evidence is copied into the saved schedule source snapshot. Later practice history never silently rewrites an existing week.
+
+See [Practice-load calibration](PRACTICE-LOAD-CALIBRATION.md) for the complete algorithm and non-goals.
+
 ## Emphasis generation
 
 Day emphasis is resolved from explicit short-term direction before long-term direction:
