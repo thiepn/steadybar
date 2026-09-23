@@ -2,7 +2,7 @@ import type { Data, RoutineBlock } from '../domain/models.js';
 import { PRACTICE_INTELLIGENCE_ENGINE_VERSION, type IntelligenceAction, type PracticeRecommendation } from '../domain/practice-intelligence.js';
 import type { PracticeIntent, PracticePrescription } from '../domain/practice-state.js';
 import { applyExerciseProgression } from '../domain/progression-engine.js';
-import { exerciseBlock } from '../practice/launch.js';
+import { exerciseBpm } from '../domain/protocols.js';
 import { uuid } from '../domain/utils.js';
 
 const recommendationIntent:Record<IntelligenceAction,PracticeIntent>={
@@ -34,7 +34,10 @@ export function recommendationBlock(data:Data,row:PracticeRecommendation):Routin
   const target=row.target;
   if(target.kind==='exercise'){
     const exercise=data.exercises.find(item=>item.id===target.exerciseId);if(!exercise)return undefined;
-    const base={...exerciseBlock(exercise),prescription:recommendationPrescription(row)};
+    const base:RoutineBlock={
+      id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:exercise.profileId,title:exercise.name,
+      targetSeconds:exercise.defaultSeconds??600,bpm:exerciseBpm(exercise),notes:'',prescription:recommendationPrescription(row),order:0,
+    };
     return row.progression?applyExerciseProgression(base,row.progression):base;
   }
   if(target.kind==='song'||target.kind==='song-section'||target.kind==='song-transition'){
