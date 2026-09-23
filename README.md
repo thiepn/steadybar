@@ -22,6 +22,18 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Local audio repertoire practice — 2.18.0
+
+Songs can now carry **browser-local audio tracks** for repertoire work. Import an audio file on the Song page, open its local player, slow it down or speed it up from 50–150%, set A/B boundaries, and save loop boundaries directly to existing song sections.
+
+The player uses the browser's media engine. Pitch preservation is enabled when the browser exposes it; otherwise Steadybar warns that speed changes may alter pitch. A one-bar metronome pre-roll is available and follows the effective playback tempo. A/B looping seeks back to the saved start boundary and is intended for practical repetition—not claimed as sample-perfect DAW looping.
+
+Local-audio practice stays connected to Steadybar's real repertoire model. Saved cues reference existing song-section IDs, `Practice section` launches the normal Focus Player, and `Add to Today` creates the same normal song-section block used elsewhere. Removing a section automatically removes only its linked audio cue.
+
+Imported track bytes live in Steadybar's separate local media database and are **not included in JSON backups**. Backup envelope v4 stores track metadata and cues so another device/browser can show the missing track and let you relink the local file. Workspace database schema is now v11; the media database is v2.
+
+See [local repertoire audio architecture and limitations](docs/LOCAL-AUDIO-PRACTICE.md).
+
 ## MIDI Drum Lab — 2.17.0
 
 Steadybar now supports electronic drum kits and MIDI pads through a dedicated **MIDI Drum Lab**. Live note-on timestamps are normalized from the browser's high-resolution MIDI clock onto the same AudioContext clock as the metronome, then analyzed with the same deterministic grid-matching core used by Timing Lab.
@@ -209,7 +221,7 @@ Strict TypeScript, native DOM components, IndexedDB, Web Audio, local SVG charts
 
 Data belongs to the browser profile and origin. Another device, browser, port or domain does not share it. Export backups regularly and before moving domains. Restore supports validated transactional **replacement**, not merge. Reset and replacement require confirmation and initiate a safety-backup download; verify that your browser saved it.
 
-Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 4** and the same `music-practice-os` format identifier. Version-1, version-2 and version-3 backups remain importable. The physical structured-workspace IndexedDB version is 10; practice state, priority cycles, weekly schedules, recording metadata, Timing Lab results, MIDI device mappings and MIDI performance results are stored separately from immutable session history. Recording audio blobs live in the separate local media database described above. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
+Steadybar was originally delivered as Music Practice OS. Its public name and backup filenames changed in v1.2. Existing database, lock, channel and backup-format identifiers intentionally stay unchanged so the rename does not orphan data or invalidate older backups. New backups use envelope **version 4** and the same `music-practice-os` format identifier. Version-1, version-2 and version-3 backups remain importable. The physical structured-workspace IndexedDB version is 11; practice state, priority cycles, weekly schedules, recording metadata, Timing Lab results, MIDI device mappings/results and local repertoire-audio metadata are stored separately from immutable session history. Recording/repertoire audio bytes live in the separate local media database. Recording audio blobs live in the separate local media database described above. The pre-profile-upgrade original copy, when present, remains downloadable in Settings. Read the [migration and rollback limits](docs/MIGRATION-V2.md) before upgrading; older apps cannot consume a v3 learning backup. Downloads use `steadybar-backup-YYYY-MM-DD.json`.
 
 Active sessions checkpoint every five seconds. Recovery excludes unknown crash downtime; up to the last checkpoint interval may be missing. Backgrounding pauses practice. Keep the app foregrounded for reliable audio; OS suspension and hardware/Bluetooth latency are outside its timing guarantees.
 
