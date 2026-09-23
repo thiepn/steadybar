@@ -12,6 +12,11 @@ export interface TimingDetectedHit {
   time:number;
   strength:number;
 }
+export interface TimingMatchPair {
+  expectedIndex:number;
+  detectedIndex:number;
+  distanceMs:number;
+}
 export interface TimingAnalysis {
   expectedCount:number;
   detectedCount:number;
@@ -66,17 +71,17 @@ function driftPerMinute(hits:TimingLabMatchedHit[]):number{
   return slope*60;
 }
 
-export function analyzeTiming(
+export function matchTimingEvents<T extends {time:number}>(
   expected:readonly TimingExpectedHit[],
-  detected:readonly TimingDetectedHit[],
+  detected:readonly T[],
   inputOffsetMs=0,
   matchWindowMs?:number,
-):TimingAnalysis{
+):{pairs:TimingMatchPair[];corrected:(T&{originalIndex:number;time:number})[];matchWindowMs:number}{
   if(!expected.length)throw new Error('Timing analysis needs at least one expected hit.');
   const intervalMs=expected.length>1?(expected[1]!.time-expected[0]!.time)*1000:500;
   const window=matchWindowMs??Math.round(Math.min(180,Math.max(35,intervalMs*.45)));
-  const corrected=detected.map((hit,index)=>({index,time:hit.time-inputOffsetMs/1000,strength:hit.strength})).sort((a,b)=>a.time-b.time||a.index-b.index);
-  const candidates:{expectedIndex:number;detectedIndex:number;distanceMs:number}[]=[];
+  const corrected=detected.map((hit,index)=>({...hit,originalIndex:index,time:hit.time-inputOffsetMs/1000})).sort((a,b)=>a.time-b.time||a.originalIndex-b.originalIndex);
+  const candidates:TimingMatchPair[]=[];
   let firstCandidate=0;
   for(let e=0;e<expected.length;e++){
     const target=expected[e]!,minimum=target.time-window/1000,maximum=target.time+window/1000;
@@ -87,12 +92,22 @@ export function analyzeTiming(
     }
   }
   candidates.sort((a,b)=>Math.abs(a.distanceMs)-Math.abs(b.distanceMs)||a.expectedIndex-b.expectedIndex||a.detectedIndex-b.detectedIndex);
-  const usedExpected=new Set<number>(),usedDetected=new Set<number>(),pairs:typeof candidates=[];
+  const usedExpected=new Set<number>(),usedDetected=new Set<number>(),pairs:TimingMatchPair[]=[];
   for(const candidate of candidates){
     if(usedExpected.has(candidate.expectedIndex)||usedDetected.has(candidate.detectedIndex))continue;
     usedExpected.add(candidate.expectedIndex);usedDetected.add(candidate.detectedIndex);pairs.push(candidate);
   }
   pairs.sort((a,b)=>a.expectedIndex-b.expectedIndex);
+  return {pairs,corrected,matchWindowMs:window};
+}
+
+export function analyzeTiming(
+  expected:readonly TimingExpectedHit[],
+  detected:readonly TimingDetectedHit[],
+  inputOffsetMs=0,
+  matchWindowMs?:number,
+):TimingAnalysis{
+  const {pairs,corrected,matchWindowMs:window}=matchTimingEvents(expected,detected,inputOffsetMs,matchWindowMs);
   const hits:TimingLabMatchedHit[]=pairs.map(pair=>{
     const target=expected[pair.expectedIndex]!,source=corrected[pair.detectedIndex]!;
     return {
