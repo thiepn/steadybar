@@ -142,7 +142,9 @@ By default only five recommendations are returned. Explicit diagnostic callers m
 
 Exercise blocks preserve the recommended progression snapshot.
 
-Song-transition recommendations become a bounded section-transition block with the existing transition notes.
+Every executable recommendation also carries a user-confirmed manual prescription snapshot containing the exact recommended target and a practice intent derived from the recommendation action. This preserves Retest / Apply / Maintain evidence context without making the Intelligence engine an automatic execution source.
+
+Song-transition recommendations become a bounded section-transition block with the existing transition notes **and retain the original transition target in that prescription**, so completed practice contributes transition evidence rather than being silently reduced to section-only evidence.
 
 Lesson recommendations do not fabricate a practice block; they link back to the actual guided lesson.
 
