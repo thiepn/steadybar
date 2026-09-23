@@ -674,3 +674,47 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .timing-live-hits{margin-left:0;grid-column:1/-1}
   .timing-offset-plot{height:130px}
 }
+
+
+/* Phase 17 — Web MIDI drum mapping and performance analysis. */
+.midi-lab-page{display:grid;gap:20px}
+.midi-device-panel,.midi-test-panel,.midi-result-card{display:grid;gap:16px}
+.midi-device-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+.midi-test-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.midi-lab-status{padding:10px 12px;background:var(--surface-soft);border-left:2px solid var(--accent);font-size:13px}
+.midi-mapping-panel>summary{display:flex;justify-content:space-between;gap:16px;align-items:center;cursor:pointer;font-weight:650}
+.midi-mapping-body{display:grid;gap:14px;padding-top:16px}
+.midi-learn-row{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.midi-mapping-list{display:grid;gap:0;border-top:1px solid var(--border)}
+.midi-mapping-row{display:grid;grid-template-columns:auto 82px minmax(150px,1fr) minmax(150px,1.2fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.midi-mapping-row input[type="text"],.midi-mapping-row select{width:100%;min-width:0}
+.midi-note-number{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.midi-live{display:flex;align-items:baseline;gap:8px;padding:14px 16px;border:1px solid var(--border);background:var(--surface)}
+.midi-live-clock{font-family:var(--mono);font-size:26px;letter-spacing:-.5px}
+.midi-live-events{margin-left:auto;font-size:12px;color:var(--muted)}
+.midi-result-host{display:grid;gap:18px}
+.midi-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.midi-voice-summary{display:grid;gap:0;border-top:1px solid var(--border)}
+.midi-voice-head,.midi-voice-row{display:grid;grid-template-columns:minmax(130px,1.5fr) 60px 90px 90px 100px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.midi-voice-head{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.midi-history{display:grid;gap:0}
+.midi-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)}
+.midi-history-row:last-child{border-bottom:0}
+.midi-history-row>div:first-child{display:grid;gap:3px;min-width:0}
+@media(max-width:900px){
+  .midi-test-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .midi-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .midi-mapping-row{grid-template-columns:auto 70px minmax(120px,1fr) minmax(120px,1fr)}
+  .midi-mapping-row>.button{grid-column:2/-1;justify-self:start}
+  .midi-history-row{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .midi-device-grid,.midi-test-grid{grid-template-columns:1fr}
+  .midi-stats{grid-template-columns:1fr 1fr}
+  .midi-mapping-row{grid-template-columns:auto 1fr}
+  .midi-mapping-row select,.midi-mapping-row input[type="text"],.midi-mapping-row>.button{grid-column:1/-1}
+  .midi-live{display:grid;grid-template-columns:auto 1fr}
+  .midi-live-events{margin-left:0;grid-column:1/-1}
+  .midi-voice-summary{overflow-x:auto}
+  .midi-voice-head,.midi-voice-row{min-width:540px}
+}
