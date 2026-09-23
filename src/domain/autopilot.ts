@@ -148,8 +148,15 @@ function choose(data:Data,candidates:PriorityCandidate[],role:SlotRole,intent:Au
     const familiar=pool.filter(candidate=>!newMaterial(candidate)||urgentNewMaterial(candidate));
     if(familiar.length)pool=familiar;
   }
-  const scored=pool.map((candidate,index)=>({candidate,index,fit:candidate.score+roleBonus(data,candidate,role,intent,primary)+diversityPenalty(candidate,selected,intent)}))
-    .sort((a,b)=>b.fit-a.fit||a.index-b.index||a.candidate.targetKey.localeCompare(b.candidate.targetKey));
+  const scored=pool.map((candidate,index)=>({
+    candidate,index,
+    roleFit:roleBonus(data,candidate,role,intent,primary)+diversityPenalty(candidate,selected,intent),
+  })).sort((a,b)=>
+    b.roleFit-a.roleFit
+    ||a.index-b.index
+    ||b.candidate.score-a.candidate.score
+    ||a.candidate.targetKey.localeCompare(b.candidate.targetKey)
+  );
   const unused=scored.find(row=>!selected.some(item=>item.targetKey===row.candidate.targetKey));
   return unused?.candidate??scored[0]?.candidate;
 }
