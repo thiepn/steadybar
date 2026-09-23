@@ -170,7 +170,7 @@ export function buildWeeklySchedule(data:Data,options:BuildWeeklyScheduleOptions
   const chosenIndexes=selectedPracticeIndexes(practiceDays,preferredWeekdays),legacyIndexes=DAY_PATTERNS[practiceDays]!;
   const loadCalibration=adaptiveEnabled?{
     ...calibration,
-    loadAdjusted:options.targetMinutes===undefined&&targetMinutes!==baselineMinutes,
+    loadAdjusted:targetSource==='profile-default'&&targetMinutes!==baselineMinutes,
     patternAdjusted:JSON.stringify(chosenIndexes)!==JSON.stringify(legacyIndexes),
   }:undefined;
   const at=new Date(now).toISOString();
