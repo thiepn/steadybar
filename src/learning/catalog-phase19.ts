@@ -28,7 +28,7 @@ function lesson(input:{
 }
 
 const drums:Course={
-  id:'drums-repertoire-lab',revision:1,instrument:'drums',stage:'ensemble',level:'advanced',
+  id:'drums-repertoire-lab',revision:1,instrument:'drums',stage:'repertoire',level:'advanced',
   title:'Drums: repertoire laboratory',summary:'Turn timing, dynamics and coordination into repeatable song-section and rehearsal decisions.',
   prerequisites:'Comfortable basic grooves, fills and section counting; use your own or permitted repertoire audio when available.',
   outcomes:['Build repeatable section-specific drum parts','Shape dynamics without losing pulse','Repair transitions and complete uninterrupted takes'],
@@ -75,7 +75,7 @@ const drums:Course={
 };
 
 const guitar:Course={
-  id:'guitar-repertoire-lab',revision:1,instrument:'guitar',stage:'ensemble',level:'advanced',
+  id:'guitar-repertoire-lab',revision:1,instrument:'guitar',stage:'repertoire',level:'advanced',
   title:'Guitar: repertoire and arrangement lab',summary:'Build repeatable parts, transitions and texture choices around real song sections.',
   prerequisites:'Comfortable chord changes, basic rhythm control and at least one song or arrangement you are allowed to practice.',
   outcomes:['Choose section-specific guitar textures','Repair transitions without losing pulse','Complete takes with controlled rhythm and space'],
@@ -110,7 +110,7 @@ const guitar:Course={
 };
 
 const bass:Course={
-  id:'bass-repertoire-lab',revision:1,instrument:'bass',stage:'ensemble',level:'advanced',
+  id:'bass-repertoire-lab',revision:1,instrument:'bass',stage:'repertoire',level:'advanced',
   title:'Bass: repertoire and pocket lab',summary:'Turn note length, harmonic anchors and drummer relationships into dependable song parts.',
   prerequisites:'Comfortable root/chord-tone playing, muting and steady eighth-note or quarter-note time.',
   outcomes:['Design stable section bass parts','Coordinate selectively with drums','Control note length and transition timing through full takes'],
@@ -145,7 +145,7 @@ const bass:Course={
 };
 
 const piano:Course={
-  id:'piano-repertoire-lab',revision:1,instrument:'piano',stage:'ensemble',level:'advanced',
+  id:'piano-repertoire-lab',revision:1,instrument:'piano',stage:'repertoire',level:'advanced',
   title:'Piano: repertoire and accompaniment lab',summary:'Build section textures, voice-leading and complete accompaniment takes around real repertoire.',
   prerequisites:'Comfortable chord shapes, basic scale/key knowledge and simple two-hand accompaniment.',
   outcomes:['Choose stable accompaniment textures','Connect chords with economical voice-leading','Repair transitions and complete full-form takes'],
@@ -180,7 +180,7 @@ const piano:Course={
 };
 
 const voice:Course={
-  id:'voice-repertoire-lab',revision:1,instrument:'voice',stage:'ensemble',level:'advanced',
+  id:'voice-repertoire-lab',revision:1,instrument:'voice',stage:'repertoire',level:'advanced',
   title:'Voice: repertoire and ensemble lab',summary:'Apply comfortable technique, phrasing, harmony and recovery to complete repertoire takes.',
   prerequisites:'A personally comfortable range, ability to stop for symptoms, and short repertoire phrases that can be sung without strain.',
   outcomes:['Plan breaths and dynamics around phrases','Prepare entrances and harmony parts','Use complete takes without singing through warning signs'],
