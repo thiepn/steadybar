@@ -718,3 +718,30 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .midi-voice-summary{overflow-x:auto}
   .midi-voice-head,.midi-voice-row{min-width:540px}
 }
+
+
+/* Phase 18 — local repertoire audio practice. */
+.song-audio-panel{display:grid;gap:0}
+.song-audio-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)}
+.song-audio-row:last-child{border-bottom:0}
+.song-audio-row>div:first-child{display:grid;gap:3px;min-width:0}
+.repertoire-audio-page{display:grid;gap:20px}
+.track-player-panel,.track-loop-panel,.track-cue-panel{display:grid;gap:14px}
+.track-time-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.track-time{font-family:var(--mono);font-size:26px;letter-spacing:-.5px}
+.track-player-panel input[type="range"]{width:100%}
+.track-player-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}
+.track-meta-row,.track-loop-meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.track-status{padding:10px 12px;background:var(--surface-soft);border-left:2px solid var(--accent);font-size:13px}
+.track-cue-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.track-cue-row:last-child{border-bottom:0}
+.track-cue-row>div:first-child{display:grid;gap:3px;min-width:0}
+@media(max-width:800px){
+  .song-audio-row,.track-cue-row{grid-template-columns:1fr}
+  .song-audio-row>.actions,.track-cue-row>.actions{justify-content:flex-start}
+  .track-player-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:520px){
+  .track-player-grid{grid-template-columns:1fr}
+  .track-time{font-size:22px}
+}
