@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.15.0 — Smart Scheduling Calibration & Adaptive Practice Load — 2026-09-23
+
+- Add a deterministic six-week **practice-load calibration** derived only from recorded active practice time.
+- Learn typical active-day duration, median active-week minutes, active-day count and recent weekday preference without using ratings, mastery, fatigue, health or hidden quality scores.
+- Add Low / Medium / High evidence confidence thresholds so sparse history cannot change schedule load.
+- Let profile-default weekly load adapt gradually only when evidence is sufficient, with each generated change bounded to ±30% of the existing baseline.
+- Keep explicit Training Cycle weekly load and explicit `weekly-minutes` goals authoritative; calibration never silently lowers or raises those targets.
+- Keep explicit `weekly-sessions` goals authoritative for day count while still allowing learned weekday placement.
+- Use learned weekday patterns for generated Practice days when evidence is sufficient; retain the deterministic legacy patterns when calibration is disabled or underdetermined.
+- Add a **Use recent practice calibration** switch to Calendar generation/regeneration and immediately preview the calibrated versus standard minutes/day count.
+- Snapshot calibration provenance into each generated week: evidence window, confidence, observed sessions/days/weeks, typical day, median active week, baseline/source, suggested load, suggested days, weekday ranking, and whether load/pattern changed.
+- Surface the calibration snapshot on saved Calendar weeks and add a read-only next-week scheduling-load preview to Weekly Review.
+- Keep generation Draft-first and user-controlled: calibration never creates DailyPlans, starts practice, applies a week, changes goals, rewrites Training Cycles or mutates history.
+- Add domain and browser regression coverage for bounded load adjustment, explicit-target authority, low-evidence fallback, learned Tue/Thu/Sat placement and the calibration toggle.
+- No IndexedDB schema or backup-envelope change is required; calibration is derived at generation time and stored only as optional source metadata on an existing Weekly Schedule.
 ## 2.14.0 — Recordings & Practice Evidence Core — 2026-09-23
 
 - Add local microphone **Record attempt** capture directly inside the Focus Player.
