@@ -6,7 +6,7 @@ import { store } from '../app/store.js';
 import { addToday, launchPractice, songBlock } from '../practice/launch.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { button, checkbox, confirmAction, empty, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
+import { button, checkbox, confirmAction, empty, field, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 
 const rates:[string,string][]=[['0.5','50%'],['0.6','60%'],['0.7','70%'],['0.75','75%'],['0.8','80%'],['0.85','85%'],['0.9','90%'],['0.95','95%'],['1','100%'],['1.05','105%'],['1.1','110%'],['1.15','115%'],['1.25','125%'],['1.5','150%']];
 function clock(seconds:number):string{
@@ -41,6 +41,7 @@ export function repertoireAudioPage(trackId:string):Page{
   const effective=el('span',{class:'muted small'},`Approx. ${Math.round(song.bpm*track.lastPlaybackRate)} BPM relative to song tempo`);
   const pitch=el('span',{class:'muted small'},player.pitchPreservationSupported?'Pitch preservation available in this browser.':'This browser does not expose pitch preservation; speed changes may alter pitch.');
   const preRoll=checkbox('trackPreroll','Use one-bar metronome pre-roll',true);
+  const volume=el('input',{type:'range',min:0,max:1,step:.05,value:.9,'aria-label':'Track volume'});
   const loopState=el('span',{class:'muted small'},'Loop off');
   const markText=el('span',{class:'muted small'},`A ${clock(markA)} · B ${clock(markB)}`);
   const cueSection=select('cueSection','Save loop for section',sections.map(section=>[section.id,section.name] as [string,string]),sections[0]?.id??'');
@@ -74,7 +75,7 @@ export function repertoireAudioPage(trackId:string):Page{
     const wantsPreroll=preRoll.querySelector('input')!.checked;
     if(!wantsPreroll){await player.play();return;}
     status.textContent='One-bar count-in…';
-    const config={...structuredClone(store.snapshot().settings.metronome),bpm:song.bpm,meter:structuredClone(song.meter),subdivision:1 as const,countIn:1 as const,timing:{...resolvedTiming(store.snapshot().settings.metronome),mode:'standard' as const}};
+    const config={...structuredClone(store.snapshot().settings.metronome),bpm:Math.max(20,Math.min(300,Math.round(song.bpm*player.playbackRate))),meter:structuredClone(song.meter),subdivision:1 as const,countIn:1 as const,timing:{...resolvedTiming(store.snapshot().settings.metronome),mode:'standard' as const}};
     await audio.start(config,{onReady:()=>{audio.stop();if(disposed)return;void player.play().then(()=>{status.textContent='Playing after one-bar pre-roll.';}).catch(error=>notify(error instanceof Error?error.message:'Track playback failed.','error'));}});
   };
   playButton=button('Play',play,'primary','play');playButton.disabled=true;
@@ -82,6 +83,7 @@ export function repertoireAudioPage(trackId:string):Page{
   loopButton=button('Enable loop',()=>{const loop=player.loopState;if(loop?.enabled){player.toggleLoop(false);loopState.textContent='Loop off';loopButton.querySelector('span')!.textContent='Enable loop';}else setLoopFromMarks();},'secondary');
 
   seek.addEventListener('input',()=>player.seek(Number(seek.value)));
+  volume.addEventListener('input',()=>player.setVolume(Number(volume.value)));
   rate.querySelector('select')!.addEventListener('change',()=>{
     const value=Number(rate.querySelector('select')!.value);player.setRate(value);effective.textContent=`Approx. ${Math.round(song.bpm*value)} BPM relative to song tempo`;
     void updateRepertoireTrackRate(track.id,value).catch(()=>{});
@@ -100,7 +102,7 @@ export function repertoireAudioPage(trackId:string):Page{
     el('div',{class:'track-time-row'},timeText,durationText),
     seek,
     el('div',{class:'actions wrap'},playButton,stopButton,loopButton),
-    el('div',{class:'form-grid track-player-grid'},rate,preRoll),
+    el('div',{class:'form-grid track-player-grid'},rate,field('Volume',volume),preRoll),
     el('div',{class:'track-meta-row'},effective,pitch),
     status,relink);
 
