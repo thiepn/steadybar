@@ -20,16 +20,17 @@ const signed=(value:number)=>`${value>0?'+':''}${value.toFixed(1)} ms`;
 const confidenceLabel=(value:TimingLabResult['confidence'])=>value==='high'?'High measurement confidence':value==='medium'?'Medium measurement confidence':'Low measurement confidence';
 
 function resultCard(result:TimingLabResult,allowDelete=false):HTMLElement{
-  const bias=timingBiasLabel(result.meanOffsetMs),matchRate=result.expectedCount?Math.round(result.matchedCount/result.expectedCount*100):0;
+  const hasMatches=result.matchedCount>0,hasSpread=result.matchedCount>1,hasDrift=result.matchedCount>2;
+  const bias=hasMatches?timingBiasLabel(result.meanOffsetMs):undefined,matchRate=result.expectedCount?Math.round(result.matchedCount/result.expectedCount*100):0;
   const card=el('article',{class:'panel timing-result-card'},
     sectionHeader(allowDelete?'Saved test':'Latest result',`${result.bpm} BPM · ${result.subdivision}× subdivision · ${timingClickLabel({...store.snapshot().settings.metronome,bpm:result.bpm,meter:result.meter,subdivision:result.subdivision,timing:result.timingClick})}`,
       allowDelete?[button('Delete',async()=>{if(await confirmAction('Delete this timing result?','The saved timing diagnostics will be permanently removed.','Delete result',true))await deleteTimingLabResult(result.id);},'ghost danger-text')]:[]),
     el('div',{class:'tag-row'},badge(confidenceLabel(result.confidence),result.confidence==='high'?'accent':'neutral'),badge(`${matchRate}% matched`),badge(`${result.misses} missed`),badge(`${result.extras} extra`)),
     el('div',{class:'stats-strip timing-stats'},
-      stat('Average bias',signed(result.meanOffsetMs),bias==='centered'?'Centered within ±5 ms':bias==='early'?'Negative = early':'Positive = late'),
-      stat('Typical error',`${result.meanAbsoluteErrorMs.toFixed(1)} ms`,'Mean absolute distance from grid'),
-      stat('Spread',`${result.spreadMs.toFixed(1)} ms`,'Standard deviation of matched offsets'),
-      stat('Drift',`${result.driftMsPerMinute>0?'+':''}${result.driftMsPerMinute.toFixed(1)} ms/min`,'Trend across the test')),
+      stat('Average bias',hasMatches?signed(result.meanOffsetMs):'—',!hasMatches?'No matched hits':bias==='centered'?'Centered within ±5 ms':bias==='early'?'Negative = early':'Positive = late'),
+      stat('Typical error',hasMatches?`${result.meanAbsoluteErrorMs.toFixed(1)} ms`:'—',hasMatches?'Mean absolute distance from grid':'No matched hits'),
+      stat('Spread',hasSpread?`${result.spreadMs.toFixed(1)} ms`:'—',hasSpread?'Standard deviation of matched offsets':'Needs at least two matched hits'),
+      stat('Drift',hasDrift?`${result.driftMsPerMinute>0?'+':''}${result.driftMsPerMinute.toFixed(1)} ms/min`:'—',hasDrift?'Trend across the test':'Needs at least three matched hits')),
     el('p',{class:'field-hint'},`Matched ${result.matchedCount} of ${result.expectedCount} expected hits inside a ±${result.matchWindowMs} ms window. Input compensation: ${result.inputOffsetMs} ms. These metrics describe detected timing only; they are not a musicianship score.`));
   if(result.hits.length){
     const limit=Math.max(result.matchWindowMs,20);
@@ -152,7 +153,7 @@ export function timingLabPage():Page{
     if(!rows.length)history.append(el('p',{class:'muted'},'Run a test to create your first microphone timing result.'));
     else for(const row of rows.slice(0,30))history.append(el('article',{class:'timing-history-row'},
       el('div',{},el('strong',{},`${row.bpm} BPM · ${row.subdivision}×`),el('span',{class:'muted small'},`${formatDate(row.createdAt,true)} · ${titleCase(row.confidence)} confidence`)),
-      el('div',{class:'tag-row'},badge(`bias ${signed(row.meanOffsetMs)}`),badge(`error ${row.meanAbsoluteErrorMs.toFixed(1)} ms`),badge(`spread ${row.spreadMs.toFixed(1)} ms`),badge(`${row.matchedCount}/${row.expectedCount} matched`)),
+      el('div',{class:'tag-row'},row.matchedCount?badge(`bias ${signed(row.meanOffsetMs)}`):badge('no matched hits'),row.matchedCount?badge(`error ${row.meanAbsoluteErrorMs.toFixed(1)} ms`):null,row.matchedCount>1?badge(`spread ${row.spreadMs.toFixed(1)} ms`):null,badge(`${row.matchedCount}/${row.expectedCount} matched`)),
       button('Delete',async()=>{if(await confirmAction('Delete this timing result?','This diagnostic result will be permanently removed.','Delete result',true))await deleteTimingLabResult(row.id);},'ghost compact danger-text')));
     resultHost.append(history);
   };
