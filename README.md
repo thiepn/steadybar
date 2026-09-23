@@ -22,6 +22,20 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Practice Intelligence — 2.20.0
+
+Steadybar now has one **Practice Intelligence** layer that combines the evidence systems already present in the app instead of adding another hidden coach model. It reads current PracticeState, diagnostics, due reviews, explicit goals/priorities, repertoire urgency, guided-learning state, and the existing progression engine, then produces a small set of explainable next actions.
+
+Each recommendation has two separate outputs. The **practice action** is one of `Repair / Retest / Stabilize / Apply / Maintain / Explore`. The **progression decision** is one of `Progress / Hold / Consolidate / Regress`. Low evidence cannot produce `Progress`; an explicit progression-engine reduction becomes `Regress`; due retests remain `Hold`; usable/build-stage work becomes `Consolidate` until stronger evidence exists.
+
+Progress shows the recommended targets with evidence, reasons, and any generated next progression. Exercise/song recommendations can be started immediately or added to Today through the same ordinary practice-block path used everywhere else. Today surfaces up to three relevant **What matters now** actions, while Weekly Review uses the same intelligence ordering for proposed skill focus instead of maintaining a separate weakness-ranking model.
+
+Autopilot is now **v2** and consumes the unified intelligence ordering. This changes which eligible targets are considered first, but it does not make Autopilot autonomous: users still choose duration/emphasis and explicitly build/start the plan. Voice remains on its existing rest-aware planning path rather than being automatically scheduled.
+
+Practice Intelligence is rebuilt from authoritative data at runtime and is not persisted as an opaque score. No schema or backup change is required; workspace schema remains v11 and backup envelope remains v4.
+
+See [Practice Intelligence architecture and decision rules](docs/PRACTICE-INTELLIGENCE.md).
+
 ## Curriculum, exercise library & repertoire training — 2.19.0
 
 Steadybar's guided catalog now contains **22 original courses, 118 lessons and 236 runnable lesson tasks**. Drums, Guitar, Bass, Piano and Voice each progress through **Foundations → Skill development → Ensemble application → Repertoire laboratory**. Custom profiles now have a second general practice-method course rather than being left with Foundation only.
