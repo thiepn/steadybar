@@ -6,6 +6,8 @@ import {migratePracticeModel} from '../dist/app/db/practice-model-migration.js';
 import {buildPracticeIntelligence,rankIntelligentPracticeTargets} from '../dist/app/domain/practice-intelligence.js';
 import {practiceTargetKey} from '../dist/app/domain/practice-state.js';
 import {recommendationBlock,recommendationHref} from '../dist/app/app/practice-intelligence.js';
+import {createSession} from '../dist/app/practice/logic.js';
+import {evidenceFromSessions} from '../dist/app/domain/practice-evidence.js';
 
 const at='2026-09-23T10:00:00.000Z',today='2026-09-23';
 function modern(){return migratePracticeModel(migratePracticeData(seedData(at)));}
@@ -118,6 +120,16 @@ test('transition recommendation builds a bounded section block without inventing
   assert.equal(block.type,'song-section');assert.equal(block.songId,song.id);assert.equal(block.songSectionId,'a');assert.equal(block.targetSeconds,300);
   assert.equal(block.prescription.target.kind,'song-transition');assert.equal(block.prescription.target.transitionId,'t');assert.equal(block.prescription.intent,'build');assert.equal(block.prescription.generatedBy,'manual');
   assert.match(block.title,/Lift/);assert.match(block.notes,/Keep beat one clear/);
+});
+
+test('transition recommendation remains transition evidence after normal session snapshotting',()=>{
+  const d=modern(),song={id:'song-evidence',createdAt:at,updatedAt:at,title:'Evidence Song',artist:'',bpm:80,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'a',name:'Verse',notes:'',order:0},{id:'b',name:'Chorus',notes:'',order:1}],transitions:[{id:'t',fromSectionId:'a',toSectionId:'b',name:'Lift',notes:''}]};
+  d.songs=[song];
+  const row={source:'practice-target',target:{kind:'song-transition',songId:song.id,transitionId:'t'},targetKey:'transition|song-evidence|shared|t',label:'Evidence Song · Lift',band:'now',action:'repair',confidence:'medium',decision:'consolidate',reasons:[],evidence:[],skillIds:[]};
+  const block=recommendationBlock(d,row);assert.ok(block);
+  const session=createSession([block],d);session.status='completed';session.endedAt=at;session.blocks[0].completed=true;session.blocks[0].actualActiveSeconds=30;session.blocks[0].endedAt=at;
+  const events=evidenceFromSessions({...d,sessions:[session]});
+  assert.ok(events.some(event=>event.targetKeys.includes('transition|song-evidence|shared|t')));
 });
 
 test('recommendation action maps to the correct practice context without automatic execution provenance',()=>{
