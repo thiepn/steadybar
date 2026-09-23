@@ -24,7 +24,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);
+  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
@@ -151,7 +151,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[],recordings:exported.data.recordings??[],timingResults:exported.data.timingResults??[]}));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[],recordings:exported.data.recordings??[],timingResults:exported.data.timingResults??[],midiDeviceProfiles:exported.data.midiDeviceProfiles??[],midiResults:exported.data.midiResults??[]}));
 });
 test('backup restore rebuilds derived mastery from evidence while preserving manual scheduling overrides',async()=>{
   await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
@@ -238,6 +238,22 @@ test('Timing Lab results persist through the v9 repository and modern backup res
 test('older version-4 backups without Timing Lab results restore with an empty timingResults collection',async()=>{
   await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.timingResults;
   await restoreBackup(backup);assert.deepEqual((await db.readData()).timingResults,[]);
+});
+
+test('MIDI mappings and performance results persist through the v10 repository and backup restore',async()=>{
+  await db.initializeDatabase();const data=await db.readData(),profile=data.profiles.find(row=>row.id===data.settings.activeProfileId),now='2026-09-23T12:00:00.000Z';
+  const device={id:'midi-device',createdAt:now,updatedAt:now,profileId:profile.id,deviceKey:'roland::td-17',inputId:'input-1',manufacturer:'Roland',name:'TD-17',channel:10,mappings:[{note:38,voice:'snare',label:'Snare',enabled:true}]};
+  await db.put('midiDeviceProfiles',device);assert.equal((await db.get('midiDeviceProfiles',device.id)).deviceKey,device.deviceKey);
+  const hits=Array.from({length:16},(_,index)=>({index,elapsedMs:index*250,offsetMs:5,note:38,velocity:index%2?100:80,channel:10,voice:'snare',label:'Snare',bar:Math.floor(index/8),beat:Math.floor((index%8)/2),part:index%2}));
+  const result={id:'midi-result',createdAt:now,updatedAt:now,midiAnalysisVersion:1,profileId:profile.id,deviceProfileId:device.id,deviceKey:device.deviceKey,deviceNameSnapshot:device.name,manufacturerSnapshot:device.manufacturer,bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:4,expectedPattern:'subdivision',analyzedVoice:'snare',matchWindowMs:80,expectedCount:16,detectedCount:16,matchedCount:16,misses:0,extras:0,unmappedCount:0,meanOffsetMs:5,medianOffsetMs:5,meanAbsoluteErrorMs:5,spreadMs:0,driftMsPerMinute:0,confidence:'high',velocityMean:90,velocityMedian:90,velocitySpread:10,velocityMin:80,velocityMax:100,velocityRange:20,hits,voices:[{voice:'snare',label:'Snare',count:16,medianVelocity:90,velocitySpread:10,meanAbsoluteErrorMs:5,timingSpreadMs:0}]};
+  await db.put('midiResults',result);assert.equal((await db.get('midiResults',result.id)).velocityMedian,90);
+  const backup=createBackup(await db.readData());assert.equal(backup.version,4);assert.equal(backup.data.midiDeviceProfiles.length,1);assert.equal(backup.data.midiResults.length,1);
+  await db.resetWorkspace();let empty=await db.readData();assert.deepEqual(empty.midiDeviceProfiles,[]);assert.deepEqual(empty.midiResults,[]);
+  await restoreBackup(backup);const restored=await db.readData();assert.equal(restored.midiDeviceProfiles[0].id,device.id);assert.equal(restored.midiResults[0].id,result.id);
+});
+test('older version-4 backups without MIDI collections restore with empty MIDI state',async()=>{
+  await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.midiDeviceProfiles;delete backup.data.midiResults;
+  await restoreBackup(backup);const restored=await db.readData();assert.deepEqual(restored.midiDeviceProfiles,[]);assert.deepEqual(restored.midiResults,[]);
 });
 
 test('weekly schedules persist through the v7 repository and modern backup restore',async()=>{

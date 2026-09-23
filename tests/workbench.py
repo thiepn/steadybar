@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/library','/timing-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -604,6 +604,30 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_text('Typical error',exact=True).first).to_be_visible()
         expect(self.page.get_by_text('16/16 matched',exact=True).first).to_be_visible()
         self.assertEqual(self.page.locator('.timing-hit-dot').count(),16)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_61_midi_lab_saved_velocity_diagnostics_and_capability_fallback(self):
+        self.onboard()
+        self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId),now=new Date().toISOString();
+          const hits=Array.from({length:16},(_,index)=>({index,elapsedMs:index*250,offsetMs:index%2?6:4,note:38,velocity:index%2?100:80,channel:10,voice:'snare',label:'Snare',bar:Math.floor(index/8),beat:Math.floor((index%8)/2),part:index%2}));
+          d.midiResults=[{id:'qa-midi-result',createdAt:now,updatedAt:now,midiAnalysisVersion:1,profileId:profile.id,deviceKey:'roland::td-17',deviceNameSnapshot:'TD-17',manufacturerSnapshot:'Roland',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:4,expectedPattern:'subdivision',analyzedVoice:'snare',matchWindowMs:80,expectedCount:16,detectedCount:16,matchedCount:16,misses:0,extras:0,unmappedCount:0,meanOffsetMs:5,medianOffsetMs:5,meanAbsoluteErrorMs:5,spreadMs:1,driftMsPerMinute:0,confidence:'high',velocityMean:90,velocityMedian:90,velocitySpread:10,velocityMin:80,velocityMax:100,velocityRange:20,hits,voices:[{voice:'snare',label:'Snare',count:16,medianVelocity:90,velocitySpread:10,meanAbsoluteErrorMs:5,timingSpreadMs:1}]}];
+          d.midiDeviceProfiles=[];await load('db/database.js').replaceData(d);await store.refresh();return true;
+        })()""")
+        self.route('/midi-lab')
+        expect(self.page.get_by_role('heading',name='MIDI Drum Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('High measurement confidence',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('Velocity median',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('16/16 matched',exact=True).first).to_be_visible()
+        expect(self.page.locator('.midi-voice-row').get_by_text('Snare',exact=True).first).to_be_visible()
+        supported=self.page.evaluate("typeof navigator.requestMIDIAccess==='function'")
+        if supported:
+            expect(self.page.get_by_role('button',name='Connect / refresh MIDI',exact=True)).to_be_enabled()
+        else:
+            expect(self.page.get_by_role('button',name='Web MIDI unavailable',exact=True)).to_be_disabled()
+            expect(self.page.get_by_text('Web MIDI is unavailable in this browser.',exact=False).first).to_be_visible()
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 

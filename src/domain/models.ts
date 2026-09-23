@@ -195,6 +195,86 @@ export interface TimingLabResult extends Entity {
   confidence: TimingLabConfidence;
   hits: TimingLabMatchedHit[];
 }
+export type MidiExpectedPattern = 'subdivision' | 'beat' | 'two-four';
+export type MidiDrumVoice =
+  | 'kick' | 'snare' | 'rim' | 'hihat-closed' | 'hihat-open' | 'hihat-pedal'
+  | 'tom-high' | 'tom-mid' | 'tom-low' | 'ride' | 'ride-bell' | 'crash' | 'other';
+export interface MidiDrumMapping {
+  note: number;
+  voice: MidiDrumVoice;
+  label: string;
+  enabled: boolean;
+}
+export interface MidiDeviceProfile extends Entity {
+  profileId: string;
+  deviceKey: string;
+  inputId?: string;
+  manufacturer: string;
+  name: string;
+  channel?: number;
+  mappings: MidiDrumMapping[];
+}
+export interface MidiPerformanceMatchedHit {
+  index: number;
+  elapsedMs: number;
+  offsetMs: number;
+  note: number;
+  velocity: number;
+  channel: number;
+  voice: MidiDrumVoice;
+  label: string;
+  bar: number;
+  beat: number;
+  part: number;
+}
+export interface MidiVoiceSummary {
+  voice: MidiDrumVoice;
+  label: string;
+  count: number;
+  medianVelocity: number;
+  velocitySpread: number;
+  meanAbsoluteErrorMs: number;
+  timingSpreadMs: number;
+}
+export interface MidiPerformanceResult extends Entity {
+  midiAnalysisVersion: 1;
+  profileId: string;
+  sessionId?: string;
+  blockId?: string;
+  sourceExerciseId?: string;
+  deviceProfileId?: string;
+  deviceKey: string;
+  deviceNameSnapshot: string;
+  manufacturerSnapshot: string;
+  bpm: number;
+  meter: Meter;
+  subdivision: Subdivision;
+  timingClick: TimingClickConfig;
+  durationSeconds: number;
+  expectedPattern: MidiExpectedPattern;
+  analyzedVoice?: MidiDrumVoice;
+  matchWindowMs: number;
+  expectedCount: number;
+  detectedCount: number;
+  matchedCount: number;
+  misses: number;
+  extras: number;
+  unmappedCount: number;
+  meanOffsetMs: number;
+  medianOffsetMs: number;
+  meanAbsoluteErrorMs: number;
+  spreadMs: number;
+  driftMsPerMinute: number;
+  confidence: TimingLabConfidence;
+  velocityMean: number;
+  velocityMedian: number;
+  velocitySpread: number;
+  velocityMin: number;
+  velocityMax: number;
+  velocityRange: number;
+  hits: MidiPerformanceMatchedHit[];
+  voices: MidiVoiceSummary[];
+}
 export interface Setlist extends Entity { name: string; date?: string; songIds: string[]; notes: string }
 export interface Preset extends Entity { name: string; config: MetronomeConfig }
 export interface Settings {
@@ -206,7 +286,7 @@ export interface Settings {
 export interface Data {
   schemaVersion?: 2; practiceModelVersion?: 1; profiles?: PracticeProfile[]; courseProgress?: CourseProgress[];
   exercises: Exercise[]; songs: Song[]; routines: Routine[]; dailyPlans: DailyPlan[];
-  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; timingResults?: TimingLabResult[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
+  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; timingResults?: TimingLabResult[]; midiDeviceProfiles?: MidiDeviceProfile[]; midiResults?: MidiPerformanceResult[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
   settings: Settings;
 }
 export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3 | 4; exportedAt: string; data: Data }

@@ -29,9 +29,10 @@ import { profilesPage } from './pages/profiles.js';
 import { practicePage, activePracticePage } from './pages/practice.js';
 import { metronomePage } from './pages/metronome.js';
 import { timingLabPage } from './pages/timing-lab.js';
+import { midiLabPage } from './pages/midi-lab.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/timing-lab','Timing Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
+const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/timing-lab','Timing Lab','pulse'],['/midi-lab','MIDI Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
@@ -41,6 +42,7 @@ function route(path:string):Page{
   if(path==='/practice')return practicePage();
   if(path==='/metronome')return metronomePage();
   if(path==='/timing-lab')return timingLabPage();
+  if(path==='/midi-lab')return midiLabPage();
   if(parts[0]==='courses')return coursesPage(id,parts[2],parts[3]);
   if(parts[0]==='library')return id?exercisePage(id):libraryPage();
   if(parts[0]==='routines')return id?routinePage(id):routinesPage();
