@@ -745,3 +745,16 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .track-player-grid{grid-template-columns:1fr}
   .track-time{font-size:22px}
 }
+
+
+/* Phase 19 — guided repertoire application cards. */
+.repertoire-guide-panel{display:grid;gap:0}
+.repertoire-guide-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;padding:16px 0;border-bottom:1px solid var(--border)}
+.repertoire-guide-card:last-child{border-bottom:0}
+.repertoire-guide-card>div:first-child{display:grid;gap:6px;min-width:0}
+.repertoire-guide-card h3{margin:0;font-size:16px}
+.repertoire-guide-card p{margin:0}
+@media(max-width:720px){
+  .repertoire-guide-card{grid-template-columns:1fr;gap:10px}
+  .repertoire-guide-card>.actions{justify-content:flex-start}
+}
