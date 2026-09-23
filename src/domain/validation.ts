@@ -236,9 +236,9 @@ const rawTimingLabResult=obj({
   ...entity,timingLabVersion:one(1),profileId:id,
   sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),
   bpm,meter,subdivision,timingClick,
-  durationSeconds:num(1,3600),threshold:num(.001,.95),inputOffsetMs:num(-250,250),matchWindowMs:num(10,500),
-  expectedCount:num(1,100000,true),detectedCount:num(0,100000,true),matchedCount:num(0,100000,true),
-  misses:num(0,100000,true),extras:num(0,100000,true),
+  durationSeconds:num(1,300),threshold:num(.001,.95),inputOffsetMs:num(-250,250),matchWindowMs:num(10,500),
+  expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
+  misses:num(0,10000,true),extras:num(0,10000,true),
   meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),
   driftMsPerMinute:num(-100000,100000),confidence:one('low','medium','high'),hits:arr(timingLabHit,10000),
 });
