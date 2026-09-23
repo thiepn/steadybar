@@ -79,6 +79,8 @@ Used when evidence is Low, a retest is due, the target is already in maintenance
 
 Used when the next practice should strengthen the same level: Repair without an explicit reduction, Stabilize, or Usable evidence.
 
+If a raw Exercise Progression snapshot says `advance` but the Intelligence decision is Hold or Consolidate, the executable recommendation is rebuilt with advancement disabled. The UI and Start/Add action therefore cannot execute a challenge increase that Intelligence explicitly blocked.
+
 ### Regress
 
 Used only when the authoritative current state/progression engine explicitly requests `reduce`.
@@ -140,7 +142,9 @@ By default only five recommendations are returned. Explicit diagnostic callers m
 - song section;
 - song transition.
 
-Exercise blocks preserve the recommended progression snapshot.
+Exercise blocks preserve the **decision-gated** progression snapshot. Raw progression-engine `advance` output is downgraded to a Hold snapshot whenever evidence confidence, Retest state, or Repair/Consolidate logic blocks progression.
+
+Every recommendation also carries its owning practice-profile ID. Shared-song blocks use that recommendation owner instead of reading whichever profile happens to be globally active when the action is clicked.
 
 Every executable recommendation also carries a user-confirmed manual prescription snapshot containing the exact recommended target and a practice intent derived from the recommendation action. This preserves Retest / Apply / Maintain evidence context without making the Intelligence engine an automatic execution source.
 
@@ -162,12 +166,9 @@ Priority factors are retained only as additional explainable context and signal 
 
 Autopilot v2 uses `rankIntelligentPracticeTargets()` instead of raw Priority ranking.
 
-Ordering therefore considers:
+The candidate list is first ordered by the unified Intelligence contract: recommendation band, practice action, evidence confidence, explainable Priority score, then deterministic target key.
 
-1. recommendation band (`Now`, `Soon`, `Later`);
-2. practice action urgency;
-3. existing explainable Priority score;
-4. deterministic target key tie-break.
+Inside each Autopilot slot, the composer applies only the slot-specific role fit (for example ramp-in, retention, repertoire, user-selected timing/technique intent) and diversity penalties. Within equal role fit, the unified Intelligence order wins; raw Priority score is only a final tie-break. This prevents a generic high Priority score from displacing an explicit Repair/Retest target in an otherwise equivalent primary slot.
 
 Autopilot still:
 
@@ -242,7 +243,10 @@ Release certification includes:
 - Usable/Build → Consolidate;
 - evidenced advance → Progress;
 - repair/retest ordering ahead of generic unexplored targets;
-- executable exercise progression preservation;
+- executable exercise progression preservation with decision gating;
+- blocked raw `advance` cannot leak into a Hold/Consolidate block;
+- shared-song recommendation profile ownership;
+- Autopilot primary ordering preserves Repair/Retest urgency over a higher raw Priority score;
 - executable transition block provenance;
 - Weekly Review unified snapshot;
 - active Priority Cycle anti-self-reinforcement;
