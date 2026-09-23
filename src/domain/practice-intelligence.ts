@@ -229,7 +229,7 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
     if(exercise)progression=buildExerciseProgression(data,exercise);
     if(progression)evidence.push('Next progression · '+progression.summary);
   }
-  const confidenceLevel=assessment?.confidence??confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0);
+  const confidenceLevel=confidence(candidate.state?.evidenceCount??0,candidate.state?.latestResult?1:0);
   return {
     source:'practice-target',target:structuredClone(candidate.target),targetKey:candidate.targetKey,label:candidate.label,
     band,action,confidence:confidenceLevel,decision:targetDecision(candidate.state,action,confidenceLevel,progression),
