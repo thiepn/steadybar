@@ -122,7 +122,7 @@ const piano:ContentRow[]=[
  ['Section accompaniment map','repertoire','Assign one repeatable accompaniment texture to each of two song sections and practice the texture change at their boundary.',repertoire('Piano section texture map','together'),'intermediate'],
  ['Close-voicing connection','chords','Connect C, Am, F, and G with economical right-hand movement while the left hand keeps a simple root pulse.',chords(['C','Am','F','G'],'Close-voiced accompaniment',16),'intermediate'],
  ['Pedal-change window','technique','Choose two adjacent chords and coordinate pedal release/reapplication with the harmonic change. Keep the hands simple enough to hear blur clearly.',rep('Controlled pedal changes',10),'intermediate'],
- ['Left-hand pulse under chords','coordination','Maintain a simple left-hand root or root-fifth pulse while the right hand changes chord texture. Stop and simplify if the pulse disappears.',tempo('Left-hand accompaniment pulse',60),'intermediate'],
+ ['Left-hand pulse under chords','independence','Maintain a simple left-hand root or root-fifth pulse while the right hand changes chord texture. Stop and simplify if the pulse disappears.',tempo('Left-hand accompaniment pulse',60),'intermediate'],
  ['Register and density contrast','repertoire','Compare a sparse high-register verse texture with a fuller chorus texture without changing form or harmonic timing.',repertoire('Register and density by section','together'),'advanced'],
  ['Complete piano take and repair','repertoire','Complete one accompaniment take, choose one form, voicing, transition, or pedal repair, then retake with the same arrangement.',repertoire('Take → repair → retake','together'),'advanced'],
 ];
