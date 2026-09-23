@@ -21,13 +21,13 @@ const options={minutes:5,voice:{startMidi:60,lowMidi:48,highMidi:84}};
 const review=(lesson,extra={})=>({id:'review1',checks:lesson.checks.map(()=>true),answers:lesson.questions.map(q=>q.answer),confidence:4,notes:'Observed an actual complete take.',evidence:{kind:'off-app',minutes:5,confirmed:true},...extra});
 function completed(data,p,course,lesson){let s=createSession(learn.lessonBlocks(course,lesson,p,options),data);for(let i=0;i<lesson.tasks.length;i++){s.blocks[i].startedAt=at;s.blocks[i].actualActiveSeconds=20;s=finishBlock(s,false,Date.parse(at)+60000+i*20000);}return validateSession(s);}
 
-test('catalog has three genuinely separate courses per principal instrument and one honest custom method course',()=>{
- assert.equal(COURSES.length,16);assert.equal(COURSES.reduce((n,c)=>n+c.lessons.length,0),94);
+test('catalog has four progressive stages per principal instrument plus honest custom development',()=>{
+ assert.equal(COURSES.length,22);assert.equal(COURSES.reduce((n,c)=>n+c.lessons.length,0),118);assert.equal(COURSES.reduce((n,c)=>n+c.lessons.reduce((m,l)=>m+l.tasks.length,0),0),236);
  assert.equal(new Set(COURSES.map(c=>c.id)).size,COURSES.length);
- for(const type of ['drums','guitar','bass','piano','voice']){const courses=learn.coursesFor(profile(type));assert.deepEqual(courses.map(c=>c.stage),['foundation','development','ensemble']);assert.equal(courses.reduce((n,c)=>n+c.lessons.length,0),18);}
- assert.equal(learn.coursesFor(profile('custom')).length,1);assert.match(learn.coursesFor(profile('custom'))[0].summary,/not fabricated/);
+ for(const type of ['drums','guitar','bass','piano','voice']){const courses=learn.coursesFor(profile(type));assert.deepEqual(courses.map(c=>c.stage),['foundation','development','ensemble','repertoire']);assert.equal(courses.reduce((n,c)=>n+c.lessons.length,0),22);}
+ const custom=learn.coursesFor(profile('custom'));assert.equal(custom.length,2);assert.deepEqual(custom.map(c=>c.stage),['foundation','development']);assert.match(custom[0].summary,/not fabricated/);
  assert.equal(learn.coursesFor({...profile('custom'),attribution:'unresolved-history'}).length,0);
- assert.ok(new Set(COURSES.flatMap(c=>c.lessons.map(l=>l.objective))).size>90);
+ assert.ok(new Set(COURSES.flatMap(c=>c.lessons.map(l=>l.objective))).size>110);
 });
 for(const c of COURSES)for(const l of c.lessons)test(`${c.id}/${l.id}: complete teaching, original example, executable tasks and criterion-specific check`,()=>{
  const p=profile(c.instrument);assert.ok(l.teaching.length>=2);assert.ok(l.teaching.join(' ').length>=250);

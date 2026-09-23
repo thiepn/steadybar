@@ -19,7 +19,7 @@ export interface Lesson {
   easier:string; harder:string; mistake:string; transfer:string;
 }
 export interface Course {
-  id:string; revision:number; instrument:InstrumentType; title:string; stage:'foundation'|'development'|'ensemble';
+  id:string; revision:number; instrument:InstrumentType; title:string; stage:'foundation'|'development'|'ensemble'|'repertoire';
   level:Experience; summary:string; prerequisites:string; outcomes:string[]; sourceIds:string[];
   /** A placement suggestion is not a proficiency certificate or an access lock. */
   placement:string[]; lessons:Lesson[];

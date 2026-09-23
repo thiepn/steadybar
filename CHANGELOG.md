@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.19.0 — Curriculum Expansion, Exercise Library, Guided Courses & Repertoire Training Content — 2026-09-23
+
+- Expand Learn from **16 courses / 94 lessons / 188 tasks** to **22 courses / 118 lessons / 236 runnable tasks**.
+- Add a distinct static **Repertoire laboratory** course stage after Ensemble application for Drums, Guitar, Bass, Piano and Voice.
+- Add four original repertoire/application lessons per principal instrument, covering section-role/texture mapping, transitions, dynamics or note length, contextual repairs and take → repair → retake workflows.
+- Expand Custom from one four-lesson Foundation course to two courses / eight lessons with a general Development pathway for observable targets, contextual repair, complete takes and later-day transfer.
+- Keep every new lesson inside the existing evidence model: two runnable tasks, explicit criteria, knowledge checks, lesson notes, off-app/session evidence and flexible review suggestions.
+- Expand the built-in exercise library from **140 to 170 exercises across the five principal instruments**, adding repertoire-specific transition, section, dynamics, pocket, texture, full-take and repair drills.
+- Add three additional general-purpose Custom exercises for contextual repair, complete takes and later-day repertoire checks.
+- Add idempotent built-in content reconciliation during database initialization: newly shipped built-ins are added by stable ID, while existing rows with the same IDs—including user edits and archives—are never overwritten.
+- Add instrument-specific **Repertoire training** guide cards directly to Song pages. Each profile receives four bounded guides that launch or plan normal existing song/song-section practice blocks with explicit instructions.
+- Repertoire guides reuse the current Songs → Today → Focus Player → History pipeline; no second repertoire database or pseudo-score is introduced.
+- Voice repertoire guides retain explicit comfort/stop rules and do not turn repeated takes into a stamina target.
+- Add deterministic catalog/exercise reconciliation tests and browser coverage proving repertoire guides preserve song/section source IDs when launched.
+- No database schema or backup-envelope bump is required beyond Phase 18's existing schema v11 / backup v4; course content is static and new built-ins reconcile into the existing stores.
 ## 2.18.0 — Local Audio Practice Engine, Track Import, Looping & Tempo-Controlled Repertoire Practice — 2026-09-23
 
 - Add song/part-attached **local repertoire tracks** stored only in the current browser profile.

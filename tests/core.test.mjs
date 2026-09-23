@@ -37,7 +37,7 @@ test('tempo series is cumulative clean only and grouped locally',()=>{
 test('date filter uses inclusive local days',()=>assert.equal(analytics.filterSessions([session(1,'other',[],'2026-09-08T22:15:00.000Z')],'2026-09-09','2026-09-09').length,1));
 test('practice daily totals are computed from actual time',()=>assert.equal(analytics.practiceByDay(fixture)[0].seconds,3600));
 test('large attempt history does not overflow argument stack',()=>assert.equal(analytics.calculateBestCleanBpm(Array.from({length:200000},()=>attempt(100))),100));
-test('built-in library includes every required rudiment, no history',()=>{const d=seedData();assert.equal(d.exercises.filter(e=>e.category==='rudiment').length,21);assert.equal(d.exercises.length,30);assert.equal(d.sessions.length,0);assert.equal(d.songs.length,0);assert.equal(d.goals.length,0);});
+test('built-in library includes every required rudiment, no history',()=>{const d=seedData();assert.equal(d.exercises.filter(e=>e.category==='rudiment').length,21);assert.equal(d.exercises.length,36);assert.equal(d.sessions.length,0);assert.equal(d.songs.length,0);assert.equal(d.goals.length,0);});
 test('starter routines have exact 20/30/45/60 minute duration',()=>assert.deepEqual(seedData().routines.map(r=>analytics.routineDuration(r.blocks)),[1200,1800,2700,3600]));
 test('all starter content validates and round-trips as backup',()=>{const b=createBackup(seedData(),date);assert.deepEqual(parseBackup(JSON.stringify(b)),b);});
 test('new daily-plan blocks have independent IDs',()=>{const blocks=[free(),free()];const copies=u.freshBlocks(blocks);assert.notEqual(copies[0].id,blocks[0].id);assert.equal(copies[1].order,1);});

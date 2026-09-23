@@ -677,6 +677,31 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertTrue(state['track']);self.assertEqual(state['cues'],0);self.assertEqual(state['sections'],0)
 
 
+    def test_64_repertoire_guide_launches_normal_song_section_practice(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),now=new Date().toISOString(),song='qa-guide-song',section='qa-guide-section';
+          d.songs=[{id:song,createdAt:now,updatedAt:now,title:'Guide Song',artist:'QA',bpm:84,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:section,name:'Verse',bars:8,notes:'Keep it simple.',order:0}]}];
+          await load('db/database.js').replaceData(d);await store.refresh();return {song,section};
+        })()""")
+        self.route('/songs/'+fixture['song'])
+        expect(self.page.get_by_role('heading',name='Repertoire training',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.repertoire-guide-card').count(),4)
+        first=self.page.locator('.repertoire-guide-card').first
+        guide_title=first.locator('h3').inner_text()
+        first.get_by_role('button',name='Start guide',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        expect(dialog.get_by_label('Song section',exact=True)).to_have_value(fixture['section'])
+        dialog.get_by_role('button',name='Start guide',exact=True).click()
+        expect(dialog).to_have_count(0)
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        session=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {song:b.sourceSongId,section:b.sourceSongSectionId,title:b.titleSnapshot,notes:b.notes};
+        })()""")
+        self.assertEqual(session['song'],fixture['song']);self.assertEqual(session['section'],fixture['section'])
+        self.assertIn(guide_title,session['title']);self.assertGreater(len(session['notes']),80)
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

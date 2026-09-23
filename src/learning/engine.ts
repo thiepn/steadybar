@@ -10,7 +10,7 @@ import { rebuildPracticeStates } from '../domain/practice-state-rebuild.js';
 import type { Course, CourseProgress, Lesson, LessonAttempt, LessonLaunchOptions, LessonRecord } from './types.js';
 import { validateCourseProgress } from './validation.js';
 
-export const stageName=(stage:Course['stage']):string=>({foundation:'Foundations',development:'Skill development',ensemble:'Ensemble application'})[stage];
+export const stageName=(stage:Course['stage']):string=>({foundation:'Foundations',development:'Skill development',ensemble:'Ensemble application',repertoire:'Repertoire laboratory'})[stage];
 export function coursesFor(profile:PracticeProfile):readonly Course[]{return profile.attribution==='unresolved-history'?[]:COURSES.filter(c=>c.instrument===profile.instrumentType);}
 export const courseById=(id:string):Course|undefined=>COURSES.find(c=>c.id===id);
 export const progressFor=(data:Data,profileId:string,courseId:string):CourseProgress|undefined=>data.courseProgress?.find(p=>p.profileId===profileId&&p.courseId===courseId);

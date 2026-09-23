@@ -24,8 +24,19 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);assert.deepEqual(data.audioTracks,[]);
+  assert.equal(data.exercises.length,36);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);assert.deepEqual(data.audioTracks,[]);
   assert.equal(adapter.state.aborted,0);
+});
+test('initialization adds missing Phase 19 built-ins without overwriting edited built-ins',async()=>{
+  await db.initializeDatabase();let data=await db.readData();
+  const edited=data.exercises.find(row=>row.id==='rudiment-1');assert.ok(edited);
+  edited.name='My edited single strokes';edited.archived=true;data.exercises=data.exercises.filter(row=>row.id!=='exercise-15').map(row=>row.id===edited.id?edited:row);
+  await db.replaceData(data);assert.equal((await db.readData()).exercises.some(row=>row.id==='exercise-15'),false);
+  await db.initializeDatabase();data=await db.readData();
+  assert.equal(data.exercises.find(row=>row.id==='rudiment-1').name,'My edited single strokes');
+  assert.equal(data.exercises.find(row=>row.id==='rudiment-1').archived,true);
+  assert.equal(data.exercises.find(row=>row.id==='exercise-15').name,'Complete Take Recovery');
+  const once=structuredClone(data);await db.initializeDatabase();assert.deepEqual(await db.readData(),once);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
   await db.initializeDatabase();const e={...migratePracticeData(seedData()).exercises[0],...metadata(),name:'My control exercise',builtin:false};

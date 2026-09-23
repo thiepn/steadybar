@@ -320,12 +320,12 @@ class MusicPracticeTests(unittest.TestCase):
         file=self.page.get_by_label('Choose backup file',exact=True)
         file.set_input_files({'name':'invalid.json','mimeType':'application/json','buffer':b'{"format":"music-practice-os","version":999}'})
         expect(self.page.get_by_role('alert')).to_contain_text('unsupported')
-        self.assertEqual(self.read("load('app/store.js').store.snapshot().exercises.length"),30)
+        self.assertEqual(self.read("load('app/store.js').store.snapshot().exercises.length"),36)
         backup=self.read("load('db/backup.js').createBackup(load('app/store.js').store.snapshot())")
         file.set_input_files({'name':'valid.json','mimeType':'application/json','buffer':json.dumps(backup).encode()})
         expect(self.page.get_by_role('dialog')).to_be_visible()
         self.page.locator('dialog[open]').get_by_role('button',name='Cancel',exact=True).click()
-        self.assertEqual(self.read("load('app/store.js').store.snapshot().exercises.length"),30)
+        self.assertEqual(self.read("load('app/store.js').store.snapshot().exercises.length"),36)
 
     def test_12_mobile_practice_critical_controls_visible(self):
         self.onboard();self.route('/library/rudiment-2');self.page.get_by_role('button',name='Start practice',exact=True).click()
