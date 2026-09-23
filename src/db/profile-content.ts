@@ -48,6 +48,12 @@ const guitar:ContentRow[]=[
  ['First-read melody','reading','Choose a new short melody from your own score or tab. Keep moving; log the first read separately from later practice.',reading('A new 4–8 bar melody from your own score or tab')],
  ['Repertoire transition','repertoire','Choose two adjacent sections of your song. Practice the last bar of one and the first bar of the next.',repertoire('Section-to-section transition')],
  ['Solo phrase isolation','repertoire','Select a short difficult phrase, identify the specific problem and practice its entry and exit as well as the notes.',repertoire('A short solo phrase'),'intermediate'],
+ ['Section texture map','repertoire','Choose two song sections and assign one repeatable guitar texture to each. Practice the boundary before adding embellishment.',repertoire('Two-section texture map'),'intermediate'],
+ ['Continuous strum through changes','rhythm','Keep down-up subdivision motion continuous while changing familiar chords. Muted strokes may stay silent, but the hand and count continue.',tempo('Continuous eighth-note motion',68),'intermediate'],
+ ['Contextual chord transition','technique','Choose one difficult repertoire chord change. Include the final beat before it and first beat after it in every repetition.',chords(['G','D/F#','Em'],'Contextual transition',12),'intermediate'],
+ ['Register contrast rehearsal','repertoire','Play a verse texture in one register and a chorus texture in another. Keep harmonic rhythm and section entrances unchanged.',repertoire('Register contrast by section'),'advanced'],
+ ['Muted pocket comparison','rhythm','Compare a sparse muted verse rhythm with a fuller chorus rhythm at the same tempo. Keep subdivision motion consistent.',groove('Muted verse/chorus pocket','articulation'),'intermediate'],
+ ['Complete guitar take and repair','repertoire','Complete one bounded repertoire take, identify one high-impact repair, practice that window, then retake with the same arrangement choices.',repertoire('Take → repair → retake'),'advanced'],
 ];
 const bass:ContentRow[]=[
  ['Even open-string alternation','warmup','Alternate index and middle fingers slowly. Listen for an even level and release unnecessary tension.',tempo('Relaxed alternating fingers')],
@@ -75,6 +81,12 @@ const bass:ContentRow[]=[
  ['First-read bass line','reading','Use a new short line from your own score. Preserve the pulse and log the first attempt before rehearsing it.',reading('New 4–8 bar bass line from your own score')],
  ['Repertoire groove','repertoire','Choose the main groove of a song. Practice a whole phrase including its rests and ending.',repertoire('Main groove, rests and ending')],
  ['Fill into the next section','repertoire','Practice one fill together with the groove before and after it. Prioritize arriving at the next section on time.',repertoire('Fill and re-entry'),'intermediate'],
+ ['Section anchor map','repertoire','Define the minimum roots, shared drum anchors, and planned note endings for two song sections before adding passing tones.',repertoire('Bass section anchor map'),'intermediate'],
+ ['Anticipation control','groove','Add one anticipated chord-change note while keeping the next root exactly on its intended beat. Compare with the simple anchor version.',groove('Single anticipation','time','C – Am – F – G'),'intermediate'],
+ ['Register choice comparison','repertoire','Play the same roots in two appropriate registers and choose the one that leaves the arrangement clearer.',repertoire('Bass register comparison'),'intermediate'],
+ ['Note-length section contrast','muting','Use shorter notes in one section and sustained notes in another while keeping attack timing and chord changes unchanged.',groove('Section note-length contrast','muting'),'intermediate'],
+ ['Contextual bass transition','repertoire','Loop the final bar of one section and first bar of the next. Preserve the planned release before the new root.',repertoire('Section transition with release'),'advanced'],
+ ['Complete bass take and repair','repertoire','Finish one bounded bass take, choose one timing, muting, or harmonic repair, then retake with the same core line.',repertoire('Take → repair → retake'),'advanced'],
 ];
 const piano:ContentRow[]=[
  ['Five-finger ease','warmup','Play a comfortable five-note pattern quietly. Keep the wrist free and release tension between passes.',tempo('Comfortable five-finger pattern')],
@@ -107,6 +119,12 @@ const piano:ContentRow[]=[
  ['Left-hand passage','repertoire','Choose a difficult accompaniment phrase. Practice the left hand alone and include its entry.',repertoire('Left-hand accompaniment passage','left')],
  ['Hands-together passage','repertoire','Join a short passage after separate-hand work. Reduce tempo until coordination is secure.',repertoire('Combine a short passage','together')],
  ['Chord-based improvisation','improvisation','Choose two familiar chords. Create a short melody using space and repetition, then reflect on the phrasing.',free('Improvise over two familiar chords')],
+ ['Section accompaniment map','repertoire','Assign one repeatable accompaniment texture to each of two song sections and practice the texture change at their boundary.',repertoire('Piano section texture map','together'),'intermediate'],
+ ['Close-voicing connection','chords','Connect C, Am, F, and G with economical right-hand movement while the left hand keeps a simple root pulse.',chords(['C','Am','F','G'],'Close-voiced accompaniment',16),'intermediate'],
+ ['Pedal-change window','technique','Choose two adjacent chords and coordinate pedal release/reapplication with the harmonic change. Keep the hands simple enough to hear blur clearly.',rep('Controlled pedal changes',10),'intermediate'],
+ ['Left-hand pulse under chords','coordination','Maintain a simple left-hand root or root-fifth pulse while the right hand changes chord texture. Stop and simplify if the pulse disappears.',tempo('Left-hand accompaniment pulse',60),'intermediate'],
+ ['Register and density contrast','repertoire','Compare a sparse high-register verse texture with a fuller chorus texture without changing form or harmonic timing.',repertoire('Register and density by section','together'),'advanced'],
+ ['Complete piano take and repair','repertoire','Complete one accompaniment take, choose one form, voicing, transition, or pedal repair, then retake with the same arrangement.',repertoire('Take → repair → retake','together'),'advanced'],
 ];
 const voice:ContentRow[]=[
  ['Quiet preparation','warmup','Check how your voice feels. Do not sing through hoarseness, pain or fatigue. Rest instead; adjust reference pitches to your comfortable range.',free('Check comfort; prepare or choose rest')],
@@ -134,6 +152,12 @@ const voice:ContentRow[]=[
  ['First-read singing','sight-singing','Choose a new short melody within a comfortable range. Hear the starting pitch separately and log the first read.',reading('New short melody from your own score, in a comfortable range')],
  ['Repertoire phrase','repertoire','Choose a short lyric phrase. Mark breathing and diction cues; pause whenever the voice becomes tired.',repertoire('One lyric phrase with breath and diction cues')],
  ['Listening and reflection','repertoire','Listen to a recording you are permitted to use or review your own recording outside the app. Note one concrete change for next time.',free('Listen and choose one next practice goal')],
+ ['Prepared repertoire entrance','repertoire','Hear the starting reference, imagine the target pitch, count the entrance, and sing only a short comfortable phrase before resting.',repertoire('Prepared vocal entrance'),'intermediate'],
+ ['Phrase breath map','breath','Mark comfortable breath points in a short repertoire section. Speak the text first, then sing once and compare the actual breaths with the plan.',repertoire('Breath-planned repertoire phrase'),'intermediate'],
+ ['Harmony-line independence','harmony','Learn one short harmony phrase alone before adding a permitted melody reference. Keep volume easy enough to hear your own line.',repertoire('Short independent harmony line'),'intermediate'],
+ ['Diction priority phrase','diction','Choose two words or consonants that need clarity in a short phrase. Keep jaw and tongue effort low while preserving the musical line.',repertoire('Diction-priority repertoire phrase'),'intermediate'],
+ ['Comfortable dynamic arc','tone','Sing a short phrase with one planned rise and return in intensity. Do not extend range or volume when fatigue appears.',repertoire('Comfortable phrase dynamic arc'),'advanced'],
+ ['Bounded vocal take and repair','repertoire','Complete one short take, choose one entrance, breath, lyric, or harmony repair, rest, and retake only if the voice remains comfortable.',repertoire('Bounded take → repair → retake'),'advanced'],
 ];
 export function starterContent(profile:PracticeProfile):{exercises:Exercise[];routines:Routine[]} {
   const timestamp=profile.createdAt,label=definition(profile.instrumentType).label;
@@ -145,7 +169,7 @@ export function starterContent(profile:PracticeProfile):{exercises:Exercise[];ro
     exercises=legacy.exercises.map(e=>({...e,...base,category:e.category,tags:[...new Set([...e.tags,'starter'])],id:canonical?e.id:`${profile.id}.${e.id}`,skillArea:e.category==='rudiment'?'rudiments':e.category,protocol:exerciseProtocol(e),level:'beginner'}));
     oldRoutines=legacy.routines.map(r=>({...r,profileId:profile.id,id:canonical?r.id:`${profile.id}.${r.id}`,blocks:r.blocks.map(b=>({...b,profileId:profile.id,exerciseId:b.exerciseId?(canonical?b.exerciseId:`${profile.id}.${b.exerciseId}`):undefined}))}));
   }else{
-    const fallback:ContentRow[]=[['Prepare and warm up','warmup','Choose a familiar, low-effort task appropriate to your instrument. Stop if it causes pain or strain.',free('Familiar gentle preparation')],['Clean passage repetitions','technique','Choose a short task from your own material. Count clean attempts after each round.',rep('A short familiar passage')],['First-read practice','reading','Use new material from your own score and distinguish first reading from rehearsal.',reading('Your own new short score')],['Repertoire phrase','repertoire','Select a short phrase, define one musical goal and reflect after playing.',repertoire('A phrase from your own repertoire')]];
+    const fallback:ContentRow[]=[['Prepare and warm up','warmup','Choose a familiar, low-effort task appropriate to your instrument. Stop if it causes pain or strain.',free('Familiar gentle preparation')],['Clean passage repetitions','technique','Choose a short task from your own material. Count clean attempts after each round.',rep('A short familiar passage')],['First-read practice','reading','Use new material from your own score and distinguish first reading from rehearsal.',reading('Your own new short score')],['Repertoire phrase','repertoire','Select a short phrase, define one musical goal and reflect after playing.',repertoire('A phrase from your own repertoire')],['Contextual repair window','technique','Practice one difficult event with a short entrance and exit so the real movement and recovery are included.',repertoire('Contextual repair window')],['Complete take and repair','repertoire','Complete one bounded take, choose one observable repair, then retake the same material without changing the criterion.',repertoire('Take → repair → retake')],['Later-day repertoire check','repertoire','Attempt a previously repaired passage before extended repetition and record what remains dependable.',repertoire('Later-day repertoire check')]];
     const rows=({guitar,bass,piano,voice,custom:fallback} as const)[profile.instrumentType];
     exercises=rows.map(([name,skillArea,instructions,protocol,level='beginner'],i)=>({...base,id:`${profile.id}.exercise-${i+1}`,name,skillArea,description:instructions.split('. ')[0]+'.',instructions,protocol:structuredClone(protocol),level}));
     if(profile.instrumentType==='custom'){
