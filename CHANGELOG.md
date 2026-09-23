@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.16.0 — Timing Lab: Microphone-Based Timing Analysis & Precision Diagnostics — 2026-09-23
+
+- Add a dedicated **Timing Lab** that compares microphone-detected attacks against the same Web Audio clock used by Steadybar's metronome.
+- Add a local AudioWorklet onset detector with sample-clock timestamps instead of relying on animation frames or UI timers.
+- Add one-bar count-in, 5–180 second tests, BPM/subdivision/click-mode controls, microphone threshold control and manual input-latency compensation.
+- Add ambient-noise microphone calibration that suggests a conservative onset threshold without uploading or retaining raw microphone audio.
+- Match detected attacks one-to-one against expected subdivision positions inside a bounded tempo-aware window.
+- Persist compact diagnostics: expected/detected/matched counts, misses, extras, signed average bias, median offset, mean absolute error, spread, drift per minute, measurement confidence and per-hit matched offsets.
+- Add a responsive offset-over-time visualization and timing-history list while keeping the underlying numeric evidence readable without the chart.
+- Add Low / Medium / High **measurement confidence** based on amount and cleanliness of matched evidence; confidence is explicitly not a skill or musicianship score.
+- Add `/timing-lab` navigation, Metronome/Progress links and command-search access.
+- Add a dedicated `timingResults` IndexedDB store and bump the structured workspace database from schema v8 to v9.
+- Keep backup envelope v4; modern backups include Timing Lab result data, while older v4 backups restore with an empty timing history.
+- Cache the timing onset worklet in the normal offline application shell.
+- Add deterministic analysis, repository, backup, native AudioWorklet, responsive UI and cross-browser regression coverage.
+- Timing Lab does not infer technique, health, fatigue, limb identity or overall groove quality. Hardware/input latency and speaker-click bleed can affect microphone measurements; headphones are strongly recommended.
 ## 2.15.0 — Smart Scheduling Calibration & Adaptive Practice Load — 2026-09-23
 
 - Add a deterministic six-week **practice-load calibration** derived only from recorded active practice time.
