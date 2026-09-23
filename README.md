@@ -22,6 +22,16 @@ npm run preview
 
 The downloadable release ZIP includes `dist/`; that copy can run `npm run preview` without installing dependencies. Git checkouts intentionally exclude generated `dist/`. Do not open the application through `file://`.
 
+## Smart scheduling calibration & adaptive practice load — 2.15.0
+
+Calendar can now learn from the previous six weeks of **recorded active practice**. With enough evidence, it estimates a typical active-day duration, median active-week volume and the weekdays you actually tend to practice. That context can prefill a more realistic draft week instead of always using the same generic Monday/Wednesday/Friday pattern.
+
+The adaptation is deliberately conservative. Profile-default weekly load may move by at most ±30% per generated week, and only with Medium/High evidence confidence. Explicit **Training Cycle** weekly load and explicit **weekly-minute goals** remain authoritative; explicit weekly-session goals keep their requested day count. Calibration never uses ratings, mastery, fatigue, health, streaks or an opaque readiness score.
+
+Calendar generation includes a **Use recent practice calibration** switch, and every generated week keeps the exact evidence snapshot that influenced it. Weekly Review also shows a read-only next-week load preview before anything is generated or applied. The feature remains Draft-first: nothing changes Today until the user explicitly generates and applies a schedule.
+
+Phase 15 adds no new database store and does not change backup format. See [practice-load calibration architecture](docs/PRACTICE-LOAD-CALIBRATION.md).
+
 ## Recordings & practice evidence — 2.14.0
 
 Active practice now includes a lightweight **Record attempt** control. It captures microphone audio for the current block and saves contextual metadata such as the profile, session, block, exercise/song section, BPM and attempt number. The flow is intentionally short: start capture, play, stop and save, then continue practicing.

@@ -540,6 +540,57 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_text('Calendar-selected timing session.',exact=True)).to_be_visible()
 
 
+    def test_59_adaptive_load_calibration_prefills_calendar_and_weekly_review(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId),utils=load('domain/utils.js'),monday=utils.isoWeekStart();
+          const stamp=new Date().toISOString(),dates=[];
+          for(let week=-6;week<=-1;week++)for(const offset of [1,3,5]){
+            const date=new Date(monday);date.setDate(date.getDate()+week*7+offset);dates.push(utils.localDate(date));
+          }
+          const make=(date,index)=>{
+            const startedAt=date+'T10:00:00.000Z',endedAt=date+'T10:40:00.000Z',seconds=2400;
+            return {id:'qa-load-'+index,createdAt:startedAt,updatedAt:endedAt,profileId:profile.id,profileNameSnapshot:profile.name,status:'completed',startedAt,endedAt,activeBlockIndex:0,sessionNotes:'',runtime:{phase:'paused',bpm:80,trainerCleanRounds:0,trainerStartSeconds:0,checkpointAt:endedAt,metronomeOn:false},blocks:[{id:'qa-load-block-'+index,profileId:profile.id,profileNameSnapshot:profile.name,type:'free',titleSnapshot:'Calibration practice',categorySnapshot:'other',stickingSnapshot:'',meterSnapshot:{beats:4,beatUnit:4},subdivisionSnapshot:1,targetSeconds:seconds,actualActiveSeconds:seconds,tempoAttempts:[],notes:'',completed:true,skipped:false,protocolSnapshot:{kind:'free',focus:'Practice'}}]};
+          };
+          d.sessions=dates.map(make);d.goals=[];d.trainingPlans=[];d.weeklySchedules=[];d.priorityCycles=[];
+          await load('db/database.js').replaceData(d);await store.refresh();
+          const round5=value=>Math.max(5,Math.round(value/5)*5),baseline=profile.defaultSessionMinutes*3,lower=round5(baseline*.7),upper=Math.min(1260,round5(baseline*1.3)),observed=round5(120),adaptive=Math.max(Math.min(observed,Math.max(lower,upper)),Math.min(lower,upper));
+          const standardDays=Math.max(1,Math.min(7,Math.round(baseline/profile.defaultSessionMinutes))),durationDays=Math.max(1,Math.round(adaptive/40)),adaptiveDays=Math.max(1,Math.min(7,Math.round((3+durationDays)/2)));
+          return {weekStart:utils.localDate(monday),profileId:profile.id,baseline,adaptive,standardDays,adaptiveDays};
+        })()""")
+        self.route('/calendar')
+        self.page.get_by_role('button',name='Generate week',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        expect(dialog.get_by_label('Use recent practice calibration',exact=True)).to_be_checked()
+        expect(dialog.get_by_text('Established calibration',exact=False)).to_be_visible()
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['adaptive']))
+        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value(str(fixture['adaptiveDays']))
+
+        dialog.get_by_label('Use recent practice calibration',exact=True).uncheck()
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['baseline']))
+        expect(dialog.get_by_label('Planned practice days',exact=True)).to_have_value(str(fixture['standardDays']))
+        dialog.get_by_label('Use recent practice calibration',exact=True).check()
+        expect(dialog.get_by_label('Planned weekly minutes',exact=True)).to_have_value(str(fixture['adaptive']))
+        dialog.get_by_role('button',name='Generate schedule',exact=True).click()
+        expect(dialog).to_have_count(0)
+
+        saved=self.read("""(()=>{
+          const schedule=load('app/store.js').store.snapshot().weeklySchedules[0];
+          return {target:schedule.targetMinutes,kinds:schedule.days.map((d,i)=>d.kind==='practice'?i:-1).filter(i=>i>=0),load:schedule.source.loadCalibration};
+        })()""")
+        self.assertEqual(saved['target'],fixture['adaptive']);self.assertEqual(saved['kinds'],[1,3,5])
+        self.assertEqual(saved['load']['confidence'],'high');self.assertTrue(saved['load']['loadAdjusted']);self.assertTrue(saved['load']['patternAdjusted'])
+        expect(self.page.get_by_text('Load calibration · High',exact=True)).to_be_visible()
+        expect(self.page.get_by_text(f"Profile-default load adjusted from {fixture['baseline']} to {fixture['adaptive']} min.",exact=True)).to_be_visible()
+
+        self.route('/review')
+        expect(self.page.get_by_role('heading',name='Next-week scheduling load',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Established calibration',exact=False).first).to_be_visible()
+        expect(self.page.get_by_text('Profile Default',exact=True)).to_be_visible()
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

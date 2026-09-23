@@ -4,6 +4,7 @@ import { activeTrainingPlan, trainingPhaseForDate } from './training-plan.js';
 import { skillDefinition } from './skill-graph.js';
 import { finishedSessions, sessionTime } from './analytics.js';
 import { localDate, uuid } from './utils.js';
+import { buildPracticeLoadCalibration } from './practice-load.js';
 
 export const WEEKLY_SCHEDULE_ENGINE_VERSION=1 as const;
 export const MAX_SCHEDULED_DAY_MINUTES=180;
@@ -14,6 +15,7 @@ export interface BuildWeeklyScheduleOptions {
   targetMinutes?:number;
   practiceDays?:number;
   includeOptionalDay?:boolean;
+  adaptiveLoad?:boolean;
   now?:Date|string|number;
 }
 export interface WeeklyScheduleDayActual {
@@ -55,10 +57,13 @@ function recentGoal(data:Data,profileId:string,type:'weekly-minutes'|'weekly-ses
   return data.goals.filter(goal=>goal.type===type&&!goal.completed&&(!goal.profileId||goal.profileId===profileId))
     .sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)||b.createdAt.localeCompare(a.createdAt))[0];
 }
+function profileDefaultWeeklyMinutes(data:Data,profileId:string):number{
+  const profile=data.profiles?.find(row=>row.id===profileId),sessions=recentGoal(data,profileId,'weekly-sessions');
+  return Math.max(5,Math.round((profile?.defaultSessionMinutes??30)*(sessions?.targetValue??3)));
+}
 function fallbackWeeklyMinutes(data:Data,profileId:string):number{
   const minutes=recentGoal(data,profileId,'weekly-minutes');if(minutes)return Math.round(minutes.targetValue);
-  const profile=data.profiles?.find(row=>row.id===profileId);const sessions=recentGoal(data,profileId,'weekly-sessions');
-  return Math.max(5,Math.round((profile?.defaultSessionMinutes??30)*(sessions?.targetValue??3)));
+  return profileDefaultWeeklyMinutes(data,profileId);
 }
 function targetFromTraining(data:Data,profileId:string,weekStart:string):number|undefined{
   const plan=activeTrainingPlan(data,profileId);if(!plan)return undefined;
@@ -72,15 +77,17 @@ function targetFromTraining(data:Data,profileId:string,weekStart:string):number|
   }
   return overlap?Math.max(5,Math.round(values.reduce((sum,value)=>sum+value,0))):undefined;
 }
+function constrainPracticeDays(count:number,targetMinutes:number):number{
+  let next=clamp(Math.round(count),1,7);
+  next=Math.max(next,Math.ceil(targetMinutes/MAX_SCHEDULED_DAY_MINUTES));
+  next=Math.min(next,Math.max(1,Math.floor(targetMinutes/5)));
+  if(next>7)throw new Error('This weekly target cannot fit into seven sessions of 180 minutes or less.');
+  return next;
+}
 function recommendedPracticeDays(data:Data,profileId:string,targetMinutes:number):number{
   const explicit=recentGoal(data,profileId,'weekly-sessions');
   const profile=data.profiles?.find(row=>row.id===profileId),defaultMinutes=Math.max(5,profile?.defaultSessionMinutes??30);
-  let count=explicit?Math.round(explicit.targetValue):Math.round(targetMinutes/defaultMinutes);
-  count=clamp(count,1,7);
-  count=Math.max(count,Math.ceil(targetMinutes/MAX_SCHEDULED_DAY_MINUTES));
-  count=Math.min(count,Math.max(1,Math.floor(targetMinutes/5)));
-  if(count>7)throw new Error('This weekly target cannot fit into seven sessions of 180 minutes or less.');
-  return count;
+  return constrainPracticeDays(explicit?Math.round(explicit.targetValue):Math.round(targetMinutes/defaultMinutes),targetMinutes);
 }
 function allocateMinutes(total:number,count:number):number[]{
   if(!Number.isInteger(total)||total<5)throw new Error('Weekly planned minutes must be a whole number of at least 5.');
@@ -104,7 +111,7 @@ function intentForDate(data:Data,profileId:string,date:string):TrainingEmphasis{
   const plan=activeTrainingPlan(data,profileId);
   return plan&&date>=plan.startOn&&date<=plan.endOn?(trainingPhaseForDate(plan,date)?.emphasis??'balanced'):'balanced';
 }
-function sourceSnapshot(data:Data,profileId:string,weekStart:string):WeeklySchedule['source']{
+function sourceSnapshot(data:Data,profileId:string,weekStart:string,loadCalibration?:WeeklySchedule['source']['loadCalibration']):WeeklySchedule['source']{
   const plan=activeTrainingPlan(data,profileId),phaseIds:string[]=[],phaseNames:string[]=[];
   if(plan)for(let i=0;i<7;i++){
     const date=addScheduleDays(weekStart,i),phase=date>=plan.startOn&&date<=plan.endOn?trainingPhaseForDate(plan,date):undefined;
@@ -116,14 +123,19 @@ function sourceSnapshot(data:Data,profileId:string,weekStart:string):WeeklySched
     ...(plan&&phaseIds.length?{trainingPlanId:plan.id,trainingPlanName:plan.name}:{}),
     trainingPhaseIds:phaseIds,trainingPhaseNames:phaseNames,
     ...(cycle?{priorityCycleId:cycle.id,priorityCycleName:cycle.name}:{}),
+    ...(loadCalibration?{loadCalibration}:{}),
   };
 }
 function optionalIndex(practiceIndexes:Set<number>):number|undefined{
   for(const index of [5,6,4,3,2,1,0])if(!practiceIndexes.has(index))return index;
   return undefined;
 }
-function buildDays(data:Data,profileId:string,weekStart:string,targetMinutes:number,practiceDays:number,includeOptional:boolean):WeeklyScheduleDay[]{
-  const allocations=allocateMinutes(targetMinutes,practiceDays),indexes=DAY_PATTERNS[practiceDays]!,practiceSet=new Set(indexes),optional=includeOptional?optionalIndex(practiceSet):undefined;
+function selectedPracticeIndexes(practiceDays:number,preferredWeekdays?:number[]):number[]{
+  if(!preferredWeekdays)return [...DAY_PATTERNS[practiceDays]!];
+  return preferredWeekdays.slice(0,practiceDays).sort((a,b)=>a-b);
+}
+function buildDays(data:Data,profileId:string,weekStart:string,targetMinutes:number,practiceDays:number,includeOptional:boolean,preferredWeekdays?:number[]):WeeklyScheduleDay[]{
+  const allocations=allocateMinutes(targetMinutes,practiceDays),indexes=selectedPracticeIndexes(practiceDays,preferredWeekdays),practiceSet=new Set(indexes),optional=includeOptional?optionalIndex(practiceSet):undefined;
   const average=Math.round(targetMinutes/practiceDays);
   return Array.from({length:7},(_,index)=>{
     const date=addScheduleDays(weekStart,index),position=indexes.indexOf(index);
@@ -138,13 +150,34 @@ function buildDays(data:Data,profileId:string,weekStart:string,targetMinutes:num
 export function buildWeeklySchedule(data:Data,options:BuildWeeklyScheduleOptions={}):WeeklySchedule{
   const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,weekStart=options.weekStart??weekStartFor(now);
   if(weekStartFor(weekStart)!==weekStart)throw new Error('Weekly schedules must start on Monday.');
-  const suggested=targetFromTraining(data,profileId,weekStart)??fallbackWeeklyMinutes(data,profileId),targetMinutes=Math.round(options.targetMinutes??suggested);
+
+  const trainingTarget=targetFromTraining(data,profileId,weekStart),minuteGoal=recentGoal(data,profileId,'weekly-minutes');
+  const baselineMinutes=Math.round(trainingTarget??minuteGoal?.targetValue??profileDefaultWeeklyMinutes(data,profileId));
+  const targetSource=trainingTarget!==undefined?'training-plan' as const:minuteGoal?'weekly-goal' as const:'profile-default' as const;
+  const calibration=buildPracticeLoadCalibration(data,profileId,weekStart,baselineMinutes,targetSource);
+  const adaptiveEnabled=options.adaptiveLoad??true,adaptiveReady=adaptiveEnabled&&calibration.confidence!=='low';
+  const adaptiveTarget=targetSource==='profile-default'&&adaptiveReady?calibration.suggestedWeeklyMinutes:baselineMinutes;
+  const targetMinutes=Math.round(options.targetMinutes??adaptiveTarget);
   if(targetMinutes>7*MAX_SCHEDULED_DAY_MINUTES)throw new Error('Weekly schedules support up to 1,260 planned minutes. Split larger workloads manually.');
-  const practiceDays=options.practiceDays??recommendedPracticeDays(data,profileId,targetMinutes),at=new Date(now).toISOString();
+
+  const explicitSessionGoal=recentGoal(data,profileId,'weekly-sessions');
+  const practiceDays=options.practiceDays??(
+    !explicitSessionGoal&&adaptiveReady
+      ?constrainPracticeDays(calibration.suggestedPracticeDays,targetMinutes)
+      :recommendedPracticeDays(data,profileId,targetMinutes)
+  );
+  const preferredWeekdays=adaptiveReady?calibration.preferredWeekdays:undefined;
+  const chosenIndexes=selectedPracticeIndexes(practiceDays,preferredWeekdays),legacyIndexes=DAY_PATTERNS[practiceDays]!;
+  const loadCalibration=adaptiveEnabled?{
+    ...calibration,
+    loadAdjusted:targetSource==='profile-default'&&targetMinutes!==baselineMinutes&&targetMinutes===calibration.suggestedWeeklyMinutes,
+    patternAdjusted:JSON.stringify(chosenIndexes)!==JSON.stringify(legacyIndexes),
+  }:undefined;
+  const at=new Date(now).toISOString();
   return {
     id:uuid(),createdAt:at,updatedAt:at,profileId,weekStart,status:'draft',targetMinutes,
-    source:sourceSnapshot(data,profileId,weekStart),
-    days:buildDays(data,profileId,weekStart,targetMinutes,practiceDays,options.includeOptionalDay??true),
+    source:sourceSnapshot(data,profileId,weekStart,loadCalibration),
+    days:buildDays(data,profileId,weekStart,targetMinutes,practiceDays,options.includeOptionalDay??true,preferredWeekdays),
   };
 }
 export function scheduleForWeek(data:Data,profileId:string,weekStart:string):WeeklySchedule|undefined{

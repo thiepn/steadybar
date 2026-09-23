@@ -4,6 +4,8 @@ import { activeProfile } from '../domain/profiles.js';
 import { buildWeeklyReview, type WeeklyFocusSelection, type WeeklyFocusSuggestion } from '../domain/weekly-review.js';
 import { skillDefinition } from '../domain/skill-graph.js';
 import { activeTrainingContext } from '../domain/training-plan.js';
+import { addScheduleDays, buildWeeklySchedule, weekStartFor } from '../domain/weekly-schedule.js';
+import { calibrationSummary } from '../domain/practice-load.js';
 import type { PriorityCycle } from '../domain/practice-state.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
@@ -48,6 +50,25 @@ export function weeklyReviewPage():Page{
       el('p',{class:'field-hint'},'This long-term phase contributes a modest, explainable Priority signal. Weekly priorities remain stronger when you apply them.')));
   }
 
+  const nextWeek=addScheduleDays(weekStartFor(),7);
+  const standardLoad=buildWeeklySchedule(data,{profileId:profile.id,weekStart:nextWeek,adaptiveLoad:false});
+  const adaptiveLoad=buildWeeklySchedule(data,{profileId:profile.id,weekStart:nextWeek,adaptiveLoad:true});
+  const load=adaptiveLoad.source.loadCalibration;
+  if(load){
+    const adaptiveDays=adaptiveLoad.days.filter(day=>day.kind==='practice').length,standardDays=standardLoad.days.filter(day=>day.kind==='practice').length;
+    page.append(el('section',{class:'panel weekly-load-preview'},sectionHeader('Next-week scheduling load',calibrationSummary(load),[
+      link('Open next week','/calendar/'+nextWeek,'button secondary','today'),
+    ]),
+      el('div',{class:'stats-strip inset-stats'},
+        stat('Planning source',titleCase(load.targetSource)),
+        stat('Weekly minutes',adaptiveLoad.targetMinutes,load.loadAdjusted?'Standard · '+standardLoad.targetMinutes:'Explicit / standard target retained'),
+        stat('Practice days',adaptiveDays,(load.patternAdjusted||adaptiveDays!==standardDays)?'Standard · '+standardDays:'Standard day count retained'),
+        stat('Confidence',titleCase(load.confidence))),
+      el('p',{class:'muted small'},load.observedSessions+' recorded session'+(load.observedSessions===1?'':'s')+' · '+load.observedActiveDays+' active day'+(load.observedActiveDays===1?'':'s')+' · '+load.observedActiveWeeks+' active week'+(load.observedActiveWeeks===1?'':'s')+' in the evidence window.'),
+      el('p',{class:'field-hint'},load.targetSource==='profile-default'
+        ?'With enough evidence, Calendar may gently adapt the profile-default weekly load and weekday placement. Nothing is saved until you generate and apply a week.'
+        :'The explicit Training Cycle / weekly-minute target remains authoritative. Calibration may only shape day count or weekday placement unless you edit the target yourself.')));
+  }
   const proposal=el('section',{class:'panel weekly-focus-panel'},sectionHeader('Next 7 days focus',review.focus.length?'Suggested from current evidence':'No automatic focus proposal'));
   if(!review.focus.length){
     proposal.append(empty('No focus proposal yet','Steadybar does not have enough eligible skill-linked material to suggest a Priority Cycle. You can continue with Balanced Autopilot and current goals.',link('Open Today','/','button secondary')));

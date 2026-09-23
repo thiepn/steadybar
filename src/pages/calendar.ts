@@ -7,6 +7,7 @@ import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
 import { badge, button, checkbox, empty, formDialog, formNumber, formText, input, link, notify, pageHeader, sectionHeader, select, stat, textarea } from '../ui/components.js';
 import { duration, formatDate, localDate, titleCase } from '../domain/utils.js';
+import { calibrationSummary } from '../domain/practice-load.js';
 
 const kindOptions:[WeeklyScheduleDayKind,string][]=[['practice','Practice'],['optional','Optional'],['rest','Rest']];
 const intentOptions:[TrainingEmphasis,string][]=[['balanced','Balanced'],['songs','Songs'],['timing','Timing'],['technique','Technique']];
@@ -14,18 +15,30 @@ const weekday=(date:string)=>new Intl.DateTimeFormat(undefined,{weekday:'long'})
 const shortDate=(date:string)=>new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'}).format(new Date(date+'T12:00:00'));
 
 function scheduleDialog(weekStart:string,schedule?:WeeklySchedule):void{
-  const data=store.view(),profile=activeProfile(store.snapshot()),preview=buildWeeklySchedule(data,{profileId:profile.id,weekStart});
-  const target=schedule?.targetMinutes??preview.targetMinutes,days=schedule?.days.filter(day=>day.kind==='practice').length??preview.days.filter(day=>day.kind==='practice').length;
+  const data=store.view(),profile=activeProfile(store.snapshot());
+  const adaptivePreview=buildWeeklySchedule(data,{profileId:profile.id,weekStart,adaptiveLoad:true});
+  const standardPreview=buildWeeklySchedule(data,{profileId:profile.id,weekStart,adaptiveLoad:false});
+  const calibration=adaptivePreview.source.loadCalibration;
+  const adaptive=checkbox('adaptiveLoad','Use recent practice calibration',true);
+  const targetField=input('targetMinutes','Planned weekly minutes',adaptivePreview.targetMinutes,'number',{min:5,max:1260,step:1,required:true});
+  const daysField=input('practiceDays','Planned practice days',adaptivePreview.days.filter(day=>day.kind==='practice').length,'number',{min:1,max:7,step:1,required:true});
+  const targetInput=targetField.querySelector('input')!,daysInput=daysField.querySelector('input')!;
   const optional=checkbox('optionalDay','Include one optional / make-up day',schedule?schedule.days.some(day=>day.kind==='optional'):true);
+  const calibrationNote=el('p',{class:'field-hint load-calibration-hint'},calibration
+    ?calibrationSummary(calibration)+'. Explicit Training Cycle and weekly-minute targets stay authoritative; calibration only adapts profile-default load and day placement.'
+    :'Recent practice calibration is unavailable. Standard planning defaults will be used.');
+  adaptive.addEventListener('change',()=>{
+    const enabled=adaptive.querySelector('input')!.checked,preview=enabled?adaptivePreview:standardPreview;
+    targetInput.value=String(preview.targetMinutes);
+    daysInput.value=String(preview.days.filter(day=>day.kind==='practice').length);
+  });
   formDialog(schedule?'Regenerate week':'Generate week',[
-    input('targetMinutes','Planned weekly minutes',target,'number',{min:5,max:1260,step:1,required:true}),
-    input('practiceDays','Planned practice days',days,'number',{min:1,max:7,step:1,required:true}),
-    optional,
+    adaptive,calibrationNote,targetField,daysField,optional,
     el('p',{class:'field-hint'},schedule
       ?'Regenerating replaces this week’s day-by-day edits and returns the schedule to Draft. Practice history and DailyPlans stay unchanged.'
       :'This creates a Draft schedule only. It does not build DailyPlans or start practice.'),
   ],async form=>{
-    const options={profileId:profile.id,weekStart,targetMinutes:formNumber(form,'targetMinutes'),practiceDays:formNumber(form,'practiceDays'),includeOptionalDay:form.has('optionalDay')};
+    const options={profileId:profile.id,weekStart,targetMinutes:formNumber(form,'targetMinutes'),practiceDays:formNumber(form,'practiceDays'),includeOptionalDay:form.has('optionalDay'),adaptiveLoad:form.has('adaptiveLoad')};
     if(schedule){await regenerateSchedule(schedule.id,options);notify('Weekly schedule regenerated as a draft.');}
     else{await createWeeklySchedule(options);notify('Weekly schedule created as a draft.');}
   },schedule?'Regenerate schedule':'Generate schedule');
@@ -86,7 +99,17 @@ export function calendarPage(requestedWeek?:string):Page{
   if(schedule.source.trainingPlanName)sources.push(badge('Cycle · '+schedule.source.trainingPlanName,'accent'));
   for(const name of schedule.source.trainingPhaseNames)sources.push(badge('Phase · '+name));
   if(schedule.source.priorityCycleName)sources.push(badge('Weekly focus · '+schedule.source.priorityCycleName));
-  if(sources.length)page.append(el('section',{class:'panel calendar-source'},sectionHeader('Generated from','Snapshots taken when this week was generated'),el('div',{class:'tag-row'},sources),el('p',{class:'field-hint'},'Later changes to a Training Cycle or Priority Cycle do not silently rewrite this saved week. Regenerate explicitly to use newer planning context.')));
+  const load=schedule.source.loadCalibration;
+  if(load)sources.push(badge('Load calibration · '+titleCase(load.confidence)));
+  if(sources.length)page.append(el('section',{class:'panel calendar-source'},sectionHeader('Generated from','Snapshots taken when this week was generated'),el('div',{class:'tag-row'},sources),
+    load?el('div',{class:'calendar-calibration'},el('p',{},calibrationSummary(load)),el('p',{class:'muted small'},`Evidence window ${formatDate(load.windowStart)} → ${formatDate(load.windowEnd)} · ${load.observedSessions} session${load.observedSessions===1?'':'s'} · ${load.observedActiveWeeks} active week${load.observedActiveWeeks===1?'':'s'}.`),
+      load.loadAdjusted
+        ?el('p',{class:'small'},`Profile-default load adjusted from ${load.baselineWeeklyMinutes} to ${schedule.targetMinutes} min.`)
+        :schedule.targetMinutes!==load.baselineWeeklyMinutes
+          ?el('p',{class:'small'},`Calendar target edited from the ${load.targetSource.replaceAll('-',' ')} baseline of ${load.baselineWeeklyMinutes} to ${schedule.targetMinutes} min.`)
+          :el('p',{class:'muted small'},`Weekly load retained the ${load.targetSource.replaceAll('-',' ')} baseline of ${load.baselineWeeklyMinutes} min.`),
+      load.patternAdjusted?el('p',{class:'muted small'},'Practice days were placed using your recent weekday pattern.'):null):null,
+    el('p',{class:'field-hint'},'Later changes to a Training Cycle, Priority Cycle or practice history do not silently rewrite this saved week. Regenerate explicitly to use newer planning context.')));
 
   const byDate=new Map(actuals.byDate.map(row=>[row.date,row]));
   const cards=schedule.days.map(day=>{
