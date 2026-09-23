@@ -21,6 +21,7 @@ export interface MidiResultInput {
   durationSeconds:number;
   device:Pick<MidiDeviceProfile,'id'|'deviceKey'|'name'|'manufacturer'>;
   analysis:MidiPerformanceAnalysis;
+  analyzedVoice?:import('../domain/models.js').MidiDrumVoice;
   sessionId?:string;
   blockId?:string;
   sourceExerciseId?:string;
@@ -30,13 +31,13 @@ export function midiProfileFor(profileId:string,deviceKey:string):MidiDeviceProf
   return (store.snapshot().midiDeviceProfiles??[]).find(row=>row.profileId===profileId&&row.deviceKey===deviceKey);
 }
 
-export async function saveMidiDeviceProfile(input:MidiDeviceProfileInput):Promise<MidiDeviceProfile>{
+export async function saveMidiDeviceProfile(input:MidiDeviceProfileInput,notify=true):Promise<MidiDeviceProfile>{
   const existing=midiProfileFor(input.profileId,input.deviceKey),base=existing??metadata();
   const next:MidiDeviceProfile={
     ...base,updatedAt:nowISO(),profileId:input.profileId,deviceKey:input.deviceKey,inputId:input.inputId,
     manufacturer:input.manufacturer,name:input.name,channel:input.channel,mappings:input.mappings.map(row=>({...row})),
   };
-  await store.save('midiDeviceProfiles',next);
+  await store.save('midiDeviceProfiles',next,notify);
   return next;
 }
 
@@ -49,7 +50,7 @@ export async function saveMidiPerformanceResult(input:MidiResultInput):Promise<M
     sessionId:input.sessionId,blockId:input.blockId,sourceExerciseId:input.sourceExerciseId,
     deviceProfileId:input.device.id,deviceKey:input.device.deviceKey,deviceNameSnapshot:input.device.name,manufacturerSnapshot:input.device.manufacturer,
     bpm:input.config.bpm,meter:structuredClone(input.config.meter),subdivision:input.config.subdivision,
-    timingClick:structuredClone(resolvedTiming(input.config)),durationSeconds:input.durationSeconds,matchWindowMs:a.matchWindowMs,
+    timingClick:structuredClone(resolvedTiming(input.config)),durationSeconds:input.durationSeconds,analyzedVoice:input.analyzedVoice,matchWindowMs:a.matchWindowMs,
     expectedCount:a.expectedCount,detectedCount:a.detectedCount,matchedCount:a.matchedCount,misses:a.misses,extras:a.extras,unmappedCount:a.unmappedCount,
     meanOffsetMs:a.meanOffsetMs,medianOffsetMs:a.medianOffsetMs,meanAbsoluteErrorMs:a.meanAbsoluteErrorMs,spreadMs:a.spreadMs,driftMsPerMinute:a.driftMsPerMinute,
     confidence:a.confidence,velocityMean:a.velocityMean,velocityMedian:a.velocityMedian,velocitySpread:a.velocitySpread,
