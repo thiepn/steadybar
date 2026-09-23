@@ -47,7 +47,7 @@ test('all canonical Autopilot budgets allocate exact time with stable slot count
     assert.equal(build.plan.generation.kind,'autopilot');
     assert.equal(build.plan.generation.requestedMinutes,minutes);
     assert.equal(build.plan.generation.sessionIntent,'balanced');
-    assert.equal(build.plan.generation.engineVersion,1);
+    assert.equal(build.plan.generation.engineVersion,2);
     assert.deepEqual(build.plan.blocks.map(b=>b.order),build.plan.blocks.map((_,i)=>i));
   }
 });
