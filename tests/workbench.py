@@ -666,10 +666,14 @@ class Workbench(e2e.MusicPracticeTests):
         self.route('/songs/'+fixture['song'])
         self.page.get_by_role('button',name='Remove Verse',exact=True).click()
         self.confirm('Remove section')
-        state=self.wait_read("""(()=>{
+        self.page.wait_for_function("""()=>import('./app/app/store.js').then(({store})=>{
+          const d=store.snapshot(),track=d.audioTracks.find(t=>t.id==='qa-cue-track'),song=d.songs.find(s=>s.id==='qa-cue-song');
+          return !!track&&track.cues.length===0&&song?.sections.length===0;
+        })""")
+        state=self.read("""(()=>{
           const d=load('app/store.js').store.snapshot(),track=d.audioTracks.find(t=>t.id==='qa-cue-track'),song=d.songs.find(s=>s.id==='qa-cue-song');
           return {track:!!track,cues:track?.cues.length,sections:song?.sections.length};
-        })()""",lambda value:value['track'] and value['cues']==0 and value['sections']==0)
+        })()""")
         self.assertTrue(state['track']);self.assertEqual(state['cues'],0);self.assertEqual(state['sections'],0)
 
 
