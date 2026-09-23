@@ -30,6 +30,12 @@ test('practice intelligence is deterministic, runtime-only and focused to five r
   assert.deepEqual(a.recommendations.map(row=>row.targetKey),[...new Set(a.recommendations.map(row=>row.targetKey))]);
 });
 
+test('default recommendation diagnostics use a recent 28-day window instead of all historical sessions',()=>{
+  const d=modern(),intelligence=buildPracticeIntelligence(d,{now:at,today});
+  assert.equal(intelligence.diagnostics.comparison.current.from,'2026-08-27');
+  assert.equal(intelligence.diagnostics.comparison.current.to,'2026-09-23');
+});
+
 test('low evidence cannot produce a Progress decision even if a stale challenge says advance',()=>{
   const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
   d.practiceStates=[targetState(exercise,{challenge:'advance',evidenceCount:0,recent:{solid:0,usable:0,notYet:0}})];
