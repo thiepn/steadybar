@@ -3,7 +3,7 @@ import type { LimitationTag, PracticeState, PracticeTargetRef } from './practice
 import { buildPracticeDiagnostics, type PracticeDiagnostics } from './practice-diagnostics.js';
 import { buildExerciseProgression } from './progression-engine.js';
 import { rankPracticeTargets, type PriorityCandidate, type PriorityFactorCode } from './priority-engine.js';
-import { activeProfile } from './profiles.js';
+import { activeProfile, profileView } from './profiles.js';
 import { practiceTargetKey } from './practice-state.js';
 import { skillDefinition, skillDefinitionsFor } from './skill-graph.js';
 import { learningTarget, lessonStatus, progressFor, recordFor } from '../learning/engine.js';
@@ -201,8 +201,8 @@ function candidateRecommendation(data:Data,candidate:PriorityCandidate,skills:Sk
   let action=assessment?.action??(candidate.state?.mastery==='maintain'?'maintain':'explore');
   let band=assessment?.band??actionBand(action);
   if(candidate.factors.some(factor=>factor.points>0&&urgentFactors.has(factor.code)))band='now';
-  if(candidate.state?.challenge==='reduce')action='repair';
-  if(candidate.state?.mastery==='retest'||candidate.reasons.includes('retention-due'))action='retest';
+  if(candidate.state?.challenge==='reduce'){action='repair';band='now';}
+  if(candidate.state?.mastery==='retest'||candidate.reasons.includes('retention-due')){action='retest';band='now';}
   const evidence=targetStateEvidence(candidate);
   let progression:ExerciseProgression|undefined;
   if(candidate.target.kind==='exercise'){
@@ -256,14 +256,14 @@ function candidateRows(data:Data,profileId:string,skills:SkillAssessment[],now:n
 export function rankIntelligentPracticeTargets(data:Data,profileId?:string,options:Pick<PracticeIntelligenceOptions,'now'|'today'>={}):PriorityCandidate[]{
   if(data.schemaVersion!==2)return [];
   const pid=profileId??activeProfile(data).id,now=toMillis(options.now);
-  const diagnostics=buildPracticeDiagnostics(data,{now}),raw=rankPracticeTargets(data,pid,{now,today:options.today});
+  const diagnostics=buildPracticeDiagnostics(profileView(data,pid),{now}),raw=rankPracticeTargets(data,pid,{now,today:options.today});
   const skills=skillAssessments(data,pid,raw,diagnostics);
   return candidateRows(data,pid,skills,now,options.today).map(row=>row.candidate);
 }
 
 export function buildPracticeIntelligence(data:Data,options:PracticeIntelligenceOptions={}):PracticeIntelligence{
   const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,generatedAt=new Date(now).toISOString();
-  const diagnostics=buildPracticeDiagnostics(data,{from:options.from,to:options.to,now});
+  const diagnostics=buildPracticeDiagnostics(profileView(data,profileId),{from:options.from,to:options.to,now});
   const raw=rankPracticeTargets(data,profileId,{now,today:options.today}),skills=skillAssessments(data,profileId,raw,diagnostics),rows=candidateRows(data,profileId,skills,now,options.today);
   const recommendations=rows.map(row=>row.recommendation),guided=guidedRecommendation(data,profileId,skills,now);
   if(guided)recommendations.push(guided);
