@@ -5,6 +5,7 @@ import { buildExerciseProgression } from './progression-engine.js';
 import { rankPracticeTargets, type PriorityCandidate, type PriorityFactorCode } from './priority-engine.js';
 import { activeProfile, profileView } from './profiles.js';
 import { practiceTargetKey } from './practice-state.js';
+import { localDate } from './utils.js';
 import { skillDefinition, skillDefinitionsFor } from './skill-graph.js';
 import { learningTarget, lessonStatus, progressFor, recordFor } from '../learning/engine.js';
 
@@ -102,6 +103,11 @@ function toMillis(value:Date|string|number|undefined):number{
   if(value instanceof Date)return value.getTime();
   if(typeof value==='number')return value;
   return Date.parse(value);
+}
+function intelligenceWindow(now:number,from?:string,to?:string):{from?:string;to?:string}{
+  if(from!==undefined||to!==undefined)return {from,to};
+  const end=new Date(now),start=new Date(now);start.setDate(start.getDate()-27);
+  return {from:localDate(start),to:localDate(end)};
 }
 function confidence(evidenceCount:number,evaluatedTargets:number):IntelligenceConfidence{
   if(evidenceCount>=6&&evaluatedTargets>=2)return 'high';
@@ -275,15 +281,15 @@ function candidateRows(data:Data,profileId:string,skills:SkillAssessment[],now:n
 
 export function rankIntelligentPracticeTargets(data:Data,profileId?:string,options:Pick<PracticeIntelligenceOptions,'now'|'today'>={}):PriorityCandidate[]{
   if(data.schemaVersion!==2)return [];
-  const pid=profileId??activeProfile(data).id,now=toMillis(options.now);
-  const diagnostics=buildPracticeDiagnostics(profileView(data,pid),{now}),raw=rankPracticeTargets(data,pid,{now,today:options.today});
+  const pid=profileId??activeProfile(data).id,now=toMillis(options.now),window=intelligenceWindow(now);
+  const diagnostics=buildPracticeDiagnostics(profileView(data,pid),{...window,now}),raw=rankPracticeTargets(data,pid,{now,today:options.today});
   const skills=skillAssessments(data,pid,raw,diagnostics);
   return candidateRows(data,pid,skills,now,options.today).map(row=>row.candidate);
 }
 
 export function buildPracticeIntelligence(data:Data,options:PracticeIntelligenceOptions={}):PracticeIntelligence{
-  const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,generatedAt=new Date(now).toISOString();
-  const diagnostics=buildPracticeDiagnostics(profileView(data,profileId),{from:options.from,to:options.to,now});
+  const now=toMillis(options.now),profileId=options.profileId??activeProfile(data).id,generatedAt=new Date(now).toISOString(),window=intelligenceWindow(now,options.from,options.to);
+  const diagnostics=buildPracticeDiagnostics(profileView(data,profileId),{...window,now});
   const raw=rankPracticeTargets(data,profileId,{now,today:options.today}),skills=skillAssessments(data,profileId,raw,diagnostics),rows=candidateRows(data,profileId,skills,now,options.today);
   const recommendations=rows.map(row=>row.recommendation),guided=guidedRecommendation(data,profileId,now);
   if(guided)recommendations.push(guided);
