@@ -10,6 +10,7 @@ import { editSection, editSong } from '../ui/editors.js';
 import { addToday, launchPractice, songBlock } from '../practice/launch.js';
 import { duration, formatDate, nowISO, reorder, titleCase } from '../domain/utils.js';
 import { finishedSessions } from '../domain/analytics.js';
+import { repertoireGuides, type RepertoireGuide } from '../domain/repertoire-content.js';
 const selectedParts = new Map<string,string>();
 const songView = { query: '', status: 'active', visible: 60 };
 const mediaSize=(bytes:number)=>bytes<1024*1024?`${Math.max(1,Math.round(bytes/1024))} KB`:`${(bytes/1024/1024).toFixed(bytes<10*1024*1024?1:0)} MB`;
@@ -80,6 +81,28 @@ export function songPage(id:string,requestedPart?:string):Page{
     el('div',{},el('strong',{},track.title),el('span',{class:'muted small'},`${duration(track.durationSeconds)} · ${mediaSize(track.sizeBytes)} · ${track.cues.length} saved cue${track.cues.length===1?'':'s'}`)),
     el('div',{class:'actions wrap'},link('Open player',`/audio/${track.id}`,'button secondary','play'),button('Delete',async()=>{if(await confirmAction('Delete this local track?',`Remove “${track.title}” and its local audio from this browser? Song history and sections remain unchanged.`,'Delete track',true)){await deleteRepertoireTrack(track.id);notify('Local track deleted.');}},'ghost danger-text'))));
   page.append(audioPanel);
+  const guides=repertoireGuides(profile.instrumentType);
+  const launchGuide=(guide:RepertoireGuide,toToday=false)=>{
+    const launch=async(sectionId?:string)=>{
+      const block=songBlock(original,sectionId,guide.minutes*60,part?.id??'shared');
+      block.title=`${song.title} · ${guide.title}`;
+      block.notes=guide.instructions;
+      if(toToday)await addToday(block);else await launchPractice([block]);
+    };
+    if(guide.scope==='song'){void launch().catch(error=>notify(error instanceof Error?error.message:'The repertoire guide could not start.','error'));return;}
+    if(!song.sections.length){notify('Add at least one song section before using this guide.','info');return;}
+    formDialog(guide.title,[
+      el('p',{},guide.summary),
+      select('section','Song section',song.sections.map(section=>[section.id,section.name] as [string,string]),song.sections[0]!.id),
+      el('p',{class:'field-hint'},guide.instructions),
+    ],async form=>launch(formText(form,'section')),toToday?'Add guide to Today':'Start guide');
+  };
+  const guidePanel=el('section',{class:'panel repertoire-guide-panel'},sectionHeader('Repertoire training',`${profile.name} · guided application using your own song material`));
+  for(const guide of guides)guidePanel.append(el('article',{class:'repertoire-guide-card'},
+    el('div',{},el('div',{class:'eyebrow'},guide.scope==='song'?'Whole song / form':'Song section'),el('h3',{},guide.title),el('p',{class:'muted small'},guide.summary),el('p',{class:'small'},guide.instructions)),
+    el('div',{class:'actions wrap'},button('Start guide',()=>launchGuide(guide,false),'secondary','play'),button('Add to Today',()=>launchGuide(guide,true),'ghost','plus'))));
+  page.append(guidePanel);
+
   const sections=el('section',{class:'panel'},sectionHeader('Song sections',undefined,[button('Practice transition',transition,'ghost','arrow'),button('Add section',()=>editSection(original,undefined,part?.id),'secondary','plus')]));
   if(!song.sections.length)sections.append(empty('No sections yet','Add an intro, verse, chorus, bridge, or any section that needs focused practice.',button('Add first section',()=>editSection(original,undefined,part?.id),'ghost','plus'),'song'));
   let dragIndex=-1;
