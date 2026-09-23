@@ -158,6 +158,43 @@ export interface PracticeRecording extends Entity {
   bpm?: number; attemptNumber: number; rating?: 1 | 2 | 3 | 4 | 5;
   note: string; tags: string[]; markedBest: boolean; milestone: boolean; favorite: boolean;
 }
+export type TimingLabConfidence = 'low' | 'medium' | 'high';
+export interface TimingLabMatchedHit {
+  index: number;
+  elapsedMs: number;
+  offsetMs: number;
+  strength: number;
+  bar: number;
+  beat: number;
+  part: number;
+}
+export interface TimingLabResult extends Entity {
+  timingLabVersion: 1;
+  profileId: string;
+  sessionId?: string;
+  blockId?: string;
+  sourceExerciseId?: string;
+  bpm: number;
+  meter: Meter;
+  subdivision: Subdivision;
+  timingClick: TimingClickConfig;
+  durationSeconds: number;
+  threshold: number;
+  inputOffsetMs: number;
+  matchWindowMs: number;
+  expectedCount: number;
+  detectedCount: number;
+  matchedCount: number;
+  misses: number;
+  extras: number;
+  meanOffsetMs: number;
+  medianOffsetMs: number;
+  meanAbsoluteErrorMs: number;
+  spreadMs: number;
+  driftMsPerMinute: number;
+  confidence: TimingLabConfidence;
+  hits: TimingLabMatchedHit[];
+}
 export interface Setlist extends Entity { name: string; date?: string; songIds: string[]; notes: string }
 export interface Preset extends Entity { name: string; config: MetronomeConfig }
 export interface Settings {
@@ -169,7 +206,7 @@ export interface Settings {
 export interface Data {
   schemaVersion?: 2; practiceModelVersion?: 1; profiles?: PracticeProfile[]; courseProgress?: CourseProgress[];
   exercises: Exercise[]; songs: Song[]; routines: Routine[]; dailyPlans: DailyPlan[];
-  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
+  sessions: PracticeSession[]; goals: Goal[]; setlists: Setlist[]; trainingPlans?: TrainingPlan[]; weeklySchedules?: WeeklySchedule[]; recordings?: PracticeRecording[]; timingResults?: TimingLabResult[]; practiceStates?: PracticeState[]; priorityCycles?: PriorityCycle[]; metronomePresets: Preset[];
   settings: Settings;
 }
 export interface Backup { format: 'music-practice-os'; version: 1 | 2 | 3 | 4; exportedAt: string; data: Data }
