@@ -20,7 +20,7 @@ function targetState(exercise,overrides={}){
   };
 }
 function recommendationFor(d,exercise){
-  return buildPracticeIntelligence(d,{profileId:exercise.profileId,now:at,today}).recommendations.find(row=>row.target.kind==='exercise'&&row.target.exerciseId===exercise.id);
+  return buildPracticeIntelligence(d,{profileId:exercise.profileId,now:at,today,recommendationLimit:12}).recommendations.find(row=>row.target.kind==='exercise'&&row.target.exerciseId===exercise.id);
 }
 
 test('practice intelligence is deterministic, runtime-only and focused to five recommendations by default',()=>{
@@ -66,6 +66,26 @@ test('strong skill evidence cannot leak Progress confidence onto a fresh target 
   const skill=intelligence.skills.find(row=>row.skillId===fresh.primarySkillId);assert.ok(skill);assert.equal(skill.confidence,'high');
   const row=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);assert.ok(row);
   assert.equal(row.confidence,'low');assert.equal(row.decision,'hold');
+});
+
+test('target action does not inherit Repair from a weak sibling in the same skill',()=>{
+  const d=modern(),groups=new Map();
+  for(const exercise of d.exercises){
+    if(!exercise.primarySkillId)continue;
+    const rows=groups.get(exercise.primarySkillId)??[];rows.push(exercise);groups.set(exercise.primarySkillId,rows);
+  }
+  const rows=[...groups.values()].find(items=>items.length>=2);assert.ok(rows);
+  const [weak,fresh]=rows;
+  d.practiceStates=[
+    targetState(weak,{challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2}}),
+    targetState(fresh,{mastery:'discover',challenge:'hold',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}}),
+  ];
+  const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:12});
+  const weakRow=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===weak.id);
+  const freshRow=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);
+  assert.ok(weakRow&&freshRow);
+  assert.equal(weakRow.action,'repair');assert.equal(weakRow.band,'now');
+  assert.equal(freshRow.action,'explore');assert.equal(freshRow.confidence,'low');assert.equal(freshRow.decision,'hold');
 });
 
 test('explicit reduce state becomes Repair plus Regress and is urgent',()=>{
