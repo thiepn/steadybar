@@ -208,7 +208,7 @@ class Workbench(e2e.MusicPracticeTests):
           };
         })()""")
         self.assertEqual(result['planGeneration']['kind'],'autopilot');self.assertEqual(result['planGeneration']['requestedMinutes'],5)
-        self.assertEqual(result['planGeneration']['sessionIntent'],'balanced');self.assertEqual(result['planGeneration']['engineVersion'],1)
+        self.assertEqual(result['planGeneration']['sessionIntent'],'balanced');self.assertEqual(result['planGeneration']['engineVersion'],2)
         self.assertEqual(result['planSeconds'],300);self.assertEqual(result['sessionSeconds'],300)
         self.assertEqual(result['planBlocks'],2);self.assertEqual(result['sessionBlocks'],2)
         self.assertEqual(result['sourcePlan'],self.read("load('app/store.js').store.snapshot().dailyPlans.find(p=>p.generation?.kind==='autopilot').id"))
