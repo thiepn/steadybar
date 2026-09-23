@@ -40,7 +40,8 @@ test('default recommendation diagnostics use a recent 28-day window instead of a
 
 test('low evidence cannot produce a Progress decision even if a stale challenge says advance',()=>{
   const d=modern(),exercise=d.exercises.find(row=>row.primarySkillId);assert.ok(exercise);
-  d.practiceStates=[targetState(exercise,{mastery:'discover',challenge:'advance',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:2}})];
+  d.practiceStates=[targetState(exercise,{mastery:'discover',challenge:'advance',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}})];
+  d.goals=[{id:'goal-low-evidence',createdAt:at,updatedAt:at,profileId:exercise.profileId,type:'custom',title:'Inspect low evidence',description:'',exerciseId:exercise.id,targetValue:1,unit:'focus',completed:false}];
   const row=recommendationFor(d,exercise);assert.ok(row);
   assert.equal(row.confidence,'low');
   assert.equal(row.decision,'hold');
@@ -60,8 +61,9 @@ test('strong skill evidence cannot leak Progress confidence onto a fresh target 
   d.practiceStates=[
     targetState(a,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:4,recent:{solid:2,usable:0,notYet:0}}),
     targetState(b,{mastery:'stabilize',challenge:'advance',latestResult:'solid',evidenceCount:4,recent:{solid:2,usable:0,notYet:0}}),
-    targetState(fresh,{mastery:'discover',challenge:'hold',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:2}}),
+    targetState(fresh,{mastery:'discover',challenge:'hold',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}}),
   ];
+  d.goals=[{id:'goal-fresh-sibling',createdAt:at,updatedAt:at,profileId:fresh.profileId,type:'custom',title:'Inspect fresh sibling',description:'',exerciseId:fresh.id,targetValue:1,unit:'focus',completed:false}];
   const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:12});
   const skill=intelligence.skills.find(row=>row.skillId===fresh.primarySkillId);assert.ok(skill);assert.equal(skill.confidence,'high');
   const row=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);assert.ok(row);
