@@ -8,7 +8,7 @@ import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPr
 import { isSkillForInstrument } from './skill-graph.js';
 export { validateProfile } from './practice-validation.js';
 import { ACCENTS, SURFACE_THEMES } from './appearance.js';
-import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeRecording, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
+import type { Backup, Data, Exercise, Goal, MetronomeConfig, PracticeRecording, PracticeSession, Preset, Routine, RoutineBlock, Settings, Setlist, Song, TimingLabResult, TrainerConfig, DailyPlan, TrainingPlan, WeeklySchedule } from './models.js';
 
 import { fail, text, num, bool, one, optional, arr, obj, iso, dateOnly, id, name, bpm, order, uniqueIds, type Validator } from './schema.js';
 export { ValidationError, dateOnly, type Validator } from './schema.js';
@@ -228,6 +228,33 @@ export const validateWeeklySchedule:Validator<WeeklySchedule>=(v,p='Weekly sched
 };
 
 
+const timingLabHit=obj({
+  index:num(0,100000,true),elapsedMs:num(0,3600000),offsetMs:num(-1000,1000),strength:num(0,1),
+  bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),
+});
+const rawTimingLabResult=obj({
+  ...entity,timingLabVersion:one(1),profileId:id,
+  sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),
+  bpm,meter,subdivision,timingClick,
+  durationSeconds:num(1,300),threshold:num(.001,.95),inputOffsetMs:num(-250,250),matchWindowMs:num(10,500),
+  expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
+  misses:num(0,10000,true),extras:num(0,10000,true),
+  meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),
+  driftMsPerMinute:num(-100000,100000),confidence:one('low','medium','high'),hits:arr(timingLabHit,10000),
+});
+export const validateTimingLabResult:Validator<TimingLabResult>=(v,p='Timing Lab result')=>{
+  const result=rawTimingLabResult(v,p);
+  if(result.matchedCount!==result.hits.length)fail(p,'matched hit count must equal stored matched hits');
+  if(result.matchedCount>result.expectedCount||result.matchedCount>result.detectedCount)fail(p,'matched hit count exceeds available events');
+  if(result.misses!==result.expectedCount-result.matchedCount)fail(p,'miss count must equal expected minus matched hits');
+  if(result.extras!==result.detectedCount-result.matchedCount)fail(p,'extra count must equal detected minus matched hits');
+  for(const hit of result.hits){
+    if(hit.beat>=result.meter.beats)fail(p,'matched hit beat exceeds the stored meter');
+    if(hit.part>=result.subdivision)fail(p,'matched hit subdivision part exceeds the stored subdivision');
+  }
+  return result;
+};
+
 const rawPracticeRecording=obj({
   ...entity,recordingVersion:one(1),profileId:id,assetId:id,title:name,
   durationSeconds:num(0.01,86400),mimeType:text(200,1),sizeBytes:num(1,10_000_000_000,true),
@@ -246,7 +273,7 @@ export const validatePracticeRecording:Validator<PracticeRecording>=(v,p='Practi
 
 export const validatePreset: Validator<Preset> = obj({ ...entity, name, config:validateMetronome });
 export const validateSettings: Validator<Settings> = obj({ activeProfileId:optional(id), primaryProfileId:optional(id), id:one('preferences'), theme:one('system','light','dark'), accent:optional(one(...ACCENTS)), surfaceTheme:optional(one(...SURFACE_THEMES)), instrument:name, aim:name, onboardingDone:bool, metronome:validateMetronome, wakeLock:bool, defaultFocus:bool, pauseWhenHidden:bool, seedVersion:num(1,100,true) });
-const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
+const dataSchema: Validator<Data> = obj({ schemaVersion:optional(one(2)), practiceModelVersion:optional(one(1)), profiles:optional(arr(validateProfile,100)), courseProgress:optional(arr(validateCourseProgress,1600)), exercises:arr(validateExercise), songs:arr(validateSong), routines:arr(validateRoutine), dailyPlans:arr(validatePlan), sessions:arr(validateSession), goals:arr(validateGoal), setlists:arr(validateSetlist), trainingPlans:optional(arr(validateTrainingPlan,1000)), weeklySchedules:optional(arr(validateWeeklySchedule,10000)), recordings:optional(arr(validatePracticeRecording,100000)), timingResults:optional(arr(validateTimingLabResult,100000)), practiceStates:optional(arr(validatePracticeState,100000)), priorityCycles:optional(arr(validatePriorityCycle,10000)), metronomePresets:arr(validatePreset), settings:validateSettings });
 /** Validate a complete replacement before opening any destructive transaction. */
 export function validateData(input:unknown):Data {
   const d=dataSchema(input,'Data');
@@ -317,6 +344,8 @@ export function validateData(input:unknown):Data {
     for(const schedule of weeklySchedules)requireProfile(schedule.profileId);
     const recordings=d.recordings??[];
     for(const recording of recordings)requireProfile(recording.profileId);
+    const timingResults=d.timingResults??[];
+    for(const result of timingResults)requireProfile(result.profileId);
     if(new Set(recordings.map(recording=>recording.assetId)).size!==recordings.length)fail('Practice recordings','audio asset IDs must be unique');
     const trainingPlans=d.trainingPlans??[],activeTrainingPlans=trainingPlans.filter(plan=>plan.status==='active');
     if(new Set(activeTrainingPlans.map(plan=>plan.profileId)).size!==activeTrainingPlans.length)fail('Training plans','only one active training plan is allowed per profile');

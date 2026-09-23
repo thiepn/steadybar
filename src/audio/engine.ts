@@ -2,31 +2,40 @@ import type { MetronomeConfig } from '../domain/models.js';
 import { validateMetronome } from '../domain/validation.js';
 import { AUDIO_LOCK, ExclusiveLease } from '../platform/locks.js';
 import { ScheduleClock, type BeatEvent } from './scheduler.js';
-interface EngineOptions { onReady?:(wallTime:number)=>void; onBeat?:(event:BeatEvent)=>void; onInterrupted?:()=>void }
+interface EngineOptions { onReady?:(wallTime:number,audioTime:number)=>void; onBeat?:(event:BeatEvent)=>void; onInterrupted?:()=>void }
 export class AudioEngine {
   private context?:AudioContext;private master?:GainNode;private clock?:ScheduleClock;
   private timer?:ReturnType<typeof setTimeout>;private frame?:number;private visuals:BeatEvent[]=[];
   private nodes=new Set<OscillatorNode>();private options:EngineOptions={};private generation=0;
   private lease?:ExclusiveLease;private readySent=false;
   running=false;
-  async start(config:MetronomeConfig,options:EngineOptions={}):Promise<void>{
-    this.stop();const generation=this.generation;validateMetronome(config);
+  private ensureContext():AudioContext {
     if(!globalThis.AudioContext)throw new Error('Web Audio is unavailable in this browser. Practice timers still work with the metronome turned off.');
     if(!this.context || this.context.state==='closed'){
       this.context=new AudioContext({latencyHint:'interactive'});this.master=this.context.createGain();this.master.connect(this.context.destination);
       this.context.onstatechange=()=>{if(this.running && this.context?.state!=='running'){const fn=this.options.onInterrupted;this.stop();fn?.();}};
     }
+    return this.context;
+  }
+  async prepareContext():Promise<AudioContext>{
+    const context=this.ensureContext();await context.resume();
+    if(context.state!=='running')throw new Error('Audio could not start. Tap again to allow browser audio.');
+    return context;
+  }
+  async start(config:MetronomeConfig,options:EngineOptions={}):Promise<void>{
+    this.stop();const generation=this.generation;validateMetronome(config);
+    const context=this.ensureContext();
     // A lease belongs to this start request, so cancelled requests cannot release a newer one.
     const lease=new ExclusiveLease(AUDIO_LOCK,'Another tab is using the metronome. Pause it there, then try again.');
     this.lease=lease;
     try {
-      await this.context.resume();
+      await context.resume();
       if(generation!==this.generation)return;
-      if(this.context.state!=='running')throw new Error('Audio could not start. Tap Start again to allow browser audio.');
+      if(context.state!=='running')throw new Error('Audio could not start. Tap Start again to allow browser audio.');
       await lease.acquire();
       if(generation!==this.generation){lease.release();return;}
       this.options=options;this.readySent=false;this.master!.gain.value=config.volume;
-      this.clock=new ScheduleClock(config,this.context.currentTime+0.06);this.running=true;
+      this.clock=new ScheduleClock(config,context.currentTime+0.06);this.running=true;
       this.schedule();this.draw();
     }catch(error){
       lease.release();
@@ -59,7 +68,7 @@ export class AudioEngine {
     const onset=this.clock?.practiceStartTime;
     if(!this.readySent && onset!==undefined && onset<=this.context.currentTime){
       this.readySent=true;
-      this.options.onReady?.(Date.now()+(onset-this.context.currentTime)*1000);
+      this.options.onReady?.(Date.now()+(onset-this.context.currentTime)*1000,onset);
     }
     // Visual callbacks follow the audio timeline, but a missed visual click cannot lose count-in completion.
     while(this.visuals[0] && this.visuals[0].time<=this.context.currentTime){

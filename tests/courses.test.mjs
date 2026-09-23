@@ -130,7 +130,7 @@ test('vocal practice cannot silently accept a missing or unsuitable personally c
 });
 test('backup v3 round trip retains learning and rejects tampered known-revision passes',()=>{
  const {data,p,course,lesson}=setup('drums');learn.reviewLesson(data,p.id,course.id,lesson.id,review(lesson),at);learn.saveLessonNote(data,p.id,course.id,lesson.id,'Material and feedback',at);
- const b=createBackup(data);assert.equal(b.version,3);assert.deepEqual(parseBackup(JSON.stringify(b)).data,{...data,trainingPlans:[],weeklySchedules:[],recordings:[]});
+ const b=createBackup(data);assert.equal(b.version,3);assert.deepEqual(parseBackup(JSON.stringify(b)).data,{...data,trainingPlans:[],weeklySchedules:[],recordings:[],timingResults:[]});
  const corrupt=structuredClone(b);corrupt.data.courseProgress[0].lessons[0].attempts[0].answers[0]=(lesson.questions[0].answer+1)%3;assert.throws(()=>validateBackup(corrupt),/passing check/);
  delete corrupt.data.courseProgress;assert.throws(()=>validateBackup(corrupt),/course progress/);
 });

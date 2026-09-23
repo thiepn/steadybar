@@ -637,3 +637,40 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .recording-history-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:10px 0;border-bottom:1px solid var(--border)}
 .recording-history-row:last-child{border-bottom:0}.recording-history-row>div:first-child{display:grid;gap:3px;min-width:0}
 @media(max-width:640px){.recording-card{grid-template-columns:1fr;gap:10px}.recording-card>.actions{justify-content:flex-start}.recording-history-row{display:grid;gap:8px}}
+
+
+/* Phase 16 — microphone Timing Lab. */
+.timing-lab-page{display:grid;gap:20px}
+.timing-setup{display:grid;gap:16px}
+.timing-lab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.timing-lab-status{padding:10px 12px;background:var(--surface-soft);border-left:2px solid var(--accent);font-size:13px}
+.timing-live{display:flex;align-items:baseline;gap:8px;padding:14px 16px;border:1px solid var(--border);background:var(--surface)}
+.timing-live-clock{font-family:var(--mono);font-size:26px;letter-spacing:-.5px}
+.timing-live-hits{margin-left:auto;font-size:12px;color:var(--muted)}
+.timing-result-host{display:grid;gap:18px}
+.timing-result-card{display:grid;gap:16px}
+.timing-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.timing-plot-wrap{display:grid;gap:8px}
+.timing-offset-plot{position:relative;height:150px;border:1px solid var(--border);background:linear-gradient(to bottom,transparent 49.5%,var(--border) 49.5%,var(--border) 50.5%,transparent 50.5%);overflow:hidden}
+.timing-zero-line{position:absolute;left:0;right:0;top:50%;border-top:1px dashed var(--border-strong)}
+.timing-hit-dot{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%)}
+.timing-hit-dot.early{outline:1px solid var(--muted)}
+.timing-hit-dot.centered{width:8px;height:8px}
+.timing-hit-dot.late{outline:1px solid var(--text)}
+.timing-history{display:grid;gap:0}
+.timing-history>.section-heading{margin-bottom:4px}
+.timing-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid var(--border)}
+.timing-history-row:last-child{border-bottom:0}
+.timing-history-row>div:first-child{display:grid;gap:3px;min-width:0}
+@media(max-width:900px){
+  .timing-lab-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .timing-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .timing-history-row{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .timing-lab-grid{grid-template-columns:1fr}
+  .timing-stats{grid-template-columns:1fr 1fr}
+  .timing-live{display:grid;grid-template-columns:auto 1fr}
+  .timing-live-hits{margin-left:0;grid-column:1/-1}
+  .timing-offset-plot{height:130px}
+}

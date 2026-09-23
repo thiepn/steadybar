@@ -2,7 +2,7 @@ import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import type { Accent, ClickMode, MetronomeConfig, Subdivision, TimingClickConfig } from '../domain/models.js';
 import { el } from '../ui/dom.js';
-import { button, confirmAction, field, formDialog, formNumber, formText, iconButton, input, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
+import { button, confirmAction, field, formDialog, formNumber, formText, iconButton, input, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 import { audio } from '../audio/engine.js';
 import { defaultAccents, resolvedTiming, tapTempo, timingClickLabel } from '../audio/scheduler.js';
 import { clampBpm } from '../domain/utils.js';
@@ -11,7 +11,7 @@ export function metronomePage():Page{
   let config=structuredClone(store.snapshot().settings.metronome),running=false,taps:number[]=[],disposed=false;
   let persistTimer:ReturnType<typeof setTimeout>|undefined,rampTimer:ReturnType<typeof setInterval>|undefined,rampStartedAt:number|undefined;
   let rampEnabled=false;
-  const page=el('div',{class:'page metronome-page'},pageHeader('','Metronome','Tempo, subdivisions, sparse clicks, silent bars, accents, and automatic ramps.'));
+  const page=el('div',{class:'page metronome-page'},pageHeader('','Metronome','Tempo, subdivisions, sparse clicks, silent bars, accents, and automatic ramps.',[link('Timing Lab','/timing-lab','button secondary','pulse')]));
   const status=el('span',{class:'status-label'},'Ready'),tempo=el('input',{type:'number',min:20,max:300,step:1,value:config.bpm,inputmode:'numeric',class:'metronome-bpm','aria-label':'BPM'}),slider=el('input',{type:'range',min:20,max:300,step:1,value:config.bpm,'aria-label':'Tempo slider'});
   const signature=el('select',{'aria-label':'Time signature'},['2/4','3/4','4/4','5/4','6/8','7/8','9/8','12/8'].map(m=>el('option',{value:m},m)));
   const subdivision=el('select',{'aria-label':'Subdivision'},[['1','Beat · 1 click'],['2','Eighths · 2 clicks'],['3','Triplets · 3 clicks'],['4','Sixteenths · 4 clicks']].map(([v,l])=>el('option',{value:v},l)));
