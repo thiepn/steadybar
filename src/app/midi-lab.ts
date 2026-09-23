@@ -21,6 +21,7 @@ export interface MidiResultInput {
   durationSeconds:number;
   device:Pick<MidiDeviceProfile,'id'|'deviceKey'|'name'|'manufacturer'>;
   analysis:MidiPerformanceAnalysis;
+  expectedPattern:import('../domain/models.js').MidiExpectedPattern;
   analyzedVoice?:import('../domain/models.js').MidiDrumVoice;
   sessionId?:string;
   blockId?:string;
@@ -50,7 +51,7 @@ export async function saveMidiPerformanceResult(input:MidiResultInput):Promise<M
     sessionId:input.sessionId,blockId:input.blockId,sourceExerciseId:input.sourceExerciseId,
     deviceProfileId:input.device.id,deviceKey:input.device.deviceKey,deviceNameSnapshot:input.device.name,manufacturerSnapshot:input.device.manufacturer,
     bpm:input.config.bpm,meter:structuredClone(input.config.meter),subdivision:input.config.subdivision,
-    timingClick:structuredClone(resolvedTiming(input.config)),durationSeconds:input.durationSeconds,analyzedVoice:input.analyzedVoice,matchWindowMs:a.matchWindowMs,
+    timingClick:structuredClone(resolvedTiming(input.config)),durationSeconds:input.durationSeconds,expectedPattern:input.expectedPattern,analyzedVoice:input.analyzedVoice,matchWindowMs:a.matchWindowMs,
     expectedCount:a.expectedCount,detectedCount:a.detectedCount,matchedCount:a.matchedCount,misses:a.misses,extras:a.extras,unmappedCount:a.unmappedCount,
     meanOffsetMs:a.meanOffsetMs,medianOffsetMs:a.medianOffsetMs,meanAbsoluteErrorMs:a.meanAbsoluteErrorMs,spreadMs:a.spreadMs,driftMsPerMinute:a.driftMsPerMinute,
     confidence:a.confidence,velocityMean:a.velocityMean,velocityMedian:a.velocityMedian,velocitySpread:a.velocitySpread,
