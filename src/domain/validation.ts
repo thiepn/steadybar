@@ -416,9 +416,10 @@ export function validateData(input:unknown):Data {
     for(const result of midiResults)requireProfile(result.profileId);
     for(const track of audioTracks){
       const song=songs.get(track.songId);if(!song)fail('Repertoire audio','song does not exist');
-      if(track.songPartId&&!song.parts?.some(part=>part.id===track.songPartId))fail('Repertoire audio','song part does not exist');
-      const sectionIds=new Set([...(song.sections??[]).map(section=>section.id),...(song.parts??[]).flatMap(part=>part.sections.map(section=>section.id))]);
-      for(const cue of track.cues)if(cue.sectionId&&!sectionIds.has(cue.sectionId))fail('Repertoire audio','cue section does not exist');
+      const part=track.songPartId?song.parts?.find(part=>part.id===track.songPartId):undefined;
+      if(track.songPartId&&!part)fail('Repertoire audio','song part does not exist');
+      const sectionIds=new Set((part?.sections??song.sections).map(section=>section.id));
+      for(const cue of track.cues)if(cue.sectionId&&!sectionIds.has(cue.sectionId))fail('Repertoire audio','cue section does not belong to this track arrangement');
     }
     if(new Set(midiDeviceProfiles.map(profile=>profile.profileId+'/'+profile.deviceKey)).size!==midiDeviceProfiles.length)fail('MIDI device profiles','one mapping profile per practice profile and device is allowed');
     if(new Set(recordings.map(recording=>recording.assetId)).size!==recordings.length)fail('Practice recordings','audio asset IDs must be unique');
