@@ -3,14 +3,12 @@ import { RepertoireTrackPlayer } from '../audio/track-player.js';
 import { resolvedTiming } from '../audio/scheduler.js';
 import { deleteRepertoireCue, repertoireTrackBlob, replaceRepertoireTrackFile, saveRepertoireCue, updateRepertoireTrackRate } from '../app/repertoire-audio.js';
 import { store } from '../app/store.js';
-import type { RepertoireAudioTrack, SongSection } from '../domain/models.js';
 import { addToday, launchPractice, songBlock } from '../practice/launch.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, checkbox, confirmAction, empty, field, link, notify, pageHeader, sectionHeader, select, stat } from '../ui/components.js';
+import { button, checkbox, confirmAction, empty, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 
 const rates:[string,string][]=[['0.5','50%'],['0.6','60%'],['0.7','70%'],['0.75','75%'],['0.8','80%'],['0.85','85%'],['0.9','90%'],['0.95','95%'],['1','100%'],['1.05','105%'],['1.1','110%'],['1.15','115%'],['1.25','125%'],['1.5','150%']];
-const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
 function clock(seconds:number):string{
   const value=Math.max(0,Number.isFinite(seconds)?seconds:0),minutes=Math.floor(value/60),rest=value-minutes*60;
   return `${minutes}:${rest.toFixed(1).padStart(4,'0')}`;
@@ -27,7 +25,7 @@ export function repertoireAudioPage(trackId:string):Page{
   const part=track.songPartId?song.parts?.find(row=>row.id===track!.songPartId):undefined;
   const sections=part?.sections??song.sections;
   const player=new RepertoireTrackPlayer();
-  let markA=0,markB=track.durationSeconds,loaded=false,loadFailed=false,disposed=false;
+  let markA=0,markB=track.durationSeconds,loaded=false,disposed=false;
   let detachPlayer=()=>{};
 
   const page=el('div',{class:'page repertoire-audio-page'},link(song.title,track.songPartId?`/songs/${song.id}/parts/${track.songPartId}`:`/songs/${song.id}`,'back-link'),
@@ -62,10 +60,10 @@ export function repertoireAudioPage(trackId:string):Page{
   const loadTrack=async()=>{
     const blob=await repertoireTrackBlob(track);
     if(!blob){
-      loaded=false;loadFailed=true;status.textContent='Audio file is missing on this device. Relink the original/local copy to use the saved cues.';
+      loaded=false;status.textContent='Audio file is missing on this device. Relink the original/local copy to use the saved cues.';
       playButton.disabled=true;return;
     }
-    await player.load(blob);loaded=true;loadFailed=false;player.setRate(track.lastPlaybackRate);
+    await player.load(blob);loaded=true;player.setRate(track.lastPlaybackRate);
     markA=0;markB=player.duration;seek.max=String(player.duration);status.textContent='Ready · local audio loaded.';
     playButton.disabled=false;markText.textContent=`A ${clock(markA)} · B ${clock(markB)}`;
   };
@@ -81,7 +79,7 @@ export function repertoireAudioPage(trackId:string):Page{
   };
   playButton=button('Play',play,'primary','play');playButton.disabled=true;
   const stopButton=button('Stop',()=>{audio.stop();player.stop();status.textContent='Stopped.';},'secondary');
-  loopButton=button('Enable loop',()=>{const loop=player['loop'];if(loop?.enabled){player.toggleLoop(false);loopState.textContent='Loop off';loopButton.querySelector('span')!.textContent='Enable loop';}else setLoopFromMarks();},'secondary');
+  loopButton=button('Enable loop',()=>{const loop=player.loopState;if(loop?.enabled){player.toggleLoop(false);loopState.textContent='Loop off';loopButton.querySelector('span')!.textContent='Enable loop';}else setLoopFromMarks();},'secondary');
 
   seek.addEventListener('input',()=>player.seek(Number(seek.value)));
   rate.querySelector('select')!.addEventListener('change',()=>{
@@ -149,7 +147,7 @@ export function repertoireAudioPage(trackId:string):Page{
     if(snapshot.loop?.enabled){loopState.textContent=`Loop on · ${clock(snapshot.loop.startSeconds)} → ${clock(snapshot.loop.endSeconds)}`;loopButton.querySelector('span')!.textContent='Disable loop';}
     else{loopState.textContent='Loop off';loopButton.querySelector('span')!.textContent='Enable loop';}
   });
-  void loadTrack().catch(error=>{loadFailed=true;status.textContent=error instanceof Error?error.message:'The local track could not be loaded.';playButton.disabled=true;});
+  void loadTrack().catch(error=>{status.textContent=error instanceof Error?error.message:'The local track could not be loaded.';playButton.disabled=true;});
 
   return {
     node:page,
