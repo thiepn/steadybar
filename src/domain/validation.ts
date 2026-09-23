@@ -279,7 +279,7 @@ const rawMidiPerformanceResult=obj({
   ...entity,midiAnalysisVersion:one(1),profileId:id,
   sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),deviceProfileId:optional(id),
   deviceKey:text(300,1),deviceNameSnapshot:text(200,1),manufacturerSnapshot:text(200),
-  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),matchWindowMs:num(10,500),
+  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),analyzedVoice:optional(midiVoice),matchWindowMs:num(10,500),
   expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
   misses:num(0,10000,true),extras:num(0,10000,true),unmappedCount:num(0,10000,true),
   meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),driftMsPerMinute:num(-100000,100000),
