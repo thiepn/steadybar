@@ -291,5 +291,6 @@ export function buildPracticeIntelligence(data:Data,options:PracticeIntelligence
   const recommendations=rows.map(row=>row.recommendation),guided=guidedRecommendation(data,profileId,skills,now);
   if(guided)recommendations.push(guided);
   recommendations.sort((a,b)=>bandOrder[a.band]-bandOrder[b.band]||actionOrder[a.action]-actionOrder[b.action]||confidenceOrder[a.confidence]-confidenceOrder[b.confidence]||a.label.localeCompare(b.label));
-  return {engineVersion:PRACTICE_INTELLIGENCE_ENGINE_VERSION,profileId,generatedAt,diagnostics,skills,recommendations:recommendations.slice(0,options.recommendationLimit??12)};
+  const limit=Math.max(1,Math.min(12,options.recommendationLimit??5));
+  return {engineVersion:PRACTICE_INTELLIGENCE_ENGINE_VERSION,profileId,generatedAt,diagnostics,skills,recommendations:recommendations.slice(0,limit)};
 }
