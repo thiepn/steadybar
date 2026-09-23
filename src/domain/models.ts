@@ -250,6 +250,7 @@ export interface MidiPerformanceResult extends Entity {
   subdivision: Subdivision;
   timingClick: TimingClickConfig;
   durationSeconds: number;
+  analyzedVoice?: MidiDrumVoice;
   matchWindowMs: number;
   expectedCount: number;
   detectedCount: number;
