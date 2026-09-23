@@ -63,7 +63,7 @@ export function todayPage(): Page {
       if(plan?.blocks.length&&!await confirmAction('Replace today’s plan?','Use a voice routine that preserves planned rest and listening. Practice history is unchanged.','Build voice plan'))return;
       await prepareStarterPlan(Number(budget.querySelector('select')!.value));notify('Voice plan ready.');
     },'secondary');
-    page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},'Autopilot v1 is not used for voice yet. This keeps the existing rest-aware voice routine with listening and recovery time.')));
+    page.append(el('div',{class:'plan-builder'},budget,prepare,el('p',{class:'field-hint'},'Autopilot is not used for voice yet. This keeps the existing rest-aware voice routine with listening and recovery time.')));
   }else{
     const scheduledMinutes=scheduled&&scheduled.day.kind!=='rest'?scheduled.day.plannedMinutes:undefined;
     const allowed=[...new Set([5,10,15,20,30,45,60,...(scheduledMinutes?[scheduledMinutes]:[])])].sort((a,b)=>a-b),defaultMinutes=scheduledMinutes??allowed.reduce((best,value)=>Math.abs(value-profile.defaultSessionMinutes)<Math.abs(best-profile.defaultSessionMinutes)?value:best,15);
