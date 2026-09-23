@@ -5,11 +5,12 @@ import { probeAudioBlob } from '../audio/track-player.js';
 import { store } from './store.js';
 
 function titleFromFile(name:string):string{
-  return name.replace(/.[^.]+$/,'').trim()||'Local track';
+  return name.replace(/\.[^.]+$/,'').trim()||'Local track';
 }
 
 export async function importRepertoireTrack(songId:string,file:File,songPartId?:string):Promise<RepertoireAudioTrack>{
   if(!file.size)throw new Error('Choose a non-empty audio file.');
+  if(file.size>512*1024*1024)throw new Error('Local track import is limited to 512 MB per file to avoid exhausting browser memory.');
   const data=store.snapshot(),song=data.songs.find(row=>row.id===songId);
   if(!song)throw new Error('The song no longer exists.');
   if(songPartId&&!song.parts?.some(part=>part.id===songPartId))throw new Error('The selected song part no longer exists.');
@@ -26,6 +27,7 @@ export async function importRepertoireTrack(songId:string,file:File,songPartId?:
 
 export async function replaceRepertoireTrackFile(trackId:string,file:File):Promise<RepertoireAudioTrack>{
   if(!file.size)throw new Error('Choose a non-empty audio file.');
+  if(file.size>512*1024*1024)throw new Error('Local track import is limited to 512 MB per file to avoid exhausting browser memory.');
   const current=(store.snapshot().audioTracks??[]).find(row=>row.id===trackId);
   if(!current)throw new Error('The local track no longer exists.');
   const probe=await probeAudioBlob(file),required=Math.max(0,...current.cues.map(cue=>cue.endSeconds));
@@ -34,7 +36,7 @@ export async function replaceRepertoireTrackFile(trackId:string,file:File):Promi
   await saveRepertoireTrackAsset(current.assetId,file,current.createdAt);
   try{
     const next={...current,fileName:file.name,title:titleFromFile(file.name),mimeType:probe.mimeType,sizeBytes:file.size,durationSeconds:probe.durationSeconds,updatedAt:nowISO()};
-    await store.save('audioTracks',next);return next;
+    await store.save('audioTracks',next,false);return next;
   }catch(error){
     if(backup)await saveRepertoireTrackAsset(current.assetId,backup,current.createdAt).catch(()=>{});
     throw error;
