@@ -7,7 +7,7 @@ import { el } from '../ui/dom.js';
 import { badge, button, checkbox, confirmAction, field, formDialog, formText, input, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 import { exportBackup, parseBackup, restoreBackup } from '../db/backup.js';
 import { resetWorkspace } from '../db/database.js';
-import { clearRecordingAssets } from '../db/media.js';
+import { clearAllMediaAssets } from '../db/media.js';
 import { practice } from '../practice/controller.js';
 import { audio } from '../audio/engine.js';
 import { pwaState } from '../app/pwa.js';
@@ -79,11 +79,11 @@ export function settingsPage():Page{
     ['Ctrl / Cmd + K','Search & commands'],['Space','Start / pause practice or metronome'],['↑ / ↓','BPM +1 / −1'],['Shift + ↑ / ↓','BPM +5 / −5'],['N','Quick note in practice'],['Esc','Close a dialog / exit fullscreen'],
   ].map(([key,label])=>el('div',{},el('dt',{},el('kbd',{},key)),el('dd',{},label)))),el('p',{class:'field-hint'},'Practice shortcuts do not override typing in fields or the normal Space action on a focused button.'));
   const reset=()=>formDialog('Reset Steadybar',[
-    el('p',{},'This removes all practice data from this browser and restores only the built-in exercises and routine templates. A safety JSON backup will be downloaded first.'),el('p',{class:'form-error'},'Important: recording audio blobs are not included in JSON backups. Export any recordings you need before resetting; reset permanently clears local recording audio.'),input('confirm','Type RESET to confirm','','text',{required:true,pattern:'RESET',autocomplete:'off'}),
+    el('p',{},'This removes all practice data from this browser and restores only the built-in exercises and routine templates. A safety JSON backup will be downloaded first.'),el('p',{class:'form-error'},'Important: recording audio and imported repertoire tracks are not included in JSON backups. Export/keep any media you need before resetting; reset permanently clears all browser-local media.'),input('confirm','Type RESET to confirm','','text',{required:true,pattern:'RESET',autocomplete:'off'}),
   ],async form=>{
     if(formText(form,'confirm')!=='RESET')throw new Error('Type RESET exactly to confirm.');
     if(practice.session?.status==='active' && !practice.external)await practice.pause();audio.stop();
-    await withWorkspaceIdle(async()=>{await exportBackup();await resetWorkspace();await clearRecordingAssets();});location.reload();
+    await withWorkspaceIdle(async()=>{await exportBackup();await resetWorkspace();await clearAllMediaAssets();});location.reload();
   },'Back up & reset');
   page.append(el('div',{class:'settings-grid'},el('div',{},profilePanel,appearance,prefs),el('div',{},dataPanel,offline,shortcuts)),el('section',{class:'danger-zone'},el('div',{},el('h2',{},'Reset application'),el('p',{class:'muted small'},'A fresh start on this device. Permanent unless you restore a backup.')),button('Reset application',reset,'danger','trash')));
   return {node:page,isDirty:()=>dirty,beforeLeave:async()=>!dirty || await confirmAction('Discard unsaved preferences?','Your changes have not been saved. Stay here to save them, or discard your edits.','Discard edits'),cleanup:()=>{colors.cleanup();window.removeEventListener('beforeunload',unload);window.removeEventListener('pwa-state',refreshOffline);}};

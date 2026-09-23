@@ -42,7 +42,17 @@ export async function changeSongSections(songId: string, partId: string | undefi
     const before = structuredClone(owner.sections);
     owner.sections = change(structuredClone(before)).map((section, order) => ({ ...section, order }));
     const oldSections=new Map(before.map(section=>[section.id,section])),newSections=new Map(owner.sections.map(section=>[section.id,section]));
-    const previousTransitions=[...(owner.transitions??[])],sectionIds=new Set(owner.sections.map(section=>section.id));
+    for(const track of data.audioTracks??[]){
+      if(track.songId!==songId||(track.songPartId??undefined)!==(partId??undefined))continue;
+      const beforeCount=track.cues.length;
+      track.cues=track.cues.filter(cue=>!cue.sectionId||newSections.has(cue.sectionId)).map(cue=>{
+        if(!cue.sectionId)return cue;
+        const old=oldSections.get(cue.sectionId),current=newSections.get(cue.sectionId);
+        return old&&current&&cue.label===old.name&&old.name!==current.name?{...cue,label:current.name}:cue;
+      });
+      if(track.cues.length!==beforeCount||track.cues.some(cue=>oldSections.get(cue.sectionId??'')?.name!==newSections.get(cue.sectionId??'')?.name))track.updatedAt=advanceISO(track.updatedAt);
+    }
+        const previousTransitions=[...(owner.transitions??[])],sectionIds=new Set(owner.sections.map(section=>section.id));
     owner.transitions=previousTransitions.filter(t=>sectionIds.has(t.fromSectionId)&&sectionIds.has(t.toSectionId));
     const transitionIds=new Set(owner.transitions.map(t=>t.id));
     const arrangementMatches=(target:{songId:string;partId?:string})=>target.songId===songId&&(target.partId??undefined)===(partId??undefined);

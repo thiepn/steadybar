@@ -632,6 +632,47 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_62_local_audio_metadata_survives_without_binary_and_player_is_responsive(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),now=new Date().toISOString(),id='qa-audio-song',section='qa-audio-section',track='qa-audio-track';
+          d.songs=[{id,createdAt:now,updatedAt:now,title:'Local Track Song',artist:'QA',bpm:100,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:section,name:'Verse',bars:8,notes:'',order:0}]}];
+          d.audioTracks=[{id:track,createdAt:now,updatedAt:now,songId:id,assetId:'missing-local-asset',title:'Practice Mix',fileName:'practice.wav',mimeType:'audio/wav',sizeBytes:4096,durationSeconds:120,cues:[{id:'qa-cue',sectionId:section,label:'Verse',startSeconds:10,endSeconds:30,order:0}],lastPlaybackRate:.8}];
+          await load('db/database.js').replaceData(d);await store.refresh();return {song:id,track};
+        })()""")
+        self.route('/songs/'+fixture['song'])
+        expect(self.page.get_by_role('heading',name='Local audio',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Practice Mix',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('link',name='Open player',exact=True)).to_be_visible()
+        self.route('/audio/'+fixture['track'])
+        expect(self.page.get_by_role('heading',name='Practice Mix',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Audio file is missing on this device.',exact=False)).to_be_visible()
+        expect(self.page.get_by_role('button',name='Play',exact=True)).to_be_disabled()
+        expect(self.page.get_by_text('10.0',exact=False).first).to_be_visible()
+        expect(self.page.get_by_role('button',name='Loop section',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('button',name='Practice section',exact=True)).to_be_visible()
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_63_removing_song_section_cleans_only_its_local_audio_cue(self):
+        self.onboard()
+        fixture=self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),now=new Date().toISOString(),song='qa-cue-song',section='qa-cue-section',track='qa-cue-track';
+          d.songs=[{id:song,createdAt:now,updatedAt:now,title:'Cue Cleanup Song',artist:'QA',bpm:90,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:section,name:'Verse',bars:8,notes:'',order:0}]}];
+          d.audioTracks=[{id:track,createdAt:now,updatedAt:now,songId:song,assetId:'qa-cue-asset',title:'Cue Mix',fileName:'cue.wav',mimeType:'audio/wav',sizeBytes:4096,durationSeconds:60,cues:[{id:'qa-cue-id',sectionId:section,label:'Verse',startSeconds:5,endSeconds:20,order:0}],lastPlaybackRate:1}];
+          await load('db/database.js').replaceData(d);await store.refresh();return {song,track};
+        })()""")
+        self.route('/songs/'+fixture['song'])
+        self.page.get_by_role('button',name='Remove Verse',exact=True).click()
+        self.confirm('Remove section')
+        state=self.wait_read("""(()=>{
+          const d=load('app/store.js').store.snapshot(),track=d.audioTracks.find(t=>t.id==='qa-cue-track'),song=d.songs.find(s=>s.id==='qa-cue-song');
+          return {track:!!track,cues:track?.cues.length,sections:song?.sections.length};
+        })()""",lambda value:value['track'] and value['cues']==0 and value['sections']==0)
+        self.assertTrue(state['track']);self.assertEqual(state['cues'],0);self.assertEqual(state['sections'],0)
+
+
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

@@ -24,7 +24,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);
+  assert.equal(data.exercises.length,30);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);assert.deepEqual(data.audioTracks,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('repository exercise create/read/update/archive uses durable repository calls',async()=>{
@@ -151,7 +151,7 @@ test('complete backup restore preserves all entity types, attempts and historica
   s.blocks[0].tempoAttempts=[{id:uuid(),bpm:105,rating:'clean',timestamp:new Date().toISOString(),note:'Relaxed grip'}];data.sessions=[finishBlock(s)];
   await db.replaceData(data);const exported=createBackup(await db.readData());
   await db.replaceData(seedData());await restoreBackup(exported);
-  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[],recordings:exported.data.recordings??[],timingResults:exported.data.timingResults??[],midiDeviceProfiles:exported.data.midiDeviceProfiles??[],midiResults:exported.data.midiResults??[]}));
+  assert.deepEqual(await db.readData(),validateData({...migratePracticeModel(migratePracticeData(exported.data)),courseProgress:exported.data.courseProgress??[],trainingPlans:exported.data.trainingPlans??[],weeklySchedules:exported.data.weeklySchedules??[],recordings:exported.data.recordings??[],timingResults:exported.data.timingResults??[],midiDeviceProfiles:exported.data.midiDeviceProfiles??[],midiResults:exported.data.midiResults??[],audioTracks:exported.data.audioTracks??[]}));
 });
 test('backup restore rebuilds derived mastery from evidence while preserving manual scheduling overrides',async()=>{
   await db.initializeDatabase();const data=await db.readData(),exercise=data.exercises[0];
@@ -254,6 +254,21 @@ test('MIDI mappings and performance results persist through the v10 repository a
 test('older version-4 backups without MIDI collections restore with empty MIDI state',async()=>{
   await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.midiDeviceProfiles;delete backup.data.midiResults;
   await restoreBackup(backup);const restored=await db.readData();assert.deepEqual(restored.midiDeviceProfiles,[]);assert.deepEqual(restored.midiResults,[]);
+});
+
+test('repertoire audio metadata and cues persist through the v11 repository and backup restore',async()=>{
+  await db.initializeDatabase();const now='2026-09-23T14:00:00.000Z';
+  const song={id:'audio-song',createdAt:now,updatedAt:now,title:'Audio fixture',artist:'',bpm:100,meter:{beats:4,beatUnit:4},key:'',difficulty:2,status:'practicing',notes:'',sections:[{id:'audio-section',name:'Verse',bars:8,notes:'',order:0}]};
+  await db.put('songs',song);
+  const track={id:'audio-track',createdAt:now,updatedAt:now,songId:song.id,assetId:'audio-asset',title:'Practice mix',fileName:'practice.wav',mimeType:'audio/wav',sizeBytes:4096,durationSeconds:120,cues:[{id:'cue-1',sectionId:song.sections[0].id,label:song.sections[0].name,startSeconds:10,endSeconds:30,order:0}],lastPlaybackRate:.8};
+  await db.put('audioTracks',track);assert.equal((await db.get('audioTracks',track.id)).lastPlaybackRate,.8);
+  const backup=createBackup(await db.readData());assert.equal(backup.version,4);assert.equal(backup.data.audioTracks.length,1);assert.equal(backup.data.audioTracks[0].assetId,'audio-asset');
+  await db.resetWorkspace();assert.deepEqual((await db.readData()).audioTracks,[]);
+  await restoreBackup(backup);const restored=await db.readData();assert.equal(restored.audioTracks[0].cues[0].startSeconds,10);
+});
+test('older version-4 backups without repertoire audio restore with an empty audioTracks collection',async()=>{
+  await db.initializeDatabase();const backup=createBackup(await db.readData());delete backup.data.audioTracks;
+  await restoreBackup(backup);assert.deepEqual((await db.readData()).audioTracks,[]);
 });
 
 test('weekly schedules persist through the v7 repository and modern backup restore',async()=>{

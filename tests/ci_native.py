@@ -192,6 +192,45 @@ class NativeOriginSmoke(e2e.MusicPracticeTests):
         self.assertGreater(result['size'],0)
         self.assertFalse(result['existsAfter'])
 
+    def test_22_repertoire_track_media_round_trip(self):
+        self.onboard()
+        result=self.read("""(async()=>{
+          const media=load('db/media.js'),id='qa-repertoire-track';
+          const source=new Blob(['steadybar-local-track'],{type:'audio/wav'});
+          await media.saveRepertoireTrackAsset(id,source,new Date().toISOString());
+          const stored=await media.getRepertoireTrackAsset(id);
+          const before={exists:await media.repertoireTrackAssetExists(id),type:stored?.type,size:stored?.size,text:stored?await stored.text():''};
+          await media.deleteRepertoireTrackAsset(id);
+          return {...before,existsAfter:await media.repertoireTrackAssetExists(id)};
+        })()""")
+        self.assertTrue(result['exists'])
+        self.assertEqual(result['type'],'audio/wav')
+        self.assertEqual(result['text'],'steadybar-local-track')
+        self.assertGreater(result['size'],0)
+        self.assertFalse(result['existsAfter'])
+
+    def test_23_local_audio_probe_rate_and_loop_controls(self):
+        self.onboard()
+        result=self.read("""(async()=>{
+          const makeWav=()=>{
+            const sampleRate=8000,seconds=.4,samples=Math.floor(sampleRate*seconds),buffer=new ArrayBuffer(44+samples*2),view=new DataView(buffer);
+            const text=(offset,value)=>{for(let i=0;i<value.length;i++)view.setUint8(offset+i,value.charCodeAt(i));};
+            text(0,'RIFF');view.setUint32(4,36+samples*2,true);text(8,'WAVE');text(12,'fmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);text(36,'data');view.setUint32(40,samples*2,true);
+            return new Blob([buffer],{type:'audio/wav'});
+          };
+          const mod=load('audio/track-player.js'),blob=makeWav(),probe=await mod.probeAudioBlob(blob),player=new mod.RepertoireTrackPlayer();
+          await player.load(blob);player.setRate(.75);player.setLoop(.05,.2,true);player.seek(.1);
+          const state={probeDuration:probe.durationSeconds,duration:player.duration,rate:player.playbackRate,loop:player.loopState,current:player.currentTime,pitch:player.pitchPreservationSupported};
+          player.destroy();return state;
+        })()""")
+        self.assertGreater(result['probeDuration'],.3)
+        self.assertLess(result['probeDuration'],.5)
+        self.assertGreater(result['duration'],.3)
+        self.assertEqual(result['rate'],.75)
+        self.assertAlmostEqual(result['loop']['startSeconds'],.05,places=2)
+        self.assertAlmostEqual(result['loop']['endSeconds'],.2,places=2)
+        self.assertAlmostEqual(result['current'],.1,places=1)
+
     def test_21_timing_onset_worklet_loads_on_shared_audio_clock(self):
         self.onboard()
         result=self.read("""(async()=>{
@@ -253,6 +292,8 @@ if __name__ == '__main__':
         'test_19_drag_reorder_and_keyboard_skip_link',
         'test_20_recording_media_blob_round_trip',
         'test_21_timing_onset_worklet_loads_on_shared_audio_clock',
+        'test_22_repertoire_track_media_round_trip',
+        'test_23_local_audio_probe_rate_and_loop_controls',
     ]
     suite = unittest.TestSuite(NativeOriginSmoke(name) for name in names)
     result = unittest.TextTestRunner(verbosity=2).run(suite)

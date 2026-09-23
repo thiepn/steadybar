@@ -1,4 +1,5 @@
 import { changeSongSections } from '../app/song-parts.js';
+import { deleteRepertoireTrack, importRepertoireTrack } from '../app/repertoire-audio.js';
 import { activeProfile, profileName } from '../domain/profiles.js';
 import { editSongPart } from '../ui/song-parts.js';
 import { store } from '../app/store.js';
@@ -11,6 +12,7 @@ import { duration, formatDate, nowISO, reorder, titleCase } from '../domain/util
 import { finishedSessions } from '../domain/analytics.js';
 const selectedParts = new Map<string,string>();
 const songView = { query: '', status: 'active', visible: 60 };
+const mediaSize=(bytes:number)=>bytes<1024*1024?`${Math.max(1,Math.round(bytes/1024))} KB`:`${(bytes/1024/1024).toFixed(bytes<10*1024*1024?1:0)} MB`;
 export function songsPage(): Page {
   const data = store.snapshot();
   const search = el('input', { type: 'search', value: songView.query, placeholder: 'Search songs or artists…', 'aria-label': 'Search songs' });
@@ -61,7 +63,23 @@ export function songPage(id:string,requestedPart?:string):Page{
     el('p',{class:'field-hint'},`${profile.name}. ${(original.parts??[]).length} instrument parts in this shared song.`),
     part?el('div',{class:'part-notes'},el('strong',{},part.name),el('p',{class:'muted small'},[part.key?`Key ${part.key}`:'',part.tuning?`Tuning ${part.tuning}`:'',part.capo!==undefined?`Capo ${part.capo}`:'',part.range].filter(Boolean).join(' · ')),el('p',{class:'pre-line'},[part.role,part.notes].filter(Boolean).join('\n'))):null,
     (original.parts??[]).some(p=>p.profileId!==profile.id)?el('p',{class:'muted small'},'Other parts: '+(original.parts??[]).filter(p=>p.profileId!==profile.id).map(p=>`${p.name} (${profileName(data,p.profileId)})`).join(' · ')):null));
-  page.append(el('div',{class:'stats-strip'},stat('Preparation',titleCase(song.status)),stat('Sections',song.sections.length),stat('Practice time',duration(history.reduce((s,h)=>s+h.block.actualActiveSeconds,0))),stat('Last practiced',history[0]?formatDate(history[0].session.startedAt):'—')));
+  const localTracks=(data.audioTracks??[]).filter(track=>track.songId===id&&(!track.songPartId||track.songPartId===part?.id));
+  page.append(el('div',{class:'stats-strip'},stat('Preparation',titleCase(song.status)),stat('Sections',song.sections.length),stat('Local tracks',localTracks.length),stat('Practice time',duration(history.reduce((s,h)=>s+h.block.actualActiveSeconds,0))),stat('Last practiced',history[0]?formatDate(history[0].session.startedAt):'—')));
+
+  const importInput=el('input',{type:'file',accept:'audio/*',hidden:true,'aria-label':'Import local repertoire audio'});
+  importInput.addEventListener('change',()=>{void (async()=>{
+    const file=importInput.files?.[0];importInput.value='';if(!file)return;
+    await importRepertoireTrack(original.id,file,part?.id);notify('Local repertoire track imported.');
+  })().catch(error=>notify(error instanceof Error?error.message:'The local audio file could not be imported.','error'));});
+  const audioPanel=el('section',{class:'panel song-audio-panel'},sectionHeader('Local audio',part?`Attached to ${part.name}`:'Attached to the shared song',[
+    button('Import local track',()=>importInput.click(),'secondary','plus'),
+  ]),importInput,
+    el('p',{class:'field-hint'},'Imported audio stays in this browser. Use it for tempo-controlled playback and saved section loops; JSON backups keep metadata/cues but not the audio bytes.'));
+  if(!localTracks.length)audioPanel.append(el('p',{class:'muted inset'},'No local track attached to this song/part yet.'));
+  else for(const track of localTracks)audioPanel.append(el('article',{class:'song-audio-row'},
+    el('div',{},el('strong',{},track.title),el('span',{class:'muted small'},`${duration(track.durationSeconds)} · ${mediaSize(track.sizeBytes)} · ${track.cues.length} saved cue${track.cues.length===1?'':'s'}`)),
+    el('div',{class:'actions wrap'},link('Open player',`/audio/${track.id}`,'button secondary','play'),button('Delete',async()=>{if(await confirmAction('Delete this local track?',`Remove “${track.title}” and its local audio from this browser? Song history and sections remain unchanged.`,'Delete track',true)){await deleteRepertoireTrack(track.id);notify('Local track deleted.');}},'ghost danger-text'))));
+  page.append(audioPanel);
   const sections=el('section',{class:'panel'},sectionHeader('Song sections',undefined,[button('Practice transition',transition,'ghost','arrow'),button('Add section',()=>editSection(original,undefined,part?.id),'secondary','plus')]));
   if(!song.sections.length)sections.append(empty('No sections yet','Add an intro, verse, chorus, bridge, or any section that needs focused practice.',button('Add first section',()=>editSection(original,undefined,part?.id),'ghost','plus'),'song'));
   let dragIndex=-1;
