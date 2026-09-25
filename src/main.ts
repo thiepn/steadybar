@@ -34,7 +34,7 @@ import { drumGridPage } from './pages/drum-grid.js';
 import { repertoireAudioPage } from './pages/repertoire-audio.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/drum-grid','Grid Lab','routine'],['/library','Library','library'],['/timing-lab','Timing Lab','pulse'],['/midi-lab','MIDI Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
+const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/drum-grid','Grid Lab','routine'],['/timing-lab','Timing Lab','pulse'],['/midi-lab','MIDI Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
