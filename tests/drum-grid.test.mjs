@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildDrumGrid, cycleDrumGridCell, drumGridStepCount, drumGridStepLabels, mirrorDrumGrid, rotateDrumGrid } from '../dist/app/domain/drum-grid.js';
 import { validateProtocol } from '../dist/app/domain/practice-validation.js';
 import { createSession } from '../dist/app/practice/logic.js';
-import { migratePracticeData } from '../dist/app/db/practice-model-migration.js';
+import { migratePracticeData } from '../dist/app/db/profile-migration.js';
 import { seedData } from '../dist/app/db/seed.js';
 
 const at='2026-09-25T03:00:00.000Z';
