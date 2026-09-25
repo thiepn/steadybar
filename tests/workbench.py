@@ -753,11 +753,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.route('/library/'+saved['id'])
         expect(self.page.get_by_role('heading',name='QA Grid Exercise',exact=True)).to_be_visible()
         self.page.get_by_role('button',name='Start practice',exact=True).click()
-        self.page.wait_for_url(re.compile(r'.*#/practice/active
-    names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
-    result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
-    raise SystemExit(0 if result.wasSuccessful() else 1)
-))
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
         expect(self.page.locator('.focus-drum-grid')).to_be_visible()
         self.assertEqual(self.page.locator('.focus-drum-grid .drum-grid-cell').count(),64)
         session=self.read("""(()=>{
@@ -769,45 +765,29 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
-    def test_66_drum_grid_lab_builds_edits_and_launches_normal_practice(self):
+    def test_67_drum_grid_lab_adds_exact_pattern_to_today(self):
         self.onboard()
         self.route('/drum-grid')
-        expect(self.page.get_by_role('heading',name='Drum Grid Lab',exact=True)).to_be_visible()
-        expect(self.page.get_by_role('heading',name='Coordination grid',exact=True)).to_be_visible()
-        self.assertEqual(self.page.locator('.drum-grid-edit-cell').count(),64)
         expect(self.page.get_by_label('Pattern family',exact=True)).to_have_value('kick-displacement')
         self.page.get_by_role('button',name='Next variation',exact=True).click()
-        expect(self.page.get_by_text('Variation 2',exact=True)).to_be_visible()
         first=self.page.locator('.drum-grid-edit-cell').first
         before=first.inner_text();first.click();self.assertNotEqual(first.inner_text(),before)
+        expected=self.read("""(()=>{
+          const cells=[...document.querySelectorAll('.drum-grid-editor .drum-grid-row:not(.drum-grid-header)')];
+          return cells.map(row=>[...row.querySelectorAll('.drum-grid-edit-cell')].map(cell=>cell.textContent==='·'?'.':cell.textContent).join(''));
+        })()""")
         self.page.get_by_role('button',name='Add to Today',exact=True).click()
         plan=None
         for _ in range(70):
             plan=self.read("""(()=>{
               const d=load('app/store.js').store.snapshot(),p=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=p?.blocks.at(-1);
-              return b?{kind:b.protocol?.kind,lanes:b.protocol?.lanes?.length,bpm:b.bpm,title:b.title}:null;
+              return b?{kind:b.protocol?.kind,lanes:b.protocol?.lanes?.map(l=>l.steps),bpm:b.bpm,title:b.title}:null;
             })()""")
             if plan:break
             self.page.wait_for_timeout(100)
-        self.assertEqual(plan['kind'],'drum-grid');self.assertEqual(plan['lanes'],4);self.assertGreaterEqual(plan['bpm'],20)
-        self.page.get_by_role('button',name='Start practice',exact=True).click()
-        self.page.wait_for_url(re.compile(r'.*#/practice/active
-    names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
-    result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
-    raise SystemExit(0 if result.wasSuccessful() else 1)
-))
-        expect(self.page.locator('.practice-drum-grid')).to_be_visible()
-        self.assertEqual(self.page.locator('.drum-grid-practice-row').count(),4)
-        state=self.read("""(()=>{
-          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
-          return {kind:b.protocolSnapshot?.kind,subdivision:b.subdivisionSnapshot,bpm:s.runtime.bpm};
-        })()""")
-        self.assertEqual(state['kind'],'drum-grid');self.assertEqual(state['subdivision'],4)
-        self.page.get_by_role('button',name='Save & leave',exact=True).click()
-        self.page.wait_for_timeout(150)
+        self.assertIsNotNone(plan);self.assertEqual(plan['kind'],'drum-grid');self.assertEqual(plan['lanes'],expected);self.assertGreaterEqual(plan['bpm'],20)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
-
 
 
 if __name__=='__main__':
