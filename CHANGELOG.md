@@ -2,6 +2,22 @@
 
 ## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
 
+- Add a dedicated **Drum Grid & Coordination Lab** for deterministic hand-foot coordination practice.
+- Add five generator families: **Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle, and Independence Builder**.
+- Add repeatable Variation + Complexity controls instead of opaque randomness; identical inputs always produce the same grid.
+- Add direct cell editing with a three-state vocabulary: rest, hit, and accent.
+- Add one-step rotation and right/left-hand mirroring without altering the underlying tempo or session evidence model.
+- Add Web Audio click preview with a moving grid playhead driven by the same audio-time scheduler used by the metronome.
+- Add **Start practice** and **Add to Today** actions that launch the current grid as a normal Steadybar practice block.
+- Add **Save as exercise** so useful grids become durable custom exercises with Drum Coordination + Timing skill attribution.
+- Add a first-class `drum-grid` practice protocol with restore/backup validation, profile compatibility checks, editable Task Settings, Focus Player rendering and reflection evidence.
+- Keep drum-grid tasks percussion-only; non-drum profiles cannot create or restore them as valid current practice tasks.
+- Fix finite trainer session snapshots so Ladder, Pyramid, Burst and Endurance retain their exact configured target duration when launched from saved plans/routines.
+- Add deterministic unit coverage for every grid family, subdivisions, cell editing, rotation/mirroring, malformed-grid rejection and practice snapshots.
+- Add browser coverage for generation, editing, Add to Today, active Focus Player rendering and responsive layouts.
+- No IndexedDB schema or backup-envelope migration is required.
+## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
+
 - Add a first-class **Drum Grid** practice protocol for explicit right-hand, left-hand, kick and hi-hat-foot patterns.
 - Add a dedicated **Drum Grid Lab** with five deterministic pattern families: Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence Builder.
 - Add 2× / 3× / 4× subdivision grids, five bounded complexity levels and deterministic variation stepping without hidden randomness.
