@@ -100,8 +100,8 @@ function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|unde
   if(!options.strictDuration)out.push('duration');
   const nonListening=!['fretboard','pitch-match','vocal-pattern','sight-reading'].includes(protocol.kind);
   if(nonListening)out.push('dynamics');
-  if(family==='percussion'&&(protocol.kind==='tempo'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
-  if(family==='percussion'&&(protocol.kind==='tempo'||!!exercise.sticking))out.push('orchestration');
+  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
+  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||!!exercise.sticking))out.push('orchestration');
   if(!['sight-reading','fretboard','pitch-match','vocal-pattern'].includes(protocol.kind))out.push('memory');
   if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire')out.push('musical-context');
   return [...new Set(out)];
