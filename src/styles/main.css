@@ -800,10 +800,19 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-drum-grid .drum-grid-cell{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);font-family:var(--mono);font-size:11px}
 .focus-drum-grid .drum-grid-cell.rest{color:var(--faint)}
 .focus-drum-grid .drum-grid-cell.current{outline:2px solid var(--focus);outline-offset:1px}
-@media(max-width:900px){.drum-grid-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){
+  .drum-grid-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .drum-grid-editor,.focus-drum-grid{width:100%;min-width:0}
+  .drum-grid-row,.focus-drum-grid .drum-grid-row{width:100%;grid-template-columns:44px repeat(var(--grid-steps),minmax(0,1fr));gap:2px}
+  .button.drum-grid-edit-cell,.focus-drum-grid .drum-grid-cell{width:100%;min-width:0}
+}
 @media(max-width:560px){
   .drum-grid-controls{grid-template-columns:1fr}
-  .drum-grid-row{grid-template-columns:48px repeat(var(--grid-steps),30px)}
-  .button.drum-grid-edit-cell{width:30px;height:30px;min-height:30px}
+  .drum-grid-scroll,.focus-drum-grid{overflow-x:hidden}
+  .drum-grid-row,.focus-drum-grid .drum-grid-row{grid-template-columns:38px repeat(var(--grid-steps),minmax(0,1fr));gap:1px}
+  .drum-grid-row>strong{padding-right:3px;font-size:9px}
+  .drum-grid-header span{font-size:8px}
+  .button.drum-grid-edit-cell{height:34px;min-height:34px;padding:0;font-size:10px}
+  .focus-drum-grid .drum-grid-cell{height:28px;font-size:9px}
   .drum-grid-variations{gap:5px}.drum-grid-variations>.button{font-size:11px;padding-inline:8px}
 }
