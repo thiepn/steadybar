@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
+
+- Add a first-class **Drum Grid** practice protocol for explicit right-hand, left-hand, kick and hi-hat-foot patterns.
+- Add a dedicated **Drum Grid Lab** with five deterministic pattern families: Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence Builder.
+- Add 2× / 3× / 4× subdivision grids, five bounded complexity levels and deterministic variation stepping without hidden randomness.
+- Add direct cell editing with rest → hit → accent cycling, whole-pattern rotation and right/left hand mirroring.
+- Add one-bar count-in and live Web Audio click preview with the current grid position highlighted against the audio-time clock.
+- Add **Start practice**, **Add to Today** and **Save as exercise** actions without introducing a second practice-history model.
+- Saved grid exercises carry normal Coordination primary-skill and Timing secondary-skill relationships so existing PracticeState, Priority, progression and Practice Intelligence can use them.
+- Persist exact grid lanes inside immutable practice protocol snapshots; later exercise edits do not rewrite historical grids.
+- Render the complete limb grid inside Focus Player while practicing and allow normal block evaluation/reflection alongside recordings, notes, timing-click controls and session history.
+- Validate grid lane uniqueness, meter/subdivision length and cell symbols during normal data validation and backup restore.
+- Add deterministic domain tests for all pattern families/subdivisions plus rotation, mirroring, editing and malformed-grid rejection.
+- Add browser coverage for Grid Lab generation, custom editing, save-to-library, launch-to-Focus-Player and responsive behavior.
+- No IndexedDB schema or backup-envelope migration is required.
+
 ## 2.21.0 — Drum Tempo Training V2: Pyramids, Bursts & Finite Trainer Targets — 2026-09-25
 
 - Add a **Pyramid** tempo trainer for controlled speed development: climb from a starting BPM to an exact peak, then descend through the same stages instead of ending at maximum effort.
