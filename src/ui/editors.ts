@@ -221,20 +221,44 @@ export function editBlock(block:RoutineBlock|undefined,onSave:(block:RoutineBloc
   },block?'Save block':'Add block');
 }
 export function trainerDialog(initial:TrainerConfig|undefined,onSave:(config:TrainerConfig)=>Promise<unknown>,bpm=80):void{
-  const mode=select('mode','Training mode',[['progressive','Progressive · timed increases'],['repetition','Repetition · clean rounds'],['ladder','Ladder · tempo stages'],['endurance','Endurance · steady tempo']],initial?.mode||'progressive');
+  const mode=select('mode','Training mode',[
+    ['progressive','Progressive · timed increases'],
+    ['repetition','Repetition · clean rounds'],
+    ['ladder','Ladder · tempo stages'],
+    ['pyramid','Pyramid · climb + descend'],
+    ['burst','Burst · recovery + speed'],
+    ['endurance','Endurance · steady tempo'],
+  ],initial?.mode||'progressive');
   const settings=el('div');
   const render=()=>{
     const m=mode.querySelector('select')!.value;settings.replaceChildren();
     if(m==='progressive'||m==='repetition'){
       const c=initial?.mode===m?initial:undefined;
-      settings.append(el('div',{class:'form-grid'},bpmInput('start','Start BPM',c?.start||bpm),bpmInput('max','Maximum BPM',c?.max||Math.max(120,bpm))),el('div',{class:'form-grid'},input('step','Increase by (BPM)',c?.step||5,'number',{min:1,max:100,step:1,required:true}),m==='progressive'?input('seconds','Every (active seconds)',initial?.mode==='progressive'?initial.seconds:120,'number',{min:1,max:86400,step:1,required:true}):input('rounds','After clean rounds',initial?.mode==='repetition'?initial.rounds:3,'number',{min:1,max:100,step:1,required:true})));
-    }else if(m==='ladder')settings.append(input('bpms','Ladder BPMs, separated by commas',initial?.mode==='ladder'?initial.bpms.join(', '):'80, 90, 100, 110, 100, 90, 80','text',{required:true}),input('seconds','Stage duration (seconds)',initial?.mode==='ladder'?initial.seconds:60,'number',{min:1,max:86400,step:1,required:true}));
-    else settings.append(el('div',{class:'form-grid'},bpmInput('bpm','Hold BPM',initial?.mode==='endurance'?initial.bpm:bpm),input('seconds','Target duration (seconds)',initial?.mode==='endurance'?initial.seconds:600,'number',{min:1,max:86400,step:1,required:true})));
+      settings.append(el('div',{class:'form-grid'},bpmInput('start','Start BPM',c?.start||bpm),bpmInput('max','Maximum BPM',c?.max||Math.min(300,Math.max(120,bpm+20)))),el('div',{class:'form-grid'},input('step','Increase by (BPM)',c?.step||5,'number',{min:1,max:100,step:1,required:true}),m==='progressive'?input('seconds','Every (active seconds)',initial?.mode==='progressive'?initial.seconds:120,'number',{min:1,max:86400,step:1,required:true}):input('rounds','After clean rounds',initial?.mode==='repetition'?initial.rounds:3,'number',{min:1,max:100,step:1,required:true})));
+    }else if(m==='ladder'){
+      settings.append(input('bpms','Ladder BPMs, separated by commas',initial?.mode==='ladder'?initial.bpms.join(', '):`${Math.max(20,bpm-10)}, ${bpm}, ${Math.min(300,bpm+10)}, ${bpm}, ${Math.max(20,bpm-10)}`,'text',{required:true}),input('seconds','Stage duration (seconds)',initial?.mode==='ladder'?initial.seconds:60,'number',{min:1,max:86400,step:1,required:true}));
+    }else if(m==='pyramid'){
+      settings.append(
+        el('div',{class:'form-grid'},bpmInput('start','Start BPM',initial?.mode==='pyramid'?initial.start:bpm),bpmInput('max','Peak BPM',initial?.mode==='pyramid'?initial.max:Math.min(300,bpm+20))),
+        el('div',{class:'form-grid'},input('step','Step (BPM)',initial?.mode==='pyramid'?initial.step:5,'number',{min:1,max:100,step:1,required:true}),input('seconds','Seconds per stage',initial?.mode==='pyramid'?initial.seconds:45,'number',{min:1,max:86400,step:1,required:true})),
+        el('p',{class:'field-hint'},'Climb to the exact peak, then descend through the same tempos. The block target becomes the full pyramid duration.')
+      );
+    }else if(m==='burst'){
+      settings.append(
+        el('div',{class:'form-grid'},bpmInput('recoveryBpm','Recovery BPM',initial?.mode==='burst'?initial.recoveryBpm:bpm),bpmInput('burstBpm','Burst BPM',initial?.mode==='burst'?initial.burstBpm:Math.min(300,bpm+20))),
+        el('div',{class:'form-grid'},input('recoverySeconds','Recovery seconds',initial?.mode==='burst'?initial.recoverySeconds:20,'number',{min:1,max:3600,step:1,required:true}),input('burstSeconds','Burst seconds',initial?.mode==='burst'?initial.burstSeconds:10,'number',{min:1,max:3600,step:1,required:true}),input('cycles','Cycles',initial?.mode==='burst'?initial.cycles:5,'number',{min:1,max:100,step:1,required:true})),
+        el('p',{class:'field-hint'},'Each cycle starts at recovery tempo, then switches to the faster burst. Keep bursts controlled; stop increasing speed when timing, sound, or relaxation breaks down.')
+      );
+    }else{
+      settings.append(el('div',{class:'form-grid'},bpmInput('bpm','Hold BPM',initial?.mode==='endurance'?initial.bpm:bpm),input('seconds','Target duration (seconds)',initial?.mode==='endurance'?initial.seconds:600,'number',{min:1,max:86400,step:1,required:true})));
+    }
   };mode.addEventListener('change',render);render();
-  formDialog('Tempo trainer',[mode,settings,el('p',{class:'field-hint'},'Pausing freezes the trainer. Progressive and repetition modes hold at the maximum. The ladder holds its final stage; it never loops unexpectedly.')],async form=>{
+  formDialog('Tempo trainer',[mode,settings,el('p',{class:'field-hint'},'Pausing freezes the trainer. Progressive and repetition modes remain open-ended. Ladder, pyramid, burst, and endurance use an explicit block target; continuing after the target holds a final or recovery tempo.')],async form=>{
     const m=formText(form,'mode');let config:unknown;
     if(m==='progressive'||m==='repetition')config={mode:m,start:formNumber(form,'start'),max:formNumber(form,'max'),step:formNumber(form,'step'),...(m==='progressive'?{seconds:formNumber(form,'seconds')}:{rounds:formNumber(form,'rounds')})};
     else if(m==='ladder')config={mode:m,bpms:formText(form,'bpms').split(',').map(v=>Number(v.trim())),seconds:formNumber(form,'seconds')};
+    else if(m==='pyramid')config={mode:m,start:formNumber(form,'start'),max:formNumber(form,'max'),step:formNumber(form,'step'),seconds:formNumber(form,'seconds')};
+    else if(m==='burst')config={mode:m,recoveryBpm:formNumber(form,'recoveryBpm'),burstBpm:formNumber(form,'burstBpm'),recoverySeconds:formNumber(form,'recoverySeconds'),burstSeconds:formNumber(form,'burstSeconds'),cycles:formNumber(form,'cycles')};
     else config={mode:m,bpm:formNumber(form,'bpm'),seconds:formNumber(form,'seconds')};
     await onSave(validateTrainer(config));
   },'Use trainer');
