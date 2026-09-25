@@ -80,7 +80,7 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       button('Matched by ear',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:true});},'secondary'),
       button('Needs another listen',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:false});},'secondary'));
   }else if(p.kind==='drum-grid'){
-    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision),grid=el('div',{class:'focus-drum-grid','aria-label':'Drum coordination grid'},
+    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision),grid=el('div',{class:'focus-drum-grid',style:'--grid-steps:'+labels.length,'aria-label':'Drum coordination grid'},
       el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))),
       ...DRUM_GRID_VOICES.map(voice=>{
         const lane=p.lanes.find(row=>row.voice===voice.id),steps=lane?.steps??'.'.repeat(labels.length);
