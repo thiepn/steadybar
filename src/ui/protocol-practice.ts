@@ -16,11 +16,11 @@ import { el } from './dom.js';
 
 export interface TaskPanel {node:HTMLElement;update:(block:PracticeBlock)=>void;cleanup:()=>void}
 export function taskPanel(initial:PracticeBlock):TaskPanel {
-  let block=initial,stamp='',restUntil=0;
+  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined;
   const p=initial.protocolSnapshot;
-  const node=el('section',{class:'protocol-task','data-protocol':p?.kind??'legacy'}),heading=el('h2',{class:'task-heading'}),cue=el('p',{class:'task-cue'}),detail=el('p',{class:'muted small'}),grid=el('div',{class:'practice-drum-grid',hidden:true}),actions=el('div',{class:'task-actions'}),feedback=el('p',{class:'task-feedback',role:'status'}),recent=el('p',{class:'muted small task-result'});
+  const node=el('section',{class:'protocol-task','data-protocol':p?.kind??'legacy'}),heading=el('h2',{class:'task-heading'}),cue=el('p',{class:'task-cue'}),detail=el('p',{class:'muted small'}),actions=el('div',{class:'task-actions'}),feedback=el('p',{class:'task-feedback',role:'status'}),recent=el('p',{class:'muted small task-result'});
   if(!p||p.kind==='tempo')return {node,update:()=>{},cleanup:()=>reference.stop()};
-  node.append(el('div',{class:'task-heading-row'},heading),cue,detail,grid,actions,feedback,recent);
+  node.append(el('div',{class:'task-heading-row'},heading),cue,detail,actions,feedback,recent);
   const state=()=>block.protocolState??{step:0,clean:0,total:0};
   const base=()=>({id:uuid(),timestamp:nowISO(),note:'',source:'self-report' as const});
   const ensureStarted=()=>{if(!practice.session||['ready','countin'].includes(practice.session.runtime.phase))throw new Error('Start practice before logging a result.');};
@@ -39,12 +39,6 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       textarea('note','Observation','',2),
     ],async form=>{const earlier=(block.outcomes??[]).filter(r=>r.kind==='count').reduce((n,r)=>n+r.durationSeconds,0);await log({...base(),kind:'count',protocol:p.kind,clean:formNumber(form,'clean'),total:formNumber(form,'total'),durationSeconds:Math.max(0,practice.elapsed()-earlier),note:formText(form,'note')},step);},'Save round');};
     actions.append(button('Log round',round,'primary'),button(p.kind==='chord-changes'?'+ Clean change':'+ Clean repetition',async()=>{ensureStarted();await log({...base(),kind:'count',protocol:p.kind,clean:1,total:1,durationSeconds:0});},'secondary'),button('Miss',async()=>{ensureStarted();await log({...base(),kind:'count',protocol:p.kind,clean:0,total:1,durationSeconds:0});},'ghost'));
-  }else if(p.kind==='drum-grid'){
-    grid.hidden=false;
-    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision),voiceLabel=new Map(DRUM_GRID_VOICES.map(v=>[v.id,v.short]));grid.style.setProperty('--grid-steps',String(labels.length));
-    grid.append(el('div',{class:'drum-grid-practice-head'},el('span',{},''),...labels.map((label,index)=>el('span',{class:`drum-grid-step-label ${index%p.pulse.subdivision===0?'beat':''}`},label))));
-    for(const lane of p.lanes)grid.append(el('div',{class:'drum-grid-practice-row','data-voice':lane.voice},el('strong',{},voiceLabel.get(lane.voice)??lane.voice),...[...lane.steps].map((value,index)=>el('span',{class:`drum-grid-practice-cell ${value==='X'?'accent':value==='x'?'hit':'rest'} ${index%p.pulse.subdivision===0?'beat':''}`,'data-index':index},value==='.'?'·':value))));
-    actions.append(button('Record reflection',()=>{ensureStarted();const step=state().step;formDialog('Grid reflection',[score('rating','Control / confidence'),textarea('note','What broke down or improved?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save reflection');},'secondary'));
   }else if(p.kind==='groove'){
     actions.append(button('Review groove',()=>{ensureStarted();const step=state().step;formDialog('Groove review',[
       el('p',{class:'field-hint'},'Your own listening assessment, from 1 (needs work) to 5 (controlled).'),score('timing','Time / pulse'),score('control',p.focus==='muting'?'Muting':'Control'),score('articulation','Articulation'),textarea('note','Observation','',2),
@@ -87,13 +81,14 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       button('Matched by ear',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:true});},'secondary'),
       button('Needs another listen',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:false});},'secondary'));
   }else if(p.kind==='drum-grid'){
-    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision),grid=el('div',{class:'focus-drum-grid',style:'--grid-steps:'+labels.length,'aria-label':'Drum coordination grid'},
+    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision);
+    drumGrid=el('div',{class:'focus-drum-grid',style:'--grid-steps:'+labels.length,'aria-label':'Drum coordination grid'},
       el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))),
       ...DRUM_GRID_VOICES.map(voice=>{
         const lane=p.lanes.find(row=>row.voice===voice.id),steps=lane?.steps??'.'.repeat(labels.length);
-        return el('div',{class:'drum-grid-row'},el('strong',{},voice.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`,'aria-label':`${voice.label} step ${index+1}: ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`},cell==='.'?'·':cell)));
+        return el('div',{class:'drum-grid-row'},el('strong',{},voice.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`,'data-index':index,'aria-label':`${voice.label} step ${index+1}: ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`},cell==='.'?'·':cell)));
       }));
-    node.insertBefore(grid,actions);
+    node.insertBefore(drumGrid,actions);
     actions.append(button('Record reflection',()=>{ensureStarted();const step=state().step;formDialog('Grid practice reflection',[score('rating','Control / confidence'),textarea('note','What broke down or improved?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save reflection');},'secondary'));
   }else if(p.kind==='sight-reading'){
     actions.append(button('Log reading attempt',()=>{ensureStarted();const step=state().step;formDialog('Reading result',[
@@ -110,12 +105,11 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
     if(p.kind==='scale-cycle')detail.textContent=[p.motion==='contrary'?'Contrary motion':'Parallel motion',p.fingering,p.position].filter(Boolean).join(' · ');
     if(p.kind==='groove')detail.textContent=`${p.progression} · ${p.focus}. ${protocolDefinition(p.kind).description}`;
     if(p.kind==='drum-grid'){
-      cue.textContent=p.name;detail.textContent=p.focus;
+      cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;
       const currentIndex=practice.beat&&['running','countin'].includes(practice.session?.runtime.phase??'')?practice.beat.beat*p.pulse.subdivision+practice.beat.part:-1;
-      grid.querySelectorAll<HTMLElement>('.drum-grid-practice-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
+      drumGrid?.querySelectorAll<HTMLElement>('.drum-grid-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
     }
     if(p.kind==='sight-reading')cue.textContent=p.material||'Choose a short passage from your own score';
-    if(p.kind==='drum-grid'){cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;}
     if(p.kind==='scale-cycle')cue.textContent=`${NOTE_NAMES[p.keys[state.step%p.keys.length]!]} ${p.quality.replaceAll('-',' ')} · ${p.hands==='not-applicable'?p.position:p.hands+' hands'} · ${p.octaves} octave${p.octaves===1?'':'s'}`;
     if(p.kind==='fretboard'){const prompt=fretPrompt(p,state.step);cue.textContent=`String ${prompt.string} · fret ${prompt.fret}`;detail.textContent=`${state.clean} correct / ${state.total} answered · ${p.target} prompt target. String 1 is highest.`;}
     if(p.kind==='pitch-match')detail.textContent=`${state.clean} self-reported matches / ${state.total} attempts · target ${p.target}. No automatic grading.`;
