@@ -14,6 +14,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
   switch(p.kind){
     case 'free':node.append(textarea('focus','Practice focus',p.focus));break;
     case 'tempo':node.append(text('technique','Technique',p.technique));if(profile.family==='percussion')node.append(text('sticking','Sticking',p.sticking??''),text('orchestration','Limb / orchestration notes',p.orchestration??''));break;
+    case 'drum-grid':node.append(text('gridName','Grid name',p.name),textarea('gridFocus','Practice focus',p.focus,3),...p.lanes.map(lane=>text(`lane-${lane.voice}`,lane.voice.replaceAll('-',' '),lane.steps,'Use . for rest, x for hit, X for accent.')));break;
     case 'drum-grid':{
       const lane=(voice:string)=>p.lanes.find(row=>row.voice===voice)?.steps??'.'.repeat(p.pulse.beats*p.pulse.subdivision);
       node.append(text('gridName','Grid name',p.name),textarea('gridFocus','Practice focus',p.focus,3),text('gridRightHand','Right hand cells',lane('right-hand'),'Use . for rest, x for hit, X for accent.'),text('gridLeftHand','Left hand cells',lane('left-hand')),text('gridKick','Kick cells',lane('kick')),text('gridHihatFoot','Hi-hat foot cells',lane('hihat-foot')));break;
@@ -52,6 +53,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
     switch(p.kind){
       case 'free':candidate={kind:p.kind,focus:text('focus'),pulse:readPulse?.(data)};break;
       case 'tempo':candidate={kind:p.kind,pulse:readPulse?.(data),technique:text('technique'),...(profile.family==='percussion'?{sticking:text('sticking'),orchestration:text('orchestration')}:{})};break;
+      case 'drum-grid':candidate={kind:p.kind,pulse:readPulse?.(data),name:text('gridName'),focus:text('gridFocus'),lanes:p.lanes.map(lane=>({voice:lane.voice,steps:text(`lane-${lane.voice}`).replaceAll(' ','')}))};break;
       case 'drum-grid':{const gridPulse=readPulse?.(data);if(!gridPulse)throw new Error('Drum grids require a metronome pulse.');const size=gridPulse.beats*gridPulse.subdivision,normalize=(value:string)=>value.replace(/\s+/g,'').slice(0,size).padEnd(size,'.');candidate={kind:p.kind,pulse:gridPulse,name:text('gridName'),focus:text('gridFocus'),lanes:[['right-hand','gridRightHand'],['left-hand','gridLeftHand'],['kick','gridKick'],['hihat-foot','gridHihatFoot']].map(([voice,key])=>({voice,steps:normalize(text(key))}))};break;}
       case 'repetitions':candidate={kind:p.kind,task:text('task'),target:n('target'),pulse:readPulse?.(data)};break;
       case 'chord-changes':candidate={kind:p.kind,chords:list('chords'),target:n('target'),technique:text('technique'),pulse:readPulse?.(data)};break;
