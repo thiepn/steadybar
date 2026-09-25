@@ -824,8 +824,9 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_text('QA Coordination Grid',exact=False).first).to_be_visible()
         expect(self.page.get_by_text('1 wrong sound',exact=True).first).to_be_visible()
         expect(self.page.locator('.midi-grid-lane-row')).to_have_count(4)
-        expect(self.page.get_by_text('Right-hand lane',exact=True).first).to_be_visible()
-        expect(self.page.get_by_text('Closed hi-hat',exact=True).first).to_be_visible()
+        first_lane=self.page.locator('.midi-grid-lane-row').first
+        expect(first_lane).to_contain_text('Right-hand lane')
+        expect(first_lane).to_contain_text('Closed hi-hat')
         expect(self.page.get_by_text('Snare accent contrast',exact=False).first).to_be_visible()
         expect(self.page.get_by_text('Δ +30.0 MIDI velocity',exact=False).first).to_be_visible()
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
