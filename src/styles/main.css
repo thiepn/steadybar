@@ -774,3 +774,35 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .today-intelligence-row,.weekly-intelligence-row{grid-template-columns:1fr}
   .today-intelligence-row>.actions{justify-content:flex-start}
 }
+
+
+/* Phase 22 — Drum Grid & Coordination Lab. */
+.drum-grid-page{display:grid;gap:20px}
+.drum-grid-setup,.drum-grid-panel{display:grid;gap:16px}
+.drum-grid-controls{grid-template-columns:repeat(5,minmax(0,1fr))}
+.drum-grid-focus{max-width:78ch}
+.drum-grid-status{padding:10px 12px;background:var(--surface-soft);border-left:2px solid var(--accent);font-size:12px}
+.drum-grid-variations{align-items:center}
+.drum-grid-scroll{overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:4px}
+.drum-grid-editor,.focus-drum-grid{display:grid;gap:4px;min-width:max-content}
+.drum-grid-row{display:grid;grid-template-columns:56px repeat(var(--grid-steps),34px);gap:4px;align-items:center}
+.drum-grid-row>strong{display:flex;align-items:center;justify-content:flex-start;min-height:34px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.drum-grid-header span{display:flex;align-items:center;justify-content:center;min-height:26px;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.button.drum-grid-edit-cell{width:34px;height:34px;min-height:34px;padding:0;border:1px solid var(--border);font-family:var(--mono);font-size:12px}
+.button.drum-grid-edit-cell.rest{color:var(--faint);background:var(--surface)}
+.button.drum-grid-edit-cell.hit,.drum-grid-cell.hit{color:var(--text);background:var(--surface-soft);font-weight:650}
+.button.drum-grid-edit-cell.accent,.drum-grid-cell.accent{color:var(--on-accent);background:var(--accent);border-color:var(--accent);font-weight:750}
+.button.drum-grid-edit-cell.playing{outline:2px solid var(--focus);outline-offset:1px}
+.drum-grid-method{margin:0;padding-left:22px;display:grid;gap:8px;font-size:13px;color:var(--muted)}
+.drum-grid-text{overflow:auto;padding:12px;background:var(--surface-soft);border:1px solid var(--border);font-family:var(--mono);font-size:12px;line-height:1.7}
+.focus-drum-grid{overflow-x:auto;padding:10px 0 4px}
+.focus-drum-grid .drum-grid-row{grid-template-columns:48px repeat(var(--grid-steps),28px)}
+.focus-drum-grid .drum-grid-cell{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);font-family:var(--mono);font-size:11px}
+.focus-drum-grid .drum-grid-cell.rest{color:var(--faint)}
+@media(max-width:900px){.drum-grid-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){
+  .drum-grid-controls{grid-template-columns:1fr}
+  .drum-grid-row{grid-template-columns:48px repeat(var(--grid-steps),30px)}
+  .button.drum-grid-edit-cell{width:30px;height:30px;min-height:30px}
+  .drum-grid-variations{gap:5px}.drum-grid-variations>.button{font-size:11px;padding-inline:8px}
+}
