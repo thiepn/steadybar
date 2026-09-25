@@ -40,7 +40,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
   }
   let readPulse:((data:FormData)=>Pulse|undefined)|undefined;
   if('pulse' in p || ['free','repetitions','chord-changes','scale-cycle','sight-reading','repertoire'].includes(p.kind)){
-    const mandatory=p.kind==='tempo'||p.kind==='groove'||p.kind==='drum-grid',c=protocolPulse(p)??pulse();
+    const mandatory=p.kind==='tempo'||p.kind==='groove'||p.kind==='drum-grid'||p.kind==='drum-grid',c=protocolPulse(p)??pulse();
     const enabled=checkbox('useClick','Use a metronome with this exercise',mandatory||!!protocolPulse(p));enabled.hidden=mandatory;
     const controls=el('div',{class:'form-grid'},number('protocolBpm','Starting BPM',c.bpm,20,300),select('beats','Beats per bar',Array.from({length:16},(_,i)=>String(i+1)),String(c.beats)),select('beatUnit','Beat unit',[['4','Quarter note'],['8','Eighth note']],String(c.beatUnit)),select('subdivision','Subdivision',[['1','1 per beat'],['2','2 per beat'],['3','3 per beat'],['4','4 per beat']],String(c.subdivision)));
     const toggle=()=>{const on=mandatory||enabled.querySelector('input')!.checked;controls.hidden=!on;controls.querySelectorAll<HTMLInputElement|HTMLSelectElement>('input,select').forEach(e=>e.disabled=!on);};enabled.addEventListener('change',toggle);toggle();node.append(enabled,controls);
