@@ -1,4 +1,4 @@
-import type { PracticeProfile, PracticeProtocol, ProtocolOutcome, ProtocolState, SongPart, SongTransition, Experience } from './practice-types.js';
+import type { PracticeProfile, PracticeProtocol, ProtocolOutcome, ProtocolState, SongPart, SongTransition, Experience, DrumGridLane, DrumGridVoice } from './practice-types.js';
 import type { PlanGeneration, PracticeEvaluation, PracticePrescription, PracticeState, PriorityCycle, SetPrepSnapshot } from './practice-state.js';
 import type { CourseProgress, LessonSource } from '../learning/types.js';
 import type { AccentColor, SurfaceTheme } from './appearance.js';
@@ -217,7 +217,7 @@ export interface TimingLabResult extends Entity {
   confidence: TimingLabConfidence;
   hits: TimingLabMatchedHit[];
 }
-export type MidiExpectedPattern = 'subdivision' | 'beat' | 'two-four';
+export type MidiExpectedPattern = 'subdivision' | 'beat' | 'two-four' | 'drum-grid';
 export type MidiDrumVoice =
   | 'kick' | 'snare' | 'rim' | 'hihat-closed' | 'hihat-open' | 'hihat-pedal'
   | 'tom-high' | 'tom-mid' | 'tom-low' | 'ride' | 'ride-bell' | 'crash' | 'other';
@@ -227,6 +227,8 @@ export interface MidiDrumMapping {
   label: string;
   enabled: boolean;
 }
+export interface MidiGridLaneAssignment { gridVoice: DrumGridVoice; midiVoice: MidiDrumVoice }
+export interface MidiGridLaneSummary { gridVoice: DrumGridVoice; midiVoice: MidiDrumVoice; expectedCount: number; matchedCount: number; misses: number }
 export interface MidiDeviceProfile extends Entity {
   profileId: string;
   deviceKey: string;
@@ -248,6 +250,8 @@ export interface MidiPerformanceMatchedHit {
   bar: number;
   beat: number;
   part: number;
+  expectedGridVoice?: DrumGridVoice;
+  expectedAccent?: boolean;
 }
 export interface MidiVoiceSummary {
   voice: MidiDrumVoice;
@@ -259,7 +263,7 @@ export interface MidiVoiceSummary {
   timingSpreadMs: number;
 }
 export interface MidiPerformanceResult extends Entity {
-  midiAnalysisVersion: 1;
+  midiAnalysisVersion: 1 | 2;
   profileId: string;
   sessionId?: string;
   blockId?: string;
@@ -275,6 +279,14 @@ export interface MidiPerformanceResult extends Entity {
   durationSeconds: number;
   expectedPattern: MidiExpectedPattern;
   analyzedVoice?: MidiDrumVoice;
+  gridNameSnapshot?: string;
+  gridLanesSnapshot?: DrumGridLane[];
+  gridAssignments?: MidiGridLaneAssignment[];
+  wrongVoiceCount?: number;
+  gridLaneSummaries?: MidiGridLaneSummary[];
+  accentVelocityMean?: number;
+  normalVelocityMean?: number;
+  accentVelocityDifference?: number;
   matchWindowMs: number;
   expectedCount: number;
   detectedCount: number;

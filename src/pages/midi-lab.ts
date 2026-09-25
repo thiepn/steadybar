@@ -3,8 +3,10 @@ import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
 import { deleteMidiPerformanceResult, midiProfileFor, saveMidiDeviceProfile, saveMidiPerformanceResult } from '../app/midi-lab.js';
 import { store } from '../app/store.js';
 import { activeProfile } from '../domain/profiles.js';
-import { analyzeMidiPerformance, defaultMidiMappings, MIDI_VOICES } from '../domain/midi-analysis.js';
-import type { ClickMode, MetronomeConfig, MidiDeviceProfile, MidiDrumMapping, MidiDrumVoice, MidiExpectedPattern, MidiPerformanceResult, Subdivision } from '../domain/models.js';
+import { analyzeMidiGridPerformance, analyzeMidiPerformance, defaultMidiMappings, MIDI_VOICES } from '../domain/midi-analysis.js';
+import { drumGridText } from '../domain/drum-grid.js';
+import type { ClickMode, MetronomeConfig, MidiDeviceProfile, MidiDrumMapping, MidiDrumVoice, MidiExpectedPattern, MidiGridLaneAssignment, MidiPerformanceResult, Subdivision } from '../domain/models.js';
+import type { DrumGridVoice, PracticeProtocol } from '../domain/practice-types.js';
 import { timingMatchWindowMs } from '../domain/timing-analysis.js';
 import { MidiInputManager, midiInput, type MidiInputDescriptor, type MidiNoteEvent } from '../midi/input.js';
 import type { Page } from '../app/navigation.js';
@@ -18,16 +20,19 @@ const clickModes:[ClickMode,string][]=[
 const subdivisions:[string,string][]=[['1','Quarter / beat'],['2','Eighths'],['3','Triplets'],['4','Sixteenths']];
 const channels:[string,string][]=[['','Any MIDI channel'],...Array.from({length:16},(_,i)=>[String(i+1),`Channel ${i+1}`] as [string,string])];
 const voiceOptions:[string,string][]=[['','All mapped notes'],...MIDI_VOICES.map(row=>[row.value,row.label] as [string,string])];
-const patternOptions:[MidiExpectedPattern,string][]=[['subdivision','Every subdivision'],['beat','Beat only'],['two-four','2 & 4 backbeat']];
+const patternOptions:[MidiExpectedPattern,string][]=[['subdivision','Every subdivision'],['beat','Beat only'],['two-four','2 & 4 backbeat'],['drum-grid','Authored Drum Grid']];
+type GridProtocol=Extract<PracticeProtocol,{kind:'drum-grid'}>;
+const gridLaneLabels:[DrumGridVoice,string][]=[['right-hand','Right-hand lane'],['left-hand','Left-hand lane'],['kick','Kick lane'],['hihat-foot','Hi-hat-foot lane']];
+const defaultGridVoice:Record<DrumGridVoice,MidiDrumVoice>={'right-hand':'hihat-closed','left-hand':'snare',kick:'kick','hihat-foot':'hihat-pedal'};
 const signed=(value:number)=>`${value>0?'+':''}${value.toFixed(1)} ms`;
 const confidenceLabel=(value:MidiPerformanceResult['confidence'])=>value==='high'?'High measurement confidence':value==='medium'?'Medium measurement confidence':'Low measurement confidence';
 
 function resultCard(result:MidiPerformanceResult):HTMLElement{
   const matchRate=result.expectedCount?Math.round(result.matchedCount/result.expectedCount*100):0;
-  const title=result.analyzedVoice?MIDI_VOICES.find(row=>row.value===result.analyzedVoice)?.label??titleCase(result.analyzedVoice):'All mapped notes',pattern=patternOptions.find(row=>row[0]===result.expectedPattern)?.[1]??titleCase(result.expectedPattern);
+  const title=result.expectedPattern==='drum-grid'?(result.gridNameSnapshot??'Drum Grid'):result.analyzedVoice?MIDI_VOICES.find(row=>row.value===result.analyzedVoice)?.label??titleCase(result.analyzedVoice):'All mapped notes',pattern=patternOptions.find(row=>row[0]===result.expectedPattern)?.[1]??titleCase(result.expectedPattern);
   const card=el('article',{class:'panel midi-result-card'},
     sectionHeader('Latest MIDI result',`${result.deviceNameSnapshot} · ${result.bpm} BPM · ${title} · ${pattern}`),
-    el('div',{class:'tag-row'},badge(confidenceLabel(result.confidence),result.confidence==='high'?'accent':'neutral'),badge(`${matchRate}% matched`),badge(`${result.misses} missed`),badge(`${result.extras} extra`),result.unmappedCount?badge(`${result.unmappedCount} unmapped`):null),
+    el('div',{class:'tag-row'},badge(confidenceLabel(result.confidence),result.confidence==='high'?'accent':'neutral'),badge(`${matchRate}% matched`),badge(`${result.misses} missed`),badge(`${result.extras} extra`),result.wrongVoiceCount?badge(`${result.wrongVoiceCount} wrong sound`):null,result.unmappedCount?badge(`${result.unmappedCount} unmapped`):null),
     el('div',{class:'stats-strip midi-stats'},
       stat('Average bias',result.matchedCount?signed(result.meanOffsetMs):'—',result.matchedCount?'Negative = early · positive = late':'Not enough matched events'),
       stat('Typical error',result.matchedCount?`${result.meanAbsoluteErrorMs.toFixed(1)} ms`:'—','Mean absolute timing distance'),
@@ -36,6 +41,22 @@ function resultCard(result:MidiPerformanceResult):HTMLElement{
       stat('Velocity spread',result.matchedCount>1?`${result.velocitySpread.toFixed(1)}`:'—','Device-relative consistency'),
       stat('Velocity range',result.matchedCount?`${result.velocityMin}–${result.velocityMax}`:'—',result.matchedCount?`range ${result.velocityRange}`:'No matched velocities')),
     el('p',{class:'field-hint'},`Matched ${result.matchedCount} of ${result.expectedCount} expected positions inside ±${result.matchWindowMs} ms. MIDI velocity is device-specific and is not identical to acoustic loudness or force.`));
+  if(result.expectedPattern==='drum-grid'&&result.gridLaneSummaries?.length){
+    const laneSummary=el('div',{class:'midi-grid-lane-summary'},el('div',{class:'midi-grid-lane-head'},el('strong',{},'Grid lane'),el('strong',{},'Assigned sound'),el('strong',{},'Matched'),el('strong',{},'Missed')));
+    for(const row of result.gridLaneSummaries){
+      const lane=gridLaneLabels.find(item=>item[0]===row.gridVoice)?.[1]??titleCase(row.gridVoice),sound=MIDI_VOICES.find(item=>item.value===row.midiVoice)?.label??titleCase(row.midiVoice);
+      laneSummary.append(el('div',{class:'midi-grid-lane-row'},el('span',{},lane),el('span',{},sound),el('span',{},`${row.matchedCount}/${row.expectedCount}`),el('span',{},row.misses)));
+    }
+    card.append(laneSummary);
+    if(result.accentVelocityDifference!==undefined){
+      const voices=[...new Set(result.hits.filter(hit=>hit.expectedAccent).map(hit=>hit.voice))],sound=voices.length===1?MIDI_VOICES.find(row=>row.value===voices[0])?.label:'Comparable mapped sound';
+      card.append(el('p',{class:'field-hint'},`${sound??'Comparable mapped sound'} accent contrast · accent mean ${result.accentVelocityMean?.toFixed(1)} vs normal ${result.normalVelocityMean?.toFixed(1)} · Δ ${result.accentVelocityDifference>0?'+':''}${result.accentVelocityDifference.toFixed(1)} MIDI velocity on the same mapped sound. This is not acoustic loudness.`));
+    }
+  }
+  const sourceActions=el('div',{class:'actions wrap midi-result-source-actions'});
+  if(result.sourceExerciseId&&store.snapshot().exercises.some(exercise=>exercise.id===result.sourceExerciseId))sourceActions.append(link('Open source exercise',`/library/${result.sourceExerciseId}`,'button ghost','library'));
+  if(result.sessionId&&store.snapshot().sessions.some(session=>session.id===result.sessionId))sourceActions.append(link('Open practice session',`/history/${result.sessionId}`,'button ghost','history'));
+  if(sourceActions.childElementCount)card.append(sourceActions);
   if(result.voices.length){
     const voices=el('div',{class:'midi-voice-summary'},el('div',{class:'midi-voice-head'},el('strong',{},'Mapped voice'),el('strong',{},'Hits'),el('strong',{},'Median vel.'),el('strong',{},'Vel. spread'),el('strong',{},'Timing error')));
     for(const row of result.voices)voices.append(el('div',{class:'midi-voice-row'},el('span',{},row.label),el('span',{},row.count),el('span',{},row.medianVelocity.toFixed(1)),el('span',{},row.velocitySpread.toFixed(1)),el('span',{},`${row.meanAbsoluteErrorMs.toFixed(1)} ms`)));
@@ -48,12 +69,12 @@ export function midiLabPage():Page{
   const snapshot=store.snapshot(),profile=activeProfile(snapshot),supported=MidiInputManager.supported();
   let devices:MidiInputDescriptor[]=[],selected:MidiInputDescriptor|undefined;
   let mappings:MidiDrumMapping[]=defaultMidiMappings(),activeProfileRow:MidiDeviceProfile|undefined;
-  let active=false,learning=false,disposed=false,startAudioTime=0,runningDuration=0,runningConfig:MetronomeConfig|undefined,runningVoice:MidiDrumVoice|undefined,runningPattern:MidiExpectedPattern='subdivision';
+  let active=false,learning=false,disposed=false,startAudioTime=0,runningDuration=0,runningConfig:MetronomeConfig|undefined,runningVoice:MidiDrumVoice|undefined,runningPattern:MidiExpectedPattern='subdivision',runningGrid:GridProtocol|undefined,runningGridAssignments:MidiGridLaneAssignment[]|undefined,runningGridExerciseId:string|undefined;
   let events:MidiNoteEvent[]=[],eventOverflow=false,finishTimer:ReturnType<typeof setTimeout>|undefined,tickTimer:ReturnType<typeof setInterval>|undefined;
   let removeStateListener:()=>void=()=>{};
 
-  const page=el('div',{class:'page midi-lab-page'},pageHeader('Electronic drum diagnostics','MIDI Drum Lab',`${profile.name} · High-resolution timing and device-relative velocity evidence from mapped MIDI note-on events.`,[
-    link('Timing Lab','/timing-lab','button secondary','pulse'),link('Progress','/progress','button secondary','progress'),
+  const page=el('div',{class:'page midi-lab-page'},pageHeader('Electronic drum diagnostics','MIDI Drum Lab',`${profile.name} · High-resolution timing, mapped-sound accuracy and device-relative velocity evidence.`,[
+    link('Drum Grid Lab','/drum-grid','button secondary','routine'),link('Timing Lab','/timing-lab','button secondary','pulse'),link('Progress','/progress','button secondary','progress'),
   ]));
 
   const status=el('p',{class:'midi-lab-status',role:'status'},supported?'Connect a MIDI input to begin.':'Web MIDI is unavailable in this browser. Saved MIDI history remains readable; use a Chromium-based browser for live MIDI input.');
@@ -65,6 +86,24 @@ export function midiLabPage():Page{
   const subdivision=select('midiSubdivision','Subdivision',subdivisions,String(snapshot.settings.metronome.subdivision));
   const clickMode=select('midiClick','Click mode',clickModes,resolvedTiming(snapshot.settings.metronome).mode);
   const durationInput=input('midiDuration','Test seconds',30,'number',{min:5,max:180,step:5,required:true});
+  const activeGridBlock=snapshot.sessions.find(session=>session.status==='active'&&session.profileId===profile.id)?.blocks.find((_,index)=>index===snapshot.sessions.find(session=>session.status==='active'&&session.profileId===profile.id)?.activeBlockIndex)?.protocolSnapshot;
+  const gridExercises=snapshot.exercises.filter(exercise=>exercise.profileId===profile.id&&!exercise.archived&&exercise.protocol?.kind==='drum-grid');
+  const gridOptions:[string,string][]=[...(activeGridBlock?.kind==='drum-grid'?[['active','Current practice grid'] as [string,string]]:[]),...gridExercises.map(exercise=>[exercise.id,exercise.name] as [string,string])];
+  if(!gridOptions.length)gridOptions.push(['','No Drum Grid exercises available']);
+  const gridSource=select('midiGridSource','Drum Grid score',gridOptions,gridOptions[0]![0]);
+  const gridAssignmentFields=new Map<DrumGridVoice,HTMLElement>(gridLaneLabels.map(([voice,label])=>[voice,select('midiGrid-'+voice,label+' sound',MIDI_VOICES.map(row=>[row.value,row.label] as [string,string]),defaultGridVoice[voice])] as [DrumGridVoice,HTMLElement]));
+  const gridPreview=el('pre',{class:'midi-grid-preview'});
+  const selectedGrid=():GridProtocol|undefined=>{
+    const value=gridSource.querySelector('select')!.value;
+    if(value==='active'){
+      const session=store.snapshot().sessions.find(row=>row.status==='active'&&row.profileId===profile.id),block=session?.blocks[session.activeBlockIndex];
+      return block?.protocolSnapshot?.kind==='drum-grid'?structuredClone(block.protocolSnapshot):undefined;
+    }
+    const exercise=store.snapshot().exercises.find(row=>row.id===value&&row.profileId===profile.id);
+    return exercise?.protocol?.kind==='drum-grid'?structuredClone(exercise.protocol):undefined;
+  };
+  const readGridAssignments=():MidiGridLaneAssignment[]=>{const grid=selectedGrid(),active=new Set(grid?.lanes.filter(lane=>/[xX]/.test(lane.steps)).map(lane=>lane.voice)??[]);return gridLaneLabels.filter(([gridVoice])=>active.has(gridVoice)).map(([gridVoice])=>({gridVoice,midiVoice:gridAssignmentFields.get(gridVoice)!.querySelector('select')!.value as MidiDrumVoice}));};
+  const gridScorePanel=el('section',{class:'midi-grid-score',hidden:true},sectionHeader('Authored Drum Grid','Assign each grid lane to the MIDI sound you will play. MIDI verifies mapped sounds, not physical hand identity.'),gridSource,gridPreview,el('div',{class:'form-grid midi-grid-assignment-grid'},...gridLaneLabels.map(([voice])=>gridAssignmentFields.get(voice)!)));
   const mappingHost=el('div',{class:'midi-mapping-list'});
   const mappingCount=el('span',{class:'muted small'});
   const live=el('div',{class:'midi-live',hidden:true},el('strong',{class:'midi-live-clock'},'0.0'),el('span',{class:'muted'},'seconds'),el('span',{class:'midi-live-events'},'0 MIDI notes'));
@@ -157,29 +196,44 @@ export function midiLabPage():Page{
 
   const resetMapping=()=>{mappings=defaultMidiMappings();renderMappings();status.textContent='General MIDI drum defaults restored locally. Save mapping to keep them for this device.';};
 
+  const syncPatternMode=()=>{
+    const gridMode=expectedPattern.querySelector('select')!.value==='drum-grid',grid=selectedGrid();
+    gridScorePanel.hidden=!gridMode;analysisVoice.hidden=gridMode;subdivision.hidden=gridMode;
+    gridPreview.textContent=grid?`${grid.name}\n${drumGridText(grid)}`:'No authored grid is available.';
+    const activeVoices=new Set(grid?.lanes.filter(lane=>/[xX]/.test(lane.steps)).map(lane=>lane.voice)??[]);
+    for(const [voice,field] of gridAssignmentFields)field.hidden=gridMode&&!activeVoices.has(voice);
+    if(gridMode&&grid){
+      bpm.querySelector<HTMLInputElement>('input')!.value=String(grid.pulse.bpm);
+      subdivision.querySelector<HTMLSelectElement>('select')!.value=String(grid.pulse.subdivision);
+    }
+  };
+  expectedPattern.addEventListener('change',syncPatternMode);gridSource.addEventListener('change',syncPatternMode);syncPatternMode();
+
   const readConfig=():MetronomeConfig=>{
-    const bpmInput=bpm.querySelector('input')!,duration=durationInput.querySelector('input')!;
+    const bpmInput=bpm.querySelector('input')!,duration=durationInput.querySelector('input')!,gridMode=expectedPattern.querySelector('select')!.value==='drum-grid',grid=gridMode?selectedGrid():undefined;
     if(!bpmInput.reportValidity()||!duration.reportValidity())throw new Error('Correct the MIDI test settings before starting.');
-    return {...structuredClone(store.snapshot().settings.metronome),bpm:Number(bpmInput.value),subdivision:Number(subdivision.querySelector('select')!.value) as Subdivision,countIn:1,timing:{...resolvedTiming(store.snapshot().settings.metronome),mode:clickMode.querySelector('select')!.value as ClickMode}};
+    if(gridMode&&!grid)throw new Error('Choose an available Drum Grid score before starting.');
+    return {...structuredClone(store.snapshot().settings.metronome),bpm:Number(bpmInput.value),meter:grid?{beats:grid.pulse.beats,beatUnit:grid.pulse.beatUnit}:structuredClone(store.snapshot().settings.metronome.meter),subdivision:grid?grid.pulse.subdivision:Number(subdivision.querySelector('select')!.value) as Subdivision,countIn:1,timing:{...resolvedTiming(store.snapshot().settings.metronome),mode:clickMode.querySelector('select')!.value as ClickMode}};
   };
 
   let startButton!:HTMLButtonElement;
-  const setupControls=[deviceSelect,channelSelect.querySelector('select')!,analysisVoice.querySelector('select')!,expectedPattern.querySelector('select')!,bpm.querySelector('input')!,subdivision.querySelector('select')!,clickMode.querySelector('select')!,durationInput.querySelector('input')!,connectButton,learnButton];
+  const setupControls:(HTMLInputElement|HTMLSelectElement|HTMLButtonElement)[]=[deviceSelect,channelSelect.querySelector('select')!,analysisVoice.querySelector('select')!,expectedPattern.querySelector('select')!,bpm.querySelector('input')!,subdivision.querySelector('select')!,clickMode.querySelector('select')!,durationInput.querySelector('input')!,gridSource.querySelector('select')!,...[...gridAssignmentFields.values()].map(field=>field.querySelector('select')!),connectButton,learnButton];
   const setSetupDisabled=(disabled:boolean)=>{for(const control of setupControls)control.disabled=disabled||(!supported&&(control===connectButton||control===learnButton||control===deviceSelect));};
   const stopTimers=()=>{clearTimeout(finishTimer);clearInterval(tickTimer);finishTimer=undefined;tickTimer=undefined;};
-  const resetTransport=()=>{active=false;stopTimers();audio.stop();midiInput.stopListening();setSetupDisabled(false);startButton.querySelector('span')!.textContent='Start MIDI test';startButton.setAttribute('aria-pressed','false');live.hidden=true;runningConfig=undefined;runningDuration=0;runningVoice=undefined;runningPattern='subdivision';};
+  const resetTransport=()=>{active=false;stopTimers();audio.stop();midiInput.stopListening();setSetupDisabled(false);startButton.querySelector('span')!.textContent='Start MIDI test';startButton.setAttribute('aria-pressed','false');live.hidden=true;runningConfig=undefined;runningDuration=0;runningVoice=undefined;runningPattern='subdivision';runningGrid=undefined;runningGridAssignments=undefined;runningGridExerciseId=undefined;syncPatternMode();};
 
   const finish=async(save=true)=>{
     if(!active)return;
-    const config=runningConfig,duration=runningDuration,voice=runningVoice,pattern=runningPattern,device=selected,overflow=eventOverflow,captured=[...events],profileRow=activeProfileRow;
+    const config=runningConfig,duration=runningDuration,voice=runningVoice,pattern=runningPattern,grid=runningGrid,gridAssignments=runningGridAssignments,gridExerciseId=runningGridExerciseId,device=selected,overflow=eventOverflow,captured=[...events],profileRow=activeProfileRow;
     resetTransport();
     if(!save){status.textContent='MIDI test canceled. No result was saved.';return;}
     if(!config||!device||!profileRow||!startAudioTime){status.textContent='MIDI test could not be finalized. Retry the test.';return;}
     if(overflow){status.textContent='Too many MIDI events were received to save a trustworthy result. Check for trigger chatter or duplicate MIDI messages.';notify(status.textContent,'error');return;}
-    const analysis=analyzeMidiPerformance(config,startAudioTime,duration,captured,profileRow,timingMatchWindowMs(config),voice,pattern);
+    if(pattern==='drum-grid'&&(!grid||!gridAssignments))throw new Error('The Drum Grid score context was lost. Retry the MIDI test.');
+    const analysis=pattern==='drum-grid'?analyzeMidiGridPerformance(config,startAudioTime,duration,captured,profileRow,grid!,gridAssignments!,timingMatchWindowMs(config)):analyzeMidiPerformance(config,startAudioTime,duration,captured,profileRow,timingMatchWindowMs(config),voice,pattern);
     const activeSession=store.snapshot().sessions.find(row=>row.status==='active'&&row.profileId===profile.id),block=activeSession?.blocks[activeSession.activeBlockIndex];
-    const saved=await saveMidiPerformanceResult({profileId:profile.id,config,durationSeconds:duration,device:profileRow,analysis,expectedPattern:pattern,analyzedVoice:voice,sessionId:activeSession?.id,blockId:block?.id,sourceExerciseId:block?.sourceExerciseId});
-    status.textContent=`Saved MIDI result · ${saved.matchedCount}/${saved.expectedCount} expected positions matched.`;
+    const saved=await saveMidiPerformanceResult({profileId:profile.id,config,durationSeconds:duration,device:profileRow,analysis,expectedPattern:pattern,analyzedVoice:voice,sessionId:activeSession?.id,blockId:block?.id,sourceExerciseId:block?.sourceExerciseId??gridExerciseId,...(grid?{gridNameSnapshot:grid.name,gridLanesSnapshot:grid.lanes,gridAssignments:gridAssignments!}: {})});
+    status.textContent=`Saved MIDI result · ${saved.matchedCount}/${saved.expectedCount} expected hits matched${saved.wrongVoiceCount?` · ${saved.wrongVoiceCount} wrong sound${saved.wrongVoiceCount===1?'':'s'}`:''}.`;
   };
 
   const startTest=async()=>{
@@ -187,10 +241,17 @@ export function midiLabPage():Page{
     if(learning)stopLearning();
     if(!supported)throw new Error('Web MIDI is unavailable in this browser.');
     const descriptor=selectedDescriptor();if(!descriptor)throw new Error('Connect and choose a MIDI input first.');
-    const config=readConfig(),duration=Number(durationInput.querySelector('input')!.value),voiceValue=analysisVoice.querySelector('select')!.value as MidiDrumVoice|'',pattern=expectedPattern.querySelector('select')!.value as MidiExpectedPattern;
+    const config=readConfig(),duration=Number(durationInput.querySelector('input')!.value),pattern=expectedPattern.querySelector('select')!.value as MidiExpectedPattern,voiceValue=pattern==='drum-grid'?'':analysisVoice.querySelector('select')!.value as MidiDrumVoice|'',grid=pattern==='drum-grid'?selectedGrid():undefined,gridAssignments=pattern==='drum-grid'?readGridAssignments():undefined,gridSourceValue=pattern==='drum-grid'?gridSource.querySelector('select')!.value:'';
     const profileRow=await saveMapping(false,false);
     if(voiceValue&&!profileRow.mappings.some(row=>row.enabled&&row.voice===voiceValue))throw new Error(`No enabled MIDI note is mapped to ${MIDI_VOICES.find(row=>row.value===voiceValue)?.label??voiceValue}.`);
-    const context=await audio.prepareContext();events=[];eventOverflow=false;startAudioTime=0;runningConfig=structuredClone(config);runningDuration=duration;runningVoice=voiceValue||undefined;runningPattern=pattern;
+    if(pattern==='drum-grid'){
+      if(!grid||!gridAssignments)throw new Error('Choose an available Drum Grid score before starting.');
+      const activeAssignments=grid.lanes.filter(lane=>/[xX]/.test(lane.steps)).map(lane=>gridAssignments.find(row=>row.gridVoice===lane.voice)!);
+      if(new Set(activeAssignments.map(row=>row.midiVoice)).size!==activeAssignments.length)throw new Error('Assign a different MIDI sound to each active grid lane so Steadybar can identify lane accuracy.');
+      const required=new Set(activeAssignments.map(row=>row.midiVoice));
+      for(const midiVoice of required)if(!profileRow.mappings.some(row=>row.enabled&&row.voice===midiVoice))throw new Error(`No enabled MIDI note is mapped to ${MIDI_VOICES.find(row=>row.value===midiVoice)?.label??midiVoice}, which this Drum Grid assignment requires.`);
+    }
+    const context=await audio.prepareContext();events=[];eventOverflow=false;startAudioTime=0;runningConfig=structuredClone(config);runningDuration=duration;runningVoice=voiceValue||undefined;runningPattern=pattern;runningGrid=grid?structuredClone(grid):undefined;runningGridAssignments=gridAssignments?structuredClone(gridAssignments):undefined;runningGridExerciseId=gridSourceValue&&gridSourceValue!=='active'?gridSourceValue:undefined;
     activeProfileRow=profileRow;selected=descriptor;
     await midiInput.listen(descriptor.id,context,event=>{
       if(events.length<20000)events.push(event);else eventOverflow=true;
@@ -202,7 +263,7 @@ export function midiLabPage():Page{
       await audio.start(config,{
         onReady:(_wallTime,audioTime)=>{
           if(disposed||!active)return;
-          startAudioTime=audioTime;status.textContent=`Measuring · ${config.bpm} BPM · ${config.subdivision}× subdivision · ${timingClickLabel(config)}`;
+          startAudioTime=audioTime;status.textContent=runningPattern==='drum-grid'?`Measuring authored grid · ${runningGrid?.name??'Drum Grid'} · ${config.bpm} BPM`:`Measuring · ${config.bpm} BPM · ${config.subdivision}× subdivision · ${timingClickLabel(config)}`;
           const started=performance.now();tickTimer=setInterval(()=>{const clock=live.querySelector('.midi-live-clock');if(clock)clock.textContent=Math.min(duration,(performance.now()-started)/1000).toFixed(1);},100);
           finishTimer=setTimeout(()=>{void finish(true).catch(error=>notify(error instanceof Error?error.message:'MIDI result could not be saved.','error'));},duration*1000+80);
         },
@@ -222,13 +283,13 @@ export function midiLabPage():Page{
     el('div',{class:'midi-mapping-body'},el('div',{class:'midi-learn-row'},learnVoice,learnButton),mappingHost,
       el('p',{class:'field-hint'},'General MIDI defaults cover common e-kit notes. Device/browser IDs can change; Steadybar primarily matches saved mappings by manufacturer + device name. Voice mapping does not infer left/right hand or foot.')));
 
-  const testPanel=el('section',{class:'panel midi-test-panel'},sectionHeader('Performance test','One bar count-in; choose one voice lane for grooves with simultaneous notes.'),
-    el('div',{class:'form-grid midi-test-grid'},bpm,subdivision,clickMode,durationInput,analysisVoice,expectedPattern),
+  const testPanel=el('section',{class:'panel midi-test-panel'},sectionHeader('Performance test','Pulse timing or exact mapped-sound scoring against an authored Drum Grid.'),
+    el('div',{class:'form-grid midi-test-grid'},bpm,subdivision,clickMode,durationInput,analysisVoice,expectedPattern),gridScorePanel,
     el('div',{class:'actions wrap'},startButton),live,
-    el('p',{class:'field-hint'},'Choose both an analysis lane and an expected-hit pattern. Example: Snare + 2 & 4 for a backbeat, Hi-hat + Every subdivision for repeated eighth/sixteenth-note lanes, or All mapped notes for single-stroke pad patterns.'));
+    el('p',{class:'field-hint'},'For pulse tests, choose an analysis lane and expected-hit pattern. For Authored Drum Grid, choose a saved/current grid and map each lane to the MIDI drum sound you will actually strike.'));
 
   const limitations=el('section',{class:'panel'},sectionHeader('What MIDI evidence means','High timestamp precision does not make every metric universal.'),
-    el('ul',{class:'plain-list'},el('li',{},'MIDI timing uses browser-reported high-resolution receive timestamps normalized to the metronome AudioContext clock.'),el('li',{},'Velocity is the device’s 1–127 MIDI value. It is useful for consistency and within-device comparison, not as an acoustic dB measurement.'),el('li',{},'Note mapping identifies drum voices only. Steadybar does not infer limb identity from a snare/hat/tom note.'),el('li',{},'Without an authored note-by-note drum score, Steadybar measures pulse timing on all notes or a selected voice lane; it does not claim full groove-note accuracy.')),
+    el('ul',{class:'plain-list'},el('li',{},'MIDI timing uses browser-reported high-resolution receive timestamps normalized to the metronome AudioContext clock.'),el('li',{},'Velocity is the device’s 1–127 MIDI value. It is useful for consistency and within-device comparison, not as an acoustic dB measurement.'),el('li',{},'Note mapping identifies drum voices only. Steadybar does not infer limb identity from a snare/hat/tom note.'),el('li',{},'Pulse modes measure timing on all notes or a selected voice lane. Authored Drum Grid mode can score exact mapped sounds because the grid and lane→sound assignment provide an explicit expected pattern; it still does not infer physical hand identity.')),
     !supported?el('p',{class:'field-hint'},'Web MIDI is primarily available in Chromium-based browsers. Firefox/WebKit can still open saved MIDI history and the rest of Steadybar normally.'):null);
 
   page.append(el('div',{class:'two-column wide-left'},devicePanel,testPanel),mappingPanel,limitations,resultHost);
@@ -240,9 +301,9 @@ export function midiLabPage():Page{
     const history=el('section',{class:'midi-history'},sectionHeader('MIDI performance history',rows.length?`${rows.length} saved result${rows.length===1?'':'s'}`:'No saved MIDI tests yet'));
     if(!rows.length)history.append(empty('No MIDI evidence yet.',supported?'Connect an electronic drum kit or MIDI pad and run a test.':'Open Steadybar in a Web MIDI-capable browser to capture new MIDI evidence.',undefined,'progress'));
     else for(const row of rows.slice(0,40)){
-      const voice=row.analyzedVoice?MIDI_VOICES.find(item=>item.value===row.analyzedVoice)?.label??titleCase(row.analyzedVoice):'All mapped notes',pattern=patternOptions.find(item=>item[0]===row.expectedPattern)?.[1]??titleCase(row.expectedPattern);
+      const voice=row.expectedPattern==='drum-grid'?(row.gridNameSnapshot??'Drum Grid'):row.analyzedVoice?MIDI_VOICES.find(item=>item.value===row.analyzedVoice)?.label??titleCase(row.analyzedVoice):'All mapped notes',pattern=patternOptions.find(item=>item[0]===row.expectedPattern)?.[1]??titleCase(row.expectedPattern);
       history.append(el('article',{class:'midi-history-row'},el('div',{},el('strong',{},`${row.deviceNameSnapshot} · ${voice} · ${pattern}`),el('span',{class:'muted small'},`${formatDate(row.createdAt,true)} · ${row.bpm} BPM · ${titleCase(row.confidence)} confidence`)),
-        el('div',{class:'tag-row'},row.matchedCount?badge(`error ${row.meanAbsoluteErrorMs.toFixed(1)} ms`):badge('no matches'),row.matchedCount?badge(`velocity ${row.velocityMedian.toFixed(1)}`):null,badge(`${row.matchedCount}/${row.expectedCount} matched`)),
+        el('div',{class:'tag-row'},row.matchedCount?badge(`error ${row.meanAbsoluteErrorMs.toFixed(1)} ms`):badge('no matches'),row.matchedCount?badge(`velocity ${row.velocityMedian.toFixed(1)}`):null,badge(`${row.matchedCount}/${row.expectedCount} matched`),row.wrongVoiceCount?badge(`${row.wrongVoiceCount} wrong sound`):null),
         button('Delete',async()=>{if(await confirmAction('Delete this MIDI result?','The saved MIDI timing/velocity diagnostics will be permanently removed. Device mapping is unchanged.','Delete result',true))await deleteMidiPerformanceResult(row.id);},'ghost compact danger-text')));
     }
     resultHost.append(history);

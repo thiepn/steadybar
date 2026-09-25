@@ -168,6 +168,16 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Grid-aware MIDI performance analysis — 2.23.0
+
+MIDI Drum Lab can now score an **authored Drum Grid** instead of only comparing events with a generic pulse lane. Choose the current practice grid or a saved Drum Grid exercise, then explicitly assign each active grid lane to the MIDI drum sound you will play. This lets Steadybar compare the authored rests/hits/accents with mapped electronic-kit note-on events while remaining clear about what the hardware can and cannot prove.
+
+MIDI still does **not** identify physical hand identity. A label such as “Right-hand lane” means “the authored lane assigned by the user to this MIDI sound for this test,” not that Steadybar detected which hand moved. Active lanes must use different assigned MIDI sounds so per-lane results remain identifiable.
+
+Grid-aware results preserve the exact grid and assignment, report expected/matched/missed hits, extras, near-time wrong sounds, unmapped notes, signed timing error, timing spread, drift and MIDI velocity statistics, plus per-lane summaries. When one mapped MIDI sound contains both matched accents and normal authored hits, Steadybar can also show their device-relative mean velocity difference. It never compares accent strength across different pads, and this remains a MIDI-velocity measure rather than acoustic loudness.
+
+Authored-grid results use MIDI analysis version 2. Existing version-1 MIDI results and generic pulse modes remain readable and unchanged. No database or backup-format migration is required.
+
 ## Drum Grid & Coordination Lab — 2.22.0
 
 Drum profiles now include a dedicated **Drum Grid Lab** for explicit four-limb coordination work without turning Steadybar into a sequencer. It generates deterministic Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence patterns across eighth-note, triplet and sixteenth-note subdivisions.

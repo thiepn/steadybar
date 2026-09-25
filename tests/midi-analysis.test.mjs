@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseMidiNoteMessage,midiTimestampToAudioTime} from '../dist/app/midi/input.js';
-import {analyzeMidiPerformance,defaultMidiMappings,expectedMidiGrid,mapMidiEvents,midiDeviceKey} from '../dist/app/domain/midi-analysis.js';
+import {analyzeMidiGridPerformance,analyzeMidiPerformance,defaultMidiMappings,expectedMidiDrumGrid,expectedMidiGrid,mapMidiEvents,midiDeviceKey} from '../dist/app/domain/midi-analysis.js';
 import {buildExpectedTimingGrid} from '../dist/app/domain/timing-analysis.js';
+import {validateMidiPerformanceResult,validateTimingLabResult} from '../dist/app/domain/validation.js';
 
 const config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:2};
 const profile={channel:10,mappings:[{note:38,voice:'snare',label:'Snare',enabled:true},{note:36,voice:'kick',label:'Kick',enabled:true}]};
@@ -104,3 +105,106 @@ test('MIDI timing keeps signed high-resolution offsets and drift',()=>{
   assert.ok(result.driftMsPerMinute>115&&result.driftMsPerMinute<125,String(result.driftMsPerMinute));
   assert.equal(result.velocitySpread,0);
 });
+
+const gridProfile={channel:10,mappings:[
+  {note:42,voice:'hihat-closed',label:'Closed hi-hat',enabled:true},
+  {note:38,voice:'snare',label:'Snare',enabled:true},
+  {note:36,voice:'kick',label:'Kick',enabled:true},
+  {note:44,voice:'hihat-pedal',label:'Hi-hat pedal',enabled:true},
+]};
+const grid={kind:'drum-grid',pulse:{bpm:120,beats:4,beatUnit:4,subdivision:2},name:'Test groove',focus:'Exact authored grid',lanes:[
+  {voice:'right-hand',steps:'x.x.x.x.'},
+  {voice:'left-hand',steps:'..X.x.X.'},
+  {voice:'kick',steps:'x...x...'},
+  {voice:'hihat-foot',steps:'.x.x.x.x'},
+]};
+const gridAssignments=[
+  {gridVoice:'right-hand',midiVoice:'hihat-closed'},
+  {gridVoice:'left-hand',midiVoice:'snare'},
+  {gridVoice:'kick',midiVoice:'kick'},
+  {gridVoice:'hihat-foot',midiVoice:'hihat-pedal'},
+];
+const noteForVoice={'hihat-closed':42,snare:38,kick:36,'hihat-pedal':44};
+
+test('authored Drum Grid expands simultaneous lane hits into exact MIDI voice targets',()=>{
+  const expected=expectedMidiDrumGrid(config,5,2,grid,gridAssignments);
+  assert.equal(expected.length,13);
+  assert.ok(expected.some(hit=>hit.time===5&&hit.gridVoice==='right-hand'&&hit.midiVoice==='hihat-closed'));
+  assert.ok(expected.some(hit=>hit.time===5&&hit.gridVoice==='kick'&&hit.midiVoice==='kick'));
+  assert.ok(expected.filter(hit=>hit.accent).every(hit=>hit.gridVoice==='left-hand'));
+});
+
+test('perfect authored Drum Grid MIDI performance matches every assigned sound and preserves accent contrast',()=>{
+  const start=5,expected=expectedMidiDrumGrid(config,start,2,grid,gridAssignments);
+  const events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:hit.accent?110:80,channel:10}));
+  const result=analyzeMidiGridPerformance(config,start,2,events,gridProfile,grid,gridAssignments,80);
+  assert.equal(result.expectedCount,13);assert.equal(result.matchedCount,13);assert.equal(result.misses,0);assert.equal(result.extras,0);assert.equal(result.wrongVoiceCount,0);
+  assert.equal(result.gridLaneSummaries.length,4);assert.equal(result.gridLaneSummaries.reduce((n,row)=>n+row.matchedCount,0),13);
+  assert.equal(result.accentVelocityMean,110);assert.equal(result.normalVelocityMean,80);assert.equal(result.accentVelocityDifference,30);
+  assert.ok(result.hits.every(hit=>hit.expectedGridVoice&&typeof hit.expectedAccent==='boolean'));
+});
+
+test('authored Drum Grid distinguishes a near-time wrong sound from a simple timing miss',()=>{
+  const start=5,expected=expectedMidiDrumGrid(config,start,2,grid,gridAssignments);
+  const wrongTarget=expected.find(hit=>hit.gridVoice==='left-hand');
+  const events=expected.filter(hit=>hit!==wrongTarget).map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:90,channel:10}));
+  events.push({time:wrongTarget.time,note:36,velocity:95,channel:10});
+  const result=analyzeMidiGridPerformance(config,start,2,events,gridProfile,grid,gridAssignments,80);
+  assert.equal(result.matchedCount,12);assert.equal(result.misses,1);assert.equal(result.extras,1);assert.equal(result.wrongVoiceCount,1);
+  const left=result.gridLaneSummaries.find(row=>row.gridVoice==='left-hand');assert.equal(left.misses,1);
+});
+
+test('generic MIDI analysis refuses Drum Grid mode without an authored score',()=>{
+  assert.throws(()=>expectedMidiGrid(config,5,2,'drum-grid'),/authored grid/i);
+});
+
+test('authored Drum Grid rejects duplicate MIDI sounds across active lanes',()=>{
+  const ambiguous=gridAssignments.map(row=>row.gridVoice==='left-hand'?{...row,midiVoice:'hihat-closed'}:row);
+  assert.throws(()=>expectedMidiDrumGrid(config,5,2,grid,ambiguous),/different MIDI sounds/i);
+});
+
+
+test('generic MIDI persistence remains version 1',()=>{
+  const start=5,expected=buildExpectedTimingGrid(config,start,2),events=expected.map(hit=>({time:hit.time,note:38,velocity:90,channel:10}));
+  const analysis=analyzeMidiPerformance(config,start,2,events,profile,80,'snare');
+  const at='2026-09-25T05:00:00.000Z',base={id:'generic-midi',createdAt:at,updatedAt:at,midiAnalysisVersion:1,profileId:'profile-drums',deviceKey:'test::kit',deviceNameSnapshot:'Test Kit',manufacturerSnapshot:'Test',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:2,expectedPattern:'subdivision',analyzedVoice:'snare',...analysis};
+  assert.deepEqual(validateMidiPerformanceResult(base),base);
+  assert.throws(()=>validateMidiPerformanceResult({...base,midiAnalysisVersion:2}),/version 1/i);
+});
+
+test('persisted authored Drum Grid MIDI result validates with hit lane metadata and optional grid metrics',()=>{
+  const start=5,expected=expectedMidiDrumGrid(config,start,2,grid,gridAssignments);
+  const events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:hit.accent?110:80,channel:10}));
+  const analysis=analyzeMidiGridPerformance(config,start,2,events,gridProfile,grid,gridAssignments,80);
+  const at='2026-09-25T05:00:00.000Z';
+  const result={
+    id:'grid-midi-result',createdAt:at,updatedAt:at,midiAnalysisVersion:2,profileId:'profile-drums',
+    deviceKey:'test::kit',deviceNameSnapshot:'Test Kit',manufacturerSnapshot:'Test',
+    bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},
+    durationSeconds:2,expectedPattern:'drum-grid',gridNameSnapshot:grid.name,gridLanesSnapshot:grid.lanes,gridAssignments,
+    ...analysis,
+  };
+  assert.deepEqual(validateMidiPerformanceResult(result),result);
+});
+
+test('persisted Drum Grid MIDI evidence rejects lane/sound contradictions',()=>{
+  const start=5,expected=expectedMidiDrumGrid(config,start,2,grid,gridAssignments);
+  const events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:hit.accent?110:80,channel:10}));
+  const analysis=analyzeMidiGridPerformance(config,start,2,events,gridProfile,grid,gridAssignments,80),at='2026-09-25T05:00:00.000Z';
+  const base={id:'grid-midi-corrupt',createdAt:at,updatedAt:at,midiAnalysisVersion:2,profileId:'profile-drums',deviceKey:'test::kit',deviceNameSnapshot:'Test Kit',manufacturerSnapshot:'Test',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:2,expectedPattern:'drum-grid',gridNameSnapshot:grid.name,gridLanesSnapshot:grid.lanes,gridAssignments,...analysis};
+  const wrongHit=structuredClone(base);wrongHit.hits[0].voice='snare';assert.throws(()=>validateMidiPerformanceResult(wrongHit),/assigned sounds/i);
+  const wrongSummary=structuredClone(base);wrongSummary.gridLaneSummaries[0].midiVoice='snare';assert.throws(()=>validateMidiPerformanceResult(wrongSummary),/saved assignments/i);
+});
+
+test('ordinary Timing Lab hit schema stays independent of Drum Grid MIDI metadata',()=>{
+  const at='2026-09-25T05:00:00.000Z',base={
+    id:'timing',createdAt:at,updatedAt:at,timingLabVersion:1,profileId:'profile-drums',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,
+    timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:1,threshold:.1,inputOffsetMs:0,matchWindowMs:80,
+    expectedCount:1,detectedCount:1,matchedCount:1,misses:0,extras:0,meanOffsetMs:0,medianOffsetMs:0,meanAbsoluteErrorMs:0,spreadMs:0,driftMsPerMinute:0,confidence:'low',
+    hits:[{index:0,elapsedMs:0,offsetMs:0,strength:.5,bar:0,beat:0,part:0}],
+  };
+  assert.deepEqual(validateTimingLabResult(base),base);
+  const polluted=structuredClone(base);polluted.hits[0].expectedGridVoice='kick';polluted.hits[0].expectedAccent=true;
+  assert.deepEqual(validateTimingLabResult(polluted),base);
+});
+

@@ -790,6 +790,49 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_68_grid_scored_midi_history_is_readable_without_live_web_midi(self):
+        self.onboard()
+        self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId),now=new Date().toISOString();
+          const lanes=[
+            {voice:'right-hand',steps:'x.......'},
+            {voice:'left-hand',steps:'..X.x...'},
+            {voice:'kick',steps:'....x...'},
+            {voice:'hihat-foot',steps:'......x.'},
+          ],assignments=[
+            {gridVoice:'right-hand',midiVoice:'hihat-closed'},
+            {gridVoice:'left-hand',midiVoice:'snare'},
+            {gridVoice:'kick',midiVoice:'kick'},
+            {gridVoice:'hihat-foot',midiVoice:'hihat-pedal'},
+          ],hits=[
+            {index:0,elapsedMs:0,offsetMs:4,note:42,velocity:80,channel:10,voice:'hihat-closed',label:'Closed hi-hat',bar:0,beat:0,part:0,expectedGridVoice:'right-hand',expectedAccent:false},
+            {index:1,elapsedMs:500,offsetMs:-3,note:38,velocity:110,channel:10,voice:'snare',label:'Snare',bar:0,beat:1,part:0,expectedGridVoice:'left-hand',expectedAccent:true},
+            {index:2,elapsedMs:1000,offsetMs:1,note:38,velocity:80,channel:10,voice:'snare',label:'Snare',bar:0,beat:2,part:0,expectedGridVoice:'left-hand',expectedAccent:false},
+            {index:3,elapsedMs:1000,offsetMs:5,note:36,velocity:90,channel:10,voice:'kick',label:'Kick',bar:0,beat:2,part:0,expectedGridVoice:'kick',expectedAccent:false},
+            {index:4,elapsedMs:1500,offsetMs:2,note:44,velocity:70,channel:10,voice:'hihat-pedal',label:'Hi-hat pedal',bar:0,beat:3,part:0,expectedGridVoice:'hihat-foot',expectedAccent:false},
+          ];
+          d.midiResults=[{id:'qa-grid-midi',createdAt:now,updatedAt:now,midiAnalysisVersion:2,profileId:profile.id,deviceKey:'qa::kit',deviceNameSnapshot:'QA E-Kit',manufacturerSnapshot:'QA',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:2,expectedPattern:'drum-grid',gridNameSnapshot:'QA Coordination Grid',gridLanesSnapshot:lanes,gridAssignments:assignments,wrongVoiceCount:1,gridLaneSummaries:[{...assignments[0],expectedCount:1,matchedCount:1,misses:0},{...assignments[1],expectedCount:2,matchedCount:2,misses:0},{...assignments[2],expectedCount:1,matchedCount:1,misses:0},{...assignments[3],expectedCount:1,matchedCount:1,misses:0}],accentVelocityMean:110,normalVelocityMean:80,accentVelocityDifference:30,matchWindowMs:80,expectedCount:5,detectedCount:6,matchedCount:5,misses:0,extras:1,unmappedCount:0,meanOffsetMs:1.8,medianOffsetMs:2,meanAbsoluteErrorMs:3,spreadMs:2.8,driftMsPerMinute:0,confidence:'low',velocityMean:86,velocityMedian:80,velocitySpread:13.6,velocityMin:70,velocityMax:110,velocityRange:40,hits,voices:[
+            {voice:'hihat-closed',label:'Closed hi-hat',count:1,medianVelocity:80,velocitySpread:0,meanAbsoluteErrorMs:4,timingSpreadMs:0},
+            {voice:'snare',label:'Snare',count:2,medianVelocity:95,velocitySpread:15,meanAbsoluteErrorMs:2,timingSpreadMs:2},
+            {voice:'kick',label:'Kick',count:1,medianVelocity:90,velocitySpread:0,meanAbsoluteErrorMs:5,timingSpreadMs:0},
+            {voice:'hihat-pedal',label:'Hi-hat pedal',count:1,medianVelocity:70,velocitySpread:0,meanAbsoluteErrorMs:2,timingSpreadMs:0},
+          ]}];
+          await load('db/database.js').replaceData(d);await store.refresh();return true;
+        })()""")
+        self.route('/midi-lab')
+        expect(self.page.get_by_role('heading',name='MIDI Drum Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('QA Coordination Grid',exact=False).first).to_be_visible()
+        expect(self.page.get_by_text('1 wrong sound',exact=True).first).to_be_visible()
+        expect(self.page.locator('.midi-grid-lane-row')).to_have_count(4)
+        first_lane=self.page.locator('.midi-grid-lane-row').first
+        expect(first_lane).to_contain_text('Right-hand lane')
+        expect(first_lane).to_contain_text('Closed hi-hat')
+        expect(self.page.get_by_text('Snare accent contrast',exact=False).first).to_be_visible()
+        expect(self.page.get_by_text('Δ +30.0 MIDI velocity',exact=False).first).to_be_visible()
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
