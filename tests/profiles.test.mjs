@@ -6,6 +6,7 @@ import {starterContent} from '../dist/app/db/profile-content.js';
 import {migratePracticeData} from '../dist/app/db/profile-migration.js';
 import {PROFILE_DEFINITIONS,FAMILIES,activeProfile,definition,practiceProfiles,supportedProtocols,profileView} from '../dist/app/domain/profiles.js';
 import {defaultProtocol,exerciseProtocol,protocolPulse,frequency,noteName,parseNote,fretPrompt,patternFits,scaleOffsets} from '../dist/app/domain/protocols.js';
+import {buildDrumGrid,cycleDrumGridCell,drumGridStepLabels,mirrorDrumGrid,rotateDrumGrid} from '../dist/app/domain/drum-grid.js';
 import {validateProfile,validateProtocol,validateOutcome,assertProtocolCompatible,assertOutcomeMatches} from '../dist/app/domain/practice-validation.js';
 import {validateData,validateBackup,validateSession,validateGoal} from '../dist/app/domain/validation.js';
 import {createBackup,parseBackup} from '../dist/app/db/backup.js';
@@ -39,6 +40,26 @@ for(const type of Object.keys(baseCounts)){
   const p=profile(type),a=starterContent(p),b=starterContent({...p,id:p.id+'-second'});assert.equal(a.exercises.filter(e=>b.exercises.some(o=>o.id===e.id)).length,0);
  });
 }
+test('drum grid generator is deterministic, bounded and valid across subdivisions',()=>{
+ for(const subdivision of [1,2,3,4])for(const preset of ['accent-grid','kick-displacement','linear-flow','four-limb-cycle','independence']){
+  const a=buildDrumGrid(preset,96,subdivision,3,5),b=buildDrumGrid(preset,96,subdivision,3,5);
+  assert.deepEqual(a,b);assert.deepEqual(validateProtocol(a),a);assert.equal(a.pulse.beats,4);assert.equal(a.lanes.length,4);
+  assert.ok(a.lanes.every(l=>l.steps.length===4*subdivision));assert.equal(drumGridStepLabels(4,subdivision).length,4*subdivision);
+ }
+});
+test('drum grid rotate, mirror and cell editing preserve valid immutable protocols',()=>{
+ const base=buildDrumGrid('kick-displacement',88,4,1,3),rotated=rotateDrumGrid(base,1),mirrored=mirrorDrumGrid(base),edited=cycleDrumGridCell(base,'kick',1);
+ assert.notDeepEqual(rotated,base);assert.notDeepEqual(mirrored,base);assert.notDeepEqual(edited,base);assert.deepEqual(validateProtocol(base),base);
+ assert.deepEqual(validateProtocol(rotated),rotated);assert.deepEqual(validateProtocol(mirrored),mirrored);assert.deepEqual(validateProtocol(edited),edited);
+ assert.equal(mirrored.lanes.find(l=>l.voice==='right-hand').steps,base.lanes.find(l=>l.voice==='left-hand').steps);
+});
+test('drum grid validation rejects malformed lengths, duplicate limbs and illegal cells',()=>{
+ const p=buildDrumGrid('accent-grid',80,4,0,2);
+ assert.throws(()=>validateProtocol({...p,lanes:p.lanes.map((l,i)=>i?l:{...l,steps:'x'})}),/match the meter/);
+ assert.throws(()=>validateProtocol({...p,lanes:[p.lanes[0],{...p.lanes[1],voice:p.lanes[0].voice}]}),/unique/);
+ assert.throws(()=>validateProtocol({...p,lanes:p.lanes.map((l,i)=>i?l:{...l,steps:'z'.repeat(16)})}),/only/);
+ assert.throws(()=>assertProtocolCompatible(p,profile('guitar')),/not supported/);
+});
 for(const family of FAMILIES)test(`custom ${family}: only capability-compatible protocols are offered`,()=>{
  const p=profile('custom',family),c=starterContent(p);validateProfile(p);assert.ok(c.exercises.length>=4);
  for(const e of c.exercises)assertProtocolCompatible(e.protocol,p);
