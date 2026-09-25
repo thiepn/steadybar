@@ -2,36 +2,20 @@
 
 ## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
 
-- Add a dedicated **Drum Grid & Coordination Lab** for deterministic hand-foot coordination practice.
-- Add five generator families: **Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle, and Independence Builder**.
-- Add repeatable Variation + Complexity controls instead of opaque randomness; identical inputs always produce the same grid.
-- Add direct cell editing with a three-state vocabulary: rest, hit, and accent.
-- Add one-step rotation and right/left-hand mirroring without altering the underlying tempo or session evidence model.
-- Add Web Audio click preview with a moving grid playhead driven by the same audio-time scheduler used by the metronome.
-- Add **Start practice** and **Add to Today** actions that launch the current grid as a normal Steadybar practice block.
-- Add **Save as exercise** so useful grids become durable custom exercises with Drum Coordination + Timing skill attribution.
-- Add a first-class `drum-grid` practice protocol with restore/backup validation, profile compatibility checks, editable Task Settings, Focus Player rendering and reflection evidence.
-- Keep drum-grid tasks percussion-only; non-drum profiles cannot create or restore them as valid current practice tasks.
-- Fix finite trainer session snapshots so Ladder, Pyramid, Burst and Endurance retain their exact configured target duration when launched from saved plans/routines.
-- Add deterministic unit coverage for every grid family, subdivisions, cell editing, rotation/mirroring, malformed-grid rejection and practice snapshots.
-- Add browser coverage for generation, editing, Add to Today, active Focus Player rendering and responsive layouts.
-- No IndexedDB schema or backup-envelope migration is required.
-## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
-
 - Add a first-class **Drum Grid** practice protocol for explicit right-hand, left-hand, kick and hi-hat-foot patterns.
 - Add a dedicated **Drum Grid Lab** with five deterministic pattern families: Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence Builder.
 - Add 2× / 3× / 4× subdivision grids, five bounded complexity levels and deterministic variation stepping without hidden randomness.
-- Add direct cell editing with rest → hit → accent cycling, whole-pattern rotation and right/left hand mirroring.
-- Add one-bar count-in and live Web Audio click preview with the current grid position highlighted against the audio-time clock.
-- Add **Start practice**, **Add to Today** and **Save as exercise** actions without introducing a second practice-history model.
-- Saved grid exercises carry normal Coordination primary-skill and Timing secondary-skill relationships so existing PracticeState, Priority, progression and Practice Intelligence can use them.
+- Add direct cell editing with rest → hit → accent cycling, whole-pattern rotation and right/left-hand mirroring.
+- Add one-bar count-in and Web Audio click preview with an audio-clock-driven grid playhead.
+- Add **Start practice**, **Add to Today** and **Save as exercise** actions without creating a second practice-history model.
+- Saved grid exercises carry Coordination as the primary skill and Timing as a secondary skill, so existing PracticeState, Priority, progression and Practice Intelligence can use them.
 - Persist exact grid lanes inside immutable practice protocol snapshots; later exercise edits do not rewrite historical grids.
-- Render the complete limb grid inside Focus Player while practicing and allow normal block evaluation/reflection alongside recordings, notes, timing-click controls and session history.
-- Validate grid lane uniqueness, meter/subdivision length and cell symbols during normal data validation and backup restore.
-- Add deterministic domain tests for all pattern families/subdivisions plus rotation, mirroring, editing and malformed-grid rejection.
-- Add browser coverage for Grid Lab generation, custom editing, save-to-library, launch-to-Focus-Player and responsive behavior.
+- Render the complete limb grid in Focus Player with live subdivision highlighting and normal reflection/block evaluation.
+- Validate grid lane uniqueness, meter/subdivision length, allowed cell symbols and percussion-profile compatibility during normal data validation and backup restore.
+- Include drum-grid exercises in percussion accent-pattern and orchestration progression dimensions.
+- Fix finite trainer session snapshots so Ladder, Pyramid, Burst and Endurance retain their exact configured target duration when launched from saved plans or routines.
+- Add deterministic unit and browser coverage for generation, editing, rotation, mirroring, save-to-library, Add to Today, Focus Player snapshots and responsive layouts.
 - No IndexedDB schema or backup-envelope migration is required.
-
 ## 2.21.0 — Drum Tempo Training V2: Pyramids, Bursts & Finite Trainer Targets — 2026-09-25
 
 - Add a **Pyramid** tempo trainer for controlled speed development: climb from a starting BPM to an exact peak, then descend through the same stages instead of ending at maximum effort.
