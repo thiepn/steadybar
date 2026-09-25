@@ -1,6 +1,7 @@
 import type {
-  MetronomeConfig,MidiDeviceProfile,MidiDrumMapping,MidiPerformanceResult,
+  MetronomeConfig,MidiDeviceProfile,MidiDrumMapping,MidiPerformanceResult,MidiGridLaneAssignment,
 } from '../domain/models.js';
+import type { DrumGridLane } from '../domain/practice-types.js';
 import type { MidiPerformanceAnalysis } from '../domain/midi-analysis.js';
 import { metadata, nowISO } from '../domain/utils.js';
 import { resolvedTiming } from '../audio/scheduler.js';
@@ -26,6 +27,9 @@ export interface MidiResultInput {
   sessionId?:string;
   blockId?:string;
   sourceExerciseId?:string;
+  gridNameSnapshot?:string;
+  gridLanesSnapshot?:DrumGridLane[];
+  gridAssignments?:MidiGridLaneAssignment[];
 }
 
 export function midiProfileFor(profileId:string,deviceKey:string):MidiDeviceProfile|undefined{
@@ -47,11 +51,14 @@ export async function deleteMidiDeviceProfile(id:string):Promise<void>{await sto
 export async function saveMidiPerformanceResult(input:MidiResultInput):Promise<MidiPerformanceResult>{
   const base=metadata(),a=input.analysis;
   const result:MidiPerformanceResult={
-    ...base,midiAnalysisVersion:1,profileId:input.profileId,
+    ...base,midiAnalysisVersion:input.expectedPattern==='drum-grid'?2:1,profileId:input.profileId,
     sessionId:input.sessionId,blockId:input.blockId,sourceExerciseId:input.sourceExerciseId,
     deviceProfileId:input.device.id,deviceKey:input.device.deviceKey,deviceNameSnapshot:input.device.name,manufacturerSnapshot:input.device.manufacturer,
     bpm:input.config.bpm,meter:structuredClone(input.config.meter),subdivision:input.config.subdivision,
-    timingClick:structuredClone(resolvedTiming(input.config)),durationSeconds:input.durationSeconds,expectedPattern:input.expectedPattern,analyzedVoice:input.analyzedVoice,matchWindowMs:a.matchWindowMs,
+    timingClick:structuredClone(resolvedTiming(input.config)),durationSeconds:input.durationSeconds,expectedPattern:input.expectedPattern,analyzedVoice:input.analyzedVoice,
+    ...(input.gridNameSnapshot?{gridNameSnapshot:input.gridNameSnapshot}:{}),...(input.gridLanesSnapshot?{gridLanesSnapshot:structuredClone(input.gridLanesSnapshot)}:{}),...(input.gridAssignments?{gridAssignments:structuredClone(input.gridAssignments)}:{}),
+    ...(a.wrongVoiceCount!==undefined?{wrongVoiceCount:a.wrongVoiceCount}:{}),...(a.gridLaneSummaries?{gridLaneSummaries:structuredClone(a.gridLaneSummaries)}:{}),
+    ...(a.accentVelocityMean!==undefined?{accentVelocityMean:a.accentVelocityMean}:{}),...(a.normalVelocityMean!==undefined?{normalVelocityMean:a.normalVelocityMean}:{}),...(a.accentVelocityDifference!==undefined?{accentVelocityDifference:a.accentVelocityDifference}:{}),matchWindowMs:a.matchWindowMs,
     expectedCount:a.expectedCount,detectedCount:a.detectedCount,matchedCount:a.matchedCount,misses:a.misses,extras:a.extras,unmappedCount:a.unmappedCount,
     meanOffsetMs:a.meanOffsetMs,medianOffsetMs:a.medianOffsetMs,meanAbsoluteErrorMs:a.meanAbsoluteErrorMs,spreadMs:a.spreadMs,driftMsPerMinute:a.driftMsPerMinute,
     confidence:a.confidence,velocityMean:a.velocityMean,velocityMedian:a.velocityMedian,velocitySpread:a.velocitySpread,
