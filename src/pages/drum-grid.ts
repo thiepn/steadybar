@@ -32,7 +32,7 @@ export function drumGridPage():Page{
   const complexitySelect=select('gridComplexity','Complexity',[['1','1 · Foundation'],['2','2 · Simple'],['3','3 · Developing'],['4','4 · Dense'],['5','5 · Advanced']],String(complexity));
   const variationText=el('span',{class:'muted small'},'Variation 1');
   const status=el('p',{class:'drum-grid-status',role:'status'},'Edit cells directly or use the deterministic variation controls.');
-  const gridHost=el('div',{class:'drum-grid-scroll'}),focusText=el('p',{class:'pre-line drum-grid-focus'});
+  const gridHost=el('div',{class:'drum-grid-scroll'}),focusText=el('p',{class:'pre-line drum-grid-focus'}),textGrid=el('pre',{class:'drum-grid-text'});
   let previewButton!:HTMLButtonElement;
 
   const previewConfig=():MetronomeConfig=>{
@@ -56,7 +56,7 @@ export function drumGridPage():Page{
 
   const renderGrid=()=>{
     const labels=drumGridStepLabels(protocol.pulse.beats,protocol.pulse.subdivision),style='--grid-steps:'+labels.length;
-    focusText.textContent=protocol.focus;variationText.textContent='Variation '+(variation+1);
+    focusText.textContent=protocol.focus;variationText.textContent='Variation '+(variation+1);textGrid.textContent=drumGridText(protocol);
     const grid=el('div',{class:'drum-grid-editor',style,role:'group','aria-label':'Editable drum grid'},
       el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))));
     for(const voice of DRUM_GRID_VOICES){
@@ -120,7 +120,7 @@ export function drumGridPage():Page{
       el('li',{},'Repeat long enough to hear instability; do not immediately increase BPM after one clean bar.'),
       el('li',{},'Use Mirror, Rotate, or Next variation to change one coordination demand while keeping the pulse stable.'),
       el('li',{},'Save useful grids as exercises so Steadybar can retain their practice history and coordination/timing evidence.')),
-    el('details',{},el('summary',{},'Text version of the current grid'),el('pre',{class:'drum-grid-text'},drumGridText(protocol))));
+    el('details',{},el('summary',{},'Text version of the current grid'),textGrid));
   page.append(setup,gridPanel,guidance);renderGrid();
   return {node:page,cleanup:()=>{disposed=true;stopPreview();}};
 }
