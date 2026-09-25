@@ -833,6 +833,92 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_69_focus_player_hands_free_shortcuts_use_normal_practice_actions(self):
+        self.onboard(True)
+        self.page.get_by_role('button',name='Start full session',exact=True).click()
+        self.start()
+        before=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session;
+          return {phase:s.runtime.phase,bpm:s.runtime.bpm,metronome:s.runtime.metronomeOn,index:s.activeBlockIndex};
+        })()""")
+        media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
+        if media!='unsupported':self.assertEqual(media,'playing')
+        self.page.keyboard.press('PageDown')
+        expect(self.page.get_by_role('button',name='Resume practice',exact=True)).to_be_visible()
+        paused=self.read("load('practice/controller.js').practice.session.runtime.phase")
+        self.assertEqual(paused,'paused')
+        media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
+        if media!='unsupported':self.assertEqual(media,'paused')
+        self.page.keyboard.press('PageDown')
+        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
+        media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
+        if media!='unsupported':self.assertEqual(media,'playing')
+
+        self.page.keyboard.press('ArrowUp')
+        expect(self.page.get_by_label('BPM',exact=True)).to_have_value(str(before['bpm']+1))
+        self.page.keyboard.press('Shift+ArrowDown')
+        expect(self.page.get_by_label('BPM',exact=True)).to_have_value(str(before['bpm']-4))
+
+        self.page.keyboard.press('m')
+        after_metro=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
+        self.assertNotEqual(after_metro,before['metronome'])
+        self.page.keyboard.press('PageUp')
+        restored=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
+        self.assertEqual(restored,before['metronome'])
+        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_have_attribute('aria-keyshortcuts','Space PageDown')
+        expect(self.page.get_by_role('button',name=re.compile(r'^Metronome ')).first).to_have_attribute('aria-keyshortcuts','M PageUp')
+
+        bpm_field=self.page.get_by_label('BPM',exact=True)
+        bpm_field.focus()
+        safe_before=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,bpm:s.runtime.bpm,evaluation:b.evaluation};})()""")
+        self.page.keyboard.press('1')
+        safe_after=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,bpm:s.runtime.bpm,evaluation:b.evaluation};})()""")
+        self.assertEqual(safe_after,safe_before)
+        self.page.get_by_role('button',name='Pause practice',exact=True).focus()
+
+        self.page.keyboard.press('Shift+/')
+        expect(self.page.get_by_role('dialog')).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Practice controls',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Page Down',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Finish block · Usable',exact=True)).to_be_visible()
+        self.page.keyboard.press('Escape')
+        expect(self.page.get_by_role('dialog')).to_have_count(0)
+
+        self.page.keyboard.press('2')
+        moved=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[0];
+          return {index:s.activeBlockIndex,result:b.evaluation?.result,phase:s.runtime.phase};
+        })()""")
+        self.assertEqual(moved['index'],before['index']+1)
+        self.assertEqual(moved['result'],'usable')
+        self.assertEqual(moved['phase'],'ready')
+
+        self.page.keyboard.press('PageDown')
+        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
+        restart_before=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {index:s.activeBlockIndex,id:b.id,count:s.blocks.length};
+        })()""")
+        self.page.keyboard.press('Shift+R')
+        restart_after=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,previous=s.blocks[s.activeBlockIndex-1],fresh=s.blocks[s.activeBlockIndex];
+          return {index:s.activeBlockIndex,id:fresh.id,count:s.blocks.length,phase:s.runtime.phase,previousNotes:previous.notes,evaluation:fresh.evaluation};
+        })()""")
+        self.assertEqual(restart_after['index'],restart_before['index']+1)
+        self.assertEqual(restart_after['count'],restart_before['count']+1)
+        self.assertNotEqual(restart_after['id'],restart_before['id'])
+        self.assertIn('Restarted: time and attempts retained',restart_after['previousNotes'])
+        self.assertEqual(restart_after['phase'],'ready')
+
+        self.page.keyboard.press('3')
+        gated=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,evaluation:b.evaluation,phase:s.runtime.phase};})()""")
+        self.assertEqual(gated['index'],restart_after['index'])
+        self.assertIsNone(gated['evaluation'])
+        self.assertEqual(gated['phase'],'ready')
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))

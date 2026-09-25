@@ -8,7 +8,7 @@ import { openAppearance } from '../ui/appearance.js';
 import { store } from '../app/store.js';
 import { navigate, type Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { button, confirmAction, empty, field, formDialog, formText, link, notify, pageHeader, sectionHeader, select, textarea } from '../ui/components.js';
+import { button, confirmAction, dialog, empty, field, formDialog, formText, link, notify, pageHeader, sectionHeader, select, textarea } from '../ui/components.js';
 import { selectRoutineDialog, trainerDialog } from '../ui/editors.js';
 import { exerciseBlock, freeBlock, launchPractice } from '../practice/launch.js';
 import { practice } from '../practice/controller.js';
@@ -21,6 +21,7 @@ import type { LimitationTag, PracticeResult } from '../domain/practice-state.js'
 import { trainerLabel } from '../domain/trainer.js';
 import { routineDuration } from '../domain/analytics.js';
 import { sessionPage } from './history.js';
+import { PRACTICE_SHORTCUTS, practiceRemoteCommand } from '../practice/remote.js';
 export function practicePage():Page{
   const snapshot=store.snapshot(),data=store.view(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=snapshot.sessions.find(s=>s.status==='active');
   const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Choose a plan, an exercise, or a timed free session.'));
@@ -67,20 +68,24 @@ export function activePracticePage():Page{
   const leave=button('Leave',async()=>{if(!await discardActiveRecording('Leave practice while recording?'))return;await practice.pause();await store.refresh();navigate('/');},'ghost','exit');
   leave.setAttribute('aria-label','Save & leave');leave.title='Pause, save, and leave practice';
   const finishSession=async()=>{if(!await discardActiveRecording('Finish session while recording?'))return;if(await confirmAction('Finish this session?','Your time, attempts, notes, and block results will be saved. Unfinished future blocks will be marked skipped.','Finish session')){await practice.finish();draw();}};
-  const focusToggle=button('Fullscreen',async()=>{if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen().catch(()=>{});},'ghost','focus');
+  const toggleFullscreen=async()=>{if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen().catch(()=>{});};
+  const showControls=()=>{const rows=el('div',{class:'practice-shortcut-list'},...PRACTICE_SHORTCUTS.map(row=>el('div',{class:'practice-shortcut-row'},el('div',{class:'practice-shortcut-keys'},...row.keys.map(key=>el('kbd',{},key))),el('span',{},row.label))));dialog('Practice controls',[el('p',{class:'field-hint'},'Keyboard shortcuts work only when no dialog or editable field is active. Bluetooth/page-turn pedals that emit Page Up / Page Down can control the click and transport; media play/pause also works when the browser exposes Media Session.'),rows]);};
+  const focusToggle=button('Fullscreen',toggleFullscreen,'ghost','focus');focusToggle.setAttribute('aria-keyshortcuts','F');
   const sessionMenu=el('details',{class:'focus-session-menu'},
     el('summary',{},'Session'),
     el('div',{class:'focus-menu-actions'},
       button('Appearance',openAppearance,'ghost'),
+      (()=>{const control=button('Controls',showControls,'ghost','help');control.setAttribute('aria-keyshortcuts','Shift+/');return control;})(),
       focusToggle,
       button('Finish session',finishSession,'secondary','check')));
   const header=el('header',{class:'focus-topbar'},leave,el('div',{class:'focus-topbar-center'},blockNumber,status),sessionMenu);
 
-  const start=button('Start practice',()=>practice.toggle(),'primary focus-start','play');
-  const metro=button('Metronome on',()=>practice.toggleAudio(),'ghost focus-metro','volume');
+  const start=button('Start practice',()=>practice.toggle(),'primary focus-start','play');start.setAttribute('aria-keyshortcuts','Space PageDown');
+  const metro=button('Metronome on',()=>practice.toggleAudio(),'ghost focus-metro','volume');metro.setAttribute('aria-keyshortcuts','M PageUp');
   const finishUnrated=button('Finish block',async()=>{if(!await discardActiveRecording('Finish block while recording?'))return;await practice.finishBlock();},'ghost');
   const skip=button('Skip block',async()=>{if(!await discardActiveRecording('Skip block while recording?'))return;await practice.finishBlock(true);},'ghost','skip');
-  const restart=button('Restart block',async()=>{if(!await discardActiveRecording('Restart block while recording?'))return;await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');},'ghost','restart');
+  const restartBlock=async()=>{if(!await discardActiveRecording('Restart block while recording?'))return;await practice.restart();notify('New segment ready. Previous time and attempts remain in history.','info');};
+  const restart=button('Restart block',restartBlock,'ghost','restart');restart.setAttribute('aria-keyshortcuts','Shift+R');
 
   const limitationOptions:[LimitationTag,string][]=[['timing','Timing'],['coordination','Coordination'],['memory','Memory'],['dynamics','Dynamics'],['tension','Tension'],['sound','Sound'],['accuracy','Accuracy'],['endurance','Endurance'],['too-fast','Too fast'],['form','Form']];
   const limitationChecks=limitationOptions.map(([value,label])=>el('label',{class:'practice-limitation'},el('input',{type:'checkbox',value}),el('span',{},label)));
@@ -93,6 +98,7 @@ export function activePracticePage():Page{
     button('Usable',()=>complete('usable'),'focus-result result-usable'),
     button('Solid',()=>complete('solid'),'focus-result result-solid'),
   ];
+  summaryButtons[0]!.setAttribute('aria-keyshortcuts','1');summaryButtons[1]!.setAttribute('aria-keyshortcuts','2');summaryButtons[2]!.setAttribute('aria-keyshortcuts','3');
 
   const attemptText=el('p',{class:'attempt-feedback small',role:'status'});
   const ratingButtons=RATINGS.map(rating=>button(rating==='acceptable'?'Acceptable':rating[0]!.toUpperCase()+rating.slice(1),async()=>{const bpm=practice.session!.runtime.bpm;await practice.attempt(rating);attemptText.textContent=`Recorded ${bpm} BPM · ${rating}.`;},`rating-button ${rating==='clean'?'clean-rating':''}`));
@@ -108,6 +114,7 @@ export function activePracticePage():Page{
   const cuesText=el('p',{class:'pre-line'});
   const cues=el('details',{class:'focus-drawer active-cues'},el('summary',{},'Practice cues'),el('div',{class:'focus-drawer-body'},cuesText));
   const note=()=>{const current=practice.session!.blocks[practice.session!.activeBlockIndex]!;formDialog('Quick practice note',[textarea('note','What did you notice?',current.notes,4)],async data=>{await practice.note(formText(data,'note'));notify('Practice note saved.');},'Save note');};
+  const quickNoteButton=button('Quick note',note,'ghost','note');quickNoteButton.setAttribute('aria-keyshortcuts','N');
   const timingClick=()=>{
     const block=practice.session!.blocks[practice.session!.activeBlockIndex]!,base=store.snapshot().settings.metronome,current=block.timingClickSnapshot??resolvedTiming(base),currentGap=`${current.gapClickBars}:${current.gapSilentBars}`;
     const gaps:[string,string][]=[['3:1','3 bars click → 1 silent'],['2:2','2 bars click → 2 silent'],['1:3','1 bar click → 3 silent'],['1:1','1 bar click → 1 silent']];
@@ -140,7 +147,7 @@ export function activePracticePage():Page{
     recordingStatus.hidden=false;recordingStatus.textContent='Recording this attempt · audio stays on this device.';
   };
   recordButton=button(PracticeRecorder.supported()?'Record attempt':'Recording unavailable',toggleRecording,'ghost','note');
-  recordButton.setAttribute('aria-pressed','false');
+  recordButton.setAttribute('aria-pressed','false');recordButton.setAttribute('aria-keyshortcuts','R');
   if(!PracticeRecorder.supported()){recordButton.disabled=true;recordButton.title='This browser does not expose microphone recording.';}
   const timingButton=button('Timing click',timingClick,'ghost','pulse');
   const trainerButton=button('Tempo trainer',()=>trainerDialog(practice.session!.blocks[practice.session!.activeBlockIndex]!.tempoTrainer,config=>practice.trainer(config),practice.session!.runtime.bpm),'ghost','progress');
@@ -148,7 +155,7 @@ export function activePracticePage():Page{
   const tools=el('details',{class:'focus-drawer focus-tools'},
     el('summary',{},'Tools & block options'),
     el('div',{class:'focus-drawer-body focus-tool-grid'},
-      recordButton,button('Quick note',note,'ghost','note'),timingButton,activeProfile(store.snapshot()).instrumentType==='drums'?link('MIDI Drum Lab','/midi-lab','button ghost','pulse'):null,activeProfile(store.snapshot()).instrumentType==='drums'?link('Drum Grid Lab','/drum-grid','button ghost','routine'):null,trainerButton,restart,skip,finishUnrated,recordingStatus));
+      recordButton,quickNoteButton,timingButton,activeProfile(store.snapshot()).instrumentType==='drums'?link('MIDI Drum Lab','/midi-lab','button ghost','pulse'):null,activeProfile(store.snapshot()).instrumentType==='drums'?link('Drum Grid Lab','/drum-grid','button ghost','routine'):null,trainerButton,restart,skip,finishUnrated,recordingStatus));
   const queueDrawer=el('details',{class:'focus-drawer focus-queue-drawer'},el('summary',{},'Session queue'),el('div',{class:'focus-drawer-body'},queue));
 
   const progressionBadge=el('span',{class:'focus-intent focus-progression',hidden:true}),setPrepBadge=el('span',{class:'focus-intent focus-set-prep',hidden:true}),progressionCue=el('p',{class:'focus-progression-cue',hidden:true});
@@ -185,7 +192,7 @@ export function activePracticePage():Page{
   };
   function draw():void{
     const session=practice.session;if(!session)return;
-    if(session.status!=='active'){if(!completedView){completedView=true;task?.cleanup();page.replaceChildren(sessionPage(session.id,true).node);}return;}
+    if(session.status!=='active'){if(mediaSession){try{mediaSession.playbackState='none';}catch{}}if(!completedView){completedView=true;task?.cleanup();page.replaceChildren(sessionPage(session.id,true).node);}return;}
     const block=session.blocks[session.activeBlockIndex]!,phase=session.runtime.phase;
     const state=JSON.stringify([block.id,block.protocolSnapshot,block.timingClickSnapshot,block.progressionSnapshot,block.setPrepSnapshot,phase,session.runtime.bpm,session.runtime.metronomeOn,block.notes,practice.error,practice.recovered,block.prescriptionSnapshot]);
     if(lastState!==state){
@@ -202,6 +209,7 @@ export function activePracticePage():Page{
       progressionCue.hidden=!progression;text(progressionCue,progression?.cue??'');
       if(document.activeElement!==tempo)tempo.value=String(session.runtime.bpm);
       text(status,phase==='running'?'Practicing':phase==='countin'?'Count-in':phase==='paused'?'Paused':'Ready');
+      if(mediaSession){try{mediaSession.playbackState=phase==='running'||phase==='countin'?'playing':phase==='paused'?'paused':'none';}catch{}}
       text(start.querySelector('span')!,phase==='running'||phase==='countin'?'Pause':phase==='paused'?'Resume':'Start');
       start.setAttribute('aria-label',phase==='running'||phase==='countin'?'Pause practice':phase==='paused'?'Resume practice':'Start practice');
       text(metro.querySelector('span')!,session.runtime.metronomeOn?'Metronome on':'Metronome off');metro.setAttribute('aria-pressed',String(session.runtime.metronomeOn));const clickBase=store.snapshot().settings.metronome,clickTiming=block.timingClickSnapshot??resolvedTiming(clickBase);text(timingButton.querySelector('span')!,`Timing click · ${timingClickLabel({...clickBase,timing:clickTiming})}`);
@@ -226,20 +234,42 @@ export function activePracticePage():Page{
     Array.from(beats.children).forEach((b,i)=>b.classList.toggle('on',!!practice.beat&&practice.beat.accent>0&&practice.beat.beat===i&&(phase==='running'||phase==='countin')));
     tick();
   }
+  const runRemote=async(command:ReturnType<typeof practiceRemoteCommand>):Promise<void>=>{
+    if(!command||practice.session?.status!=='active')return;
+    const session=practice.session,block=session.blocks[session.activeBlockIndex]!,phase=session.runtime.phase,hasTempo=!block.protocolSnapshot||!!protocolPulse(block.protocolSnapshot);
+    switch(command.kind){
+      case 'toggle':await practice.toggle();break;
+      case 'tempo':if(hasTempo)await practice.setBpm(session.runtime.bpm+command.delta);break;
+      case 'metronome':if(hasTempo)await practice.toggleAudio();break;
+      case 'result':if(!['ready','countin'].includes(phase))await complete(command.result);break;
+      case 'record':if(PracticeRecorder.supported())await toggleRecording();else notify('Microphone recording is unavailable in this browser.','info');break;
+      case 'restart':await restartBlock();break;
+      case 'note':note();break;
+      case 'fullscreen':await toggleFullscreen();break;
+      case 'help':showControls();break;
+    }
+  };
   const onKey=(event:KeyboardEvent)=>{
     const targetNode=event.target as HTMLElement;
-    if(practice.session?.status!=='active'||event.ctrlKey||event.metaKey||event.altKey||event.repeat)return;
+    if(practice.session?.status!=='active')return;
+    if(event.key==='Escape'&&document.fullscreenElement){void document.exitFullscreen().catch(()=>{});return;}
     if(document.querySelector('dialog[open]')||targetNode.closest('input,textarea,select,[contenteditable=true]'))return;
-    if(event.code==='Space'&&!targetNode.closest('button,a')){event.preventDefault();void practice.toggle().catch(e=>notify(e.message,'error'));}
-    else if((event.key==='ArrowUp'||event.key==='ArrowDown')&&(!practice.session!.blocks[practice.session!.activeBlockIndex]!.protocolSnapshot||protocolPulse(practice.session!.blocks[practice.session!.activeBlockIndex]!.protocolSnapshot!))){event.preventDefault();void practice.setBpm(practice.session!.runtime.bpm+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?5:1)).catch(e=>notify(e.message,'error'));}
-    else if(event.key.toLowerCase()==='n'){event.preventDefault();note();}
-    else if(event.key==='Escape'&&document.fullscreenElement)void document.exitFullscreen().catch(()=>{});
+    const command=practiceRemoteCommand(event);if(!command)return;
+    if(event.code==='Space'&&targetNode.closest('button,a'))return;
+    event.preventDefault();void runRemote(command).catch(e=>notify(e instanceof Error?e.message:'Practice control failed.','error'));
   };
+  const mediaSession='mediaSession' in navigator?navigator.mediaSession:undefined;
+  if(mediaSession){
+    try{
+      mediaSession.setActionHandler('play',()=>{if(practice.session?.status==='active'&&practice.session.runtime.phase!=='running'&&practice.session.runtime.phase!=='countin')void practice.start().catch(()=>{});});
+      mediaSession.setActionHandler('pause',()=>{if(practice.session?.status==='active'&&['running','countin'].includes(practice.session.runtime.phase))void practice.pause().catch(()=>{});});
+    }catch{}
+  }
   window.addEventListener('keydown',onKey);const unsubscribe=practice.subscribe(draw),timer=setInterval(tick,250);draw();
   return {
     node:page,
     beforeLeave:async()=>discardActiveRecording('Leave practice while recording?'),
-    cleanup:()=>{if(practiceRecorder.active)practiceRecorder.cancel();resetRecordingUi();task?.cleanup();unsubscribe();clearInterval(timer);window.removeEventListener('keydown',onKey);if(!practice.external&&practice.session?.status==='active'&&['running','countin'].includes(practice.session.runtime.phase))void practice.pause().catch(()=>{});if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});}
+    cleanup:()=>{if(practiceRecorder.active)practiceRecorder.cancel();resetRecordingUi();task?.cleanup();unsubscribe();clearInterval(timer);window.removeEventListener('keydown',onKey);if(mediaSession){try{mediaSession.playbackState='none';mediaSession.setActionHandler('play',null);mediaSession.setActionHandler('pause',null);}catch{}}if(!practice.external&&practice.session?.status==='active'&&['running','countin'].includes(practice.session.runtime.phase))void practice.pause().catch(()=>{});if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});}
   };
 }
 
