@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
+
+- Add a first-class **Drum Grid** practice protocol for explicit right-hand, left-hand, kick and hi-hat-foot patterns.
+- Add a dedicated **Drum Grid Lab** with five deterministic pattern families: Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence Builder.
+- Add 2× / 3× / 4× subdivision grids, five bounded complexity levels and deterministic variation stepping without hidden randomness.
+- Add direct cell editing with rest → hit → accent cycling, whole-pattern rotation and right/left-hand mirroring.
+- Add one-bar count-in and Web Audio click preview with an audio-clock-driven grid playhead.
+- Add **Start practice**, **Add to Today** and **Save as exercise** actions without creating a second practice-history model.
+- Saved grid exercises carry Coordination as the primary skill and Timing as a secondary skill, so existing PracticeState, Priority, progression and Practice Intelligence can use them.
+- Persist exact grid lanes inside immutable practice protocol snapshots; later exercise edits do not rewrite historical grids.
+- Render the complete limb grid in Focus Player with live subdivision highlighting and normal reflection/block evaluation.
+- Validate grid lane uniqueness, meter/subdivision length, allowed cell symbols and percussion-profile compatibility during normal data validation and backup restore.
+- Include drum-grid exercises in percussion accent-pattern and orchestration progression dimensions.
+- Fix finite trainer session snapshots so Ladder, Pyramid, Burst and Endurance retain their exact configured target duration when launched from saved plans or routines.
+- Add deterministic unit and browser coverage for generation, editing, rotation, mirroring, save-to-library, Add to Today, Focus Player snapshots and responsive layouts.
+- No IndexedDB schema or backup-envelope migration is required.
 ## 2.21.0 — Drum Tempo Training V2: Pyramids, Bursts & Finite Trainer Targets — 2026-09-25
 
 - Add a **Pyramid** tempo trainer for controlled speed development: climb from a starting BPM to an exact peak, then descend through the same stages instead of ending at maximum effort.

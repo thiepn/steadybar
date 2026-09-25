@@ -3,6 +3,8 @@ export type InstrumentType = 'drums' | 'guitar' | 'bass' | 'piano' | 'voice' | '
 export type InstrumentFamily = 'percussion' | 'fretted' | 'bowed' | 'keyboard' | 'wind' | 'pitched' | 'voice' | 'general';
 export type Experience = 'beginner' | 'intermediate' | 'advanced';
 export type Capability = 'tempo' | 'sticking' | 'pitch' | 'chords' | 'fretboard' | 'hands' | 'voice' | 'repertoire';
+export type DrumGridVoice = 'right-hand' | 'left-hand' | 'kick' | 'hihat-foot';
+export interface DrumGridLane { voice: DrumGridVoice; steps: string }
 export interface PracticeProfile {
   id: string; name: string; instrumentType: InstrumentType; family: InstrumentFamily;
   level: Experience; focusAreas: string[]; defaultSessionMinutes: number;
@@ -15,6 +17,7 @@ export type ScaleQuality = 'major' | 'natural-minor' | 'minor-pentatonic' | 'maj
 export type PracticeProtocol =
   | { kind: 'free'; focus: string; pulse?: Pulse }
   | { kind: 'tempo'; pulse: Pulse; technique: string; sticking?: string; orchestration?: string }
+  | { kind: 'drum-grid'; pulse: Pulse; name: string; focus: string; lanes: DrumGridLane[] }
   | { kind: 'repetitions'; task: string; target: number; pulse?: Pulse }
   | { kind: 'chord-changes'; chords: string[]; target: number; technique: string; pulse?: Pulse }
   | { kind: 'groove'; pulse: Pulse; key: string; style: string; focus: 'time' | 'muting' | 'articulation' | 'coordination'; progression: string }

@@ -168,6 +168,15 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Drum Grid & Coordination Lab — 2.22.0
+
+Drum profiles now include a dedicated **Drum Grid Lab** for explicit four-limb coordination work without turning Steadybar into a sequencer. It generates deterministic Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence patterns across eighth-note, triplet and sixteenth-note subdivisions.
+
+Every grid is editable. Cells cycle through rest, hit and accent; patterns can be rotated or mirrored; complexity and numbered variations change one coordination demand without hidden randomness. A one-bar count-in and Web Audio preview use Steadybar's existing audio-time clock, and Focus Player highlights the current subdivision while the exact saved grid remains visible.
+
+A grid can be practiced immediately, added to Today, or saved as a normal custom exercise. Saved grids are attributed to Drum Coordination with Timing as a secondary skill, so they participate in the existing PracticeState, progression and Practice Intelligence systems. Historical sessions retain the exact grid snapshot that was actually practiced.
+
+The grid is a practice target, not an automatic technique score. Steadybar records the pattern and normal practice evidence, but does not infer limb technique, physical strain or coordination quality from the grid itself.
 ## Drum tempo training — 2.21.0
 
 The Focus Player now has six integrated tempo trainers: **Progressive**, **Repetition**, **Ladder**, **Pyramid**, **Burst**, and **Endurance**. They run inside ordinary exercise sessions, so changing the tempo-training method does not create a separate history or scoring system.
@@ -208,7 +217,7 @@ See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architec
 
 | Profile | Distinct practice experience |
 |---|---|
-| Drums | Sticking, subdivision, accents, clean-tempo attempts and six integrated tempo trainers, including pyramid and burst work. |
+| Drums | Drum Grid coordination work, sticking, subdivisions, accents, clean-tempo attempts and six integrated tempo trainers, including pyramid and burst work. |
 | Guitar | Chord sequences with clean/total counts, objectively checked fretboard recall, scales with key/position/technique, and repertoire passages. |
 | Bass | Groove/harmonic cues, time/control/muting/articulation reviews, chord-tone work and fretboard recall. |
 | Piano | Scale/key cycles, hands/ motion/fingering, reference patterns, and first-read versus repeated-reading results. |

@@ -17,6 +17,7 @@ export const validateProtocol:Validator<PracticeProtocol>=(v,p='Protocol')=>{
   switch(kind(v)){
     case 'free':return obj({kind:one('free'),focus:text(),pulse:optional(pulse)})(v,p);
     case 'tempo':return obj({kind:one('tempo'),pulse,technique:text(),sticking:optional(text(1000)),orchestration:optional(text(1000))})(v,p);
+    case 'drum-grid':{const r=obj({kind:one('drum-grid'),pulse,name:text(120,1),focus:text(1000,1),lanes:arr(obj({voice:one('right-hand','left-hand','kick','hihat-foot'),steps:text(64,1)}),4)})(v,p);const expected=r.pulse.beats*r.pulse.subdivision;if(!r.lanes.length||new Set(r.lanes.map(l=>l.voice)).size!==r.lanes.length)fail(p,'drum grid lanes must use unique limb voices');if(r.lanes.some(l=>l.steps.length!==expected||!/^[.xX]+$/.test(l.steps)))fail(p,'drum grid steps must match the meter and subdivision pulse length and use only ., x, or X');return r;}
     case 'repetitions':return obj({kind:one('repetitions'),task:text(),target:num(1,10000,true),pulse:optional(pulse)})(v,p);
     case 'chord-changes':{const r=obj({kind:one('chord-changes'),chords:arr(text(40,1),24),target:num(1,10000,true),technique:text(1000),pulse:optional(pulse)})(v,p);if(r.chords.length<2)fail(p,'choose at least two chords');return r;}
     case 'groove':return obj({kind:one('groove'),pulse,key:text(40),style:text(200),focus:one('time','muting','articulation','coordination'),progression:text(1000)})(v,p);
@@ -48,9 +49,10 @@ export const validateProtocolState:Validator<ProtocolState>=obj({step:num(0,1000
 export function assertProtocolCompatible(p:PracticeProtocol,profile:PracticeProfile):void {
   if(!supportedProtocols(profile).some(s=>s.id===p.kind))fail('Protocol',`${p.kind} is not supported by this profile family`);
   if(p.kind==='tempo'&&p.sticking&&profile.family!=='percussion')fail('Protocol','sticking is only available for percussion');
+  if(p.kind==='drum-grid'&&profile.family!=='percussion')fail('Protocol','drum grids are only available for percussion profiles');
 }
 export function assertOutcomeMatches(outcome:ProtocolOutcome,protocol:PracticeProtocol):void {
-  const map:Record<PracticeProtocol['kind'],readonly ProtocolOutcome['kind'][]>={free:['reflection'],tempo:['reflection'],repetitions:['count'],'chord-changes':['count'],groove:['groove'],'scale-cycle':['scale'],fretboard:['recall'],'vocal-pattern':['voice'],'pitch-match':['pitch'],'sight-reading':['reading'],repertoire:['reflection']};
+  const map:Record<PracticeProtocol['kind'],readonly ProtocolOutcome['kind'][]>={free:['reflection'],tempo:['reflection'],'drum-grid':['reflection'],repetitions:['count'],'chord-changes':['count'],groove:['groove'],'scale-cycle':['scale'],fretboard:['recall'],'vocal-pattern':['voice'],'pitch-match':['pitch'],'sight-reading':['reading'],repertoire:['reflection']};
   if(!map[protocol.kind].includes(outcome.kind))fail('Outcome','result does not belong to this protocol');
   if(outcome.kind==='count'&&outcome.protocol!==protocol.kind)fail('Outcome','count result belongs to a different protocol');
   if(outcome.kind==='scale'&&protocol.kind==='scale-cycle'&&(!protocol.keys.includes(outcome.key)||outcome.hands!==protocol.hands||outcome.quality!==protocol.quality))fail('Outcome','scale result does not match the exercise');

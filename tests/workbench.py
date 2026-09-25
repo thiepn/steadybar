@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/drum-grid','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -729,6 +729,65 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('heading',name='Practice intelligence',exact=True)).to_be_visible()
         expect(self.page.get_by_text('Regress',exact=True).first).to_be_visible()
 
+
+    def test_66_drum_grid_lab_saves_and_launches_exact_protocol(self):
+        self.onboard()
+        self.route('/drum-grid')
+        expect(self.page.get_by_role('heading',name='Drum Grid Lab',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.drum-grid-edit-cell').count(),64)
+        self.page.get_by_role('button',name='Next variation',exact=True).click()
+        expect(self.page.get_by_text('Variation 2',exact=True)).to_be_visible()
+        first=self.page.get_by_role('button',name=re.compile(r'Right hand step 1:')).first
+        first.click()
+        self.page.get_by_role('button',name='Save as exercise',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Exercise name',exact=True).fill('QA Grid Exercise')
+        dialog.get_by_role('button',name='Save exercise',exact=True).click()
+        expect(dialog).to_have_count(0)
+        saved=self.read("""(()=>{
+          const e=load('app/store.js').store.snapshot().exercises.find(e=>e.name==='QA Grid Exercise');
+          return e?{id:e.id,kind:e.protocol?.kind,pulse:e.protocol?.pulse,lanes:e.protocol?.lanes,primary:e.primarySkillId,secondary:e.secondarySkillIds}:null;
+        })()""")
+        self.assertIsNotNone(saved);self.assertEqual(saved['kind'],'drum-grid');self.assertEqual(saved['primary'],'drums.coordination')
+        self.assertIn('drums.timing',saved['secondary']);self.assertEqual(len(saved['lanes']),4);self.assertTrue(all(len(row['steps'])==16 for row in saved['lanes']))
+        self.route('/library/'+saved['id'])
+        expect(self.page.get_by_role('heading',name='QA Grid Exercise',exact=True)).to_be_visible()
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        expect(self.page.locator('.focus-drum-grid')).to_be_visible()
+        self.assertEqual(self.page.locator('.focus-drum-grid .drum-grid-cell').count(),64)
+        session=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {exercise:b.sourceExerciseId,kind:b.protocolSnapshot?.kind,lanes:b.protocolSnapshot?.lanes,bpm:b.initialBpm};
+        })()""")
+        self.assertEqual(session['exercise'],saved['id']);self.assertEqual(session['kind'],'drum-grid');self.assertEqual(session['lanes'],saved['lanes'])
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_67_drum_grid_lab_adds_exact_pattern_to_today(self):
+        self.onboard()
+        self.route('/drum-grid')
+        expect(self.page.get_by_label('Pattern family',exact=True)).to_have_value('kick-displacement')
+        self.page.get_by_role('button',name='Next variation',exact=True).click()
+        first=self.page.locator('.drum-grid-edit-cell').first
+        before=first.inner_text();first.click();self.assertNotEqual(first.inner_text(),before)
+        expected=self.read("""(()=>{
+          const cells=[...document.querySelectorAll('.drum-grid-editor .drum-grid-row:not(.drum-grid-header)')];
+          return cells.map(row=>[...row.querySelectorAll('.drum-grid-edit-cell')].map(cell=>cell.textContent==='·'?'.':cell.textContent).join(''));
+        })()""")
+        self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),p=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=p?.blocks.at(-1);
+              return b?{kind:b.protocol?.kind,lanes:b.protocol?.lanes?.map(l=>l.steps),bpm:b.bpm,title:b.title}:null;
+            })()""")
+            if plan:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan);self.assertEqual(plan['kind'],'drum-grid');self.assertEqual(plan['lanes'],expected);self.assertGreaterEqual(plan['bpm'],20)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
 if __name__=='__main__':

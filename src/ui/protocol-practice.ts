@@ -2,6 +2,7 @@ import type { PracticeBlock } from '../domain/models.js';
 import type { ProtocolOutcome } from '../domain/practice-types.js';
 import { protocolDefinition } from '../domain/profiles.js';
 import { fretPrompt, noteName, NOTE_NAMES, patternFits, protocolSummary, scaleOffsets } from '../domain/protocols.js';
+import { drumGridStepLabels, DRUM_GRID_VOICES } from '../domain/drum-grid.js';
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { reference } from '../audio/reference.js';
 import { audio } from '../audio/engine.js';
@@ -14,7 +15,7 @@ import { el } from './dom.js';
 
 export interface TaskPanel {node:HTMLElement;update:(block:PracticeBlock)=>void;cleanup:()=>void}
 export function taskPanel(initial:PracticeBlock):TaskPanel {
-  let block=initial,stamp='',restUntil=0;
+  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined;
   const p=initial.protocolSnapshot;
   const node=el('section',{class:'protocol-task','data-protocol':p?.kind??'legacy'}),heading=el('h2',{class:'task-heading'}),cue=el('p',{class:'task-cue'}),detail=el('p',{class:'muted small'}),actions=el('div',{class:'task-actions'}),feedback=el('p',{class:'task-feedback',role:'status'}),recent=el('p',{class:'muted small task-result'});
   if(!p||p.kind==='tempo')return {node,update:()=>{},cleanup:()=>reference.stop()};
@@ -78,6 +79,16 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
     actions.append(button('Play reference',()=>listen([p.rootMidi,p.rootMidi+p.interval]),'primary'),button('Stop reference',()=>reference.stop(),'secondary'),
       button('Matched by ear',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:true});},'secondary'),
       button('Needs another listen',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:false});},'secondary'));
+  }else if(p.kind==='drum-grid'){
+    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision);
+    drumGrid=el('div',{class:'focus-drum-grid',style:'--grid-steps:'+labels.length,'aria-label':'Drum coordination grid'},
+      el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))),
+      ...DRUM_GRID_VOICES.map(voice=>{
+        const lane=p.lanes.find(row=>row.voice===voice.id),steps=lane?.steps??'.'.repeat(labels.length);
+        return el('div',{class:'drum-grid-row'},el('strong',{},voice.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`,'data-index':index,'aria-label':`${voice.label} step ${index+1}: ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`},cell==='.'?'·':cell)));
+      }));
+    node.insertBefore(drumGrid,actions);
+    actions.append(button('Record reflection',()=>{ensureStarted();const step=state().step;formDialog('Grid practice reflection',[score('rating','Control / confidence'),textarea('note','What broke down or improved?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save reflection');},'secondary'));
   }else if(p.kind==='sight-reading'){
     actions.append(button('Log reading attempt',()=>{ensureStarted();const step=state().step;formDialog('Reading result',[
       input('errors','Note / rhythm errors',0,'number',{min:0,max:1000,step:1,required:true}),score('continuity','Continuity'),textarea('note','Observation','',2),
@@ -87,11 +98,16 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
   }
   node.append(button(p.kind==='vocal-pattern'?'Adjust range / pattern':'Task settings',configure,'ghost compact'));
   const update=(current:PracticeBlock)=>{
-    block=current;const state=block.protocolState??{step:0,clean:0,total:0},next=JSON.stringify([state,block.outcomes?.length,practice.session?.runtime.phase]);if(next===stamp)return;stamp=next;
+    block=current;const state=block.protocolState??{step:0,clean:0,total:0},next=JSON.stringify([state,block.outcomes?.length,practice.session?.runtime.phase,practice.beat?.bar,practice.beat?.beat,practice.beat?.part]);if(next===stamp)return;stamp=next;
     heading.textContent=protocolDefinition(p.kind).label;cue.textContent=protocolSummary(p);detail.textContent=protocolDefinition(p.kind).description;
     if(p.kind==='chord-changes'||p.kind==='repetitions')detail.textContent=`${state.clean} clean / ${state.total} attempts · goal ${p.target} clean`;
     if(p.kind==='scale-cycle')detail.textContent=[p.motion==='contrary'?'Contrary motion':'Parallel motion',p.fingering,p.position].filter(Boolean).join(' · ');
     if(p.kind==='groove')detail.textContent=`${p.progression} · ${p.focus}. ${protocolDefinition(p.kind).description}`;
+    if(p.kind==='drum-grid'){
+      cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;
+      const currentIndex=practice.beat&&['running','countin'].includes(practice.session?.runtime.phase??'')?practice.beat.beat*p.pulse.subdivision+practice.beat.part:-1;
+      drumGrid?.querySelectorAll<HTMLElement>('.drum-grid-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
+    }
     if(p.kind==='sight-reading')cue.textContent=p.material||'Choose a short passage from your own score';
     if(p.kind==='scale-cycle')cue.textContent=`${NOTE_NAMES[p.keys[state.step%p.keys.length]!]} ${p.quality.replaceAll('-',' ')} · ${p.hands==='not-applicable'?p.position:p.hands+' hands'} · ${p.octaves} octave${p.octaves===1?'':'s'}`;
     if(p.kind==='fretboard'){const prompt=fretPrompt(p,state.step);cue.textContent=`String ${prompt.string} · fret ${prompt.fret}`;detail.textContent=`${state.clean} correct / ${state.total} answered · ${p.target} prompt target. String 1 is highest.`;}

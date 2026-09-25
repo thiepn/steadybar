@@ -1,5 +1,6 @@
 import type { Exercise, Meter, Subdivision } from './models.js';
 import type { PracticeProfile, PracticeProtocol, ProtocolKind, Pulse } from './practice-types.js';
+import { buildDrumGrid } from './drum-grid.js';
 export const NOTE_NAMES = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'] as const;
 export function noteName(midi:number):string{return `${NOTE_NAMES[((midi%12)+12)%12]}${Math.floor(midi/12)-1}`;}
 export function frequency(midi:number):number{return 440*2**((midi-69)/12);}
@@ -15,6 +16,7 @@ export function defaultProtocol(kind:ProtocolKind,profile:PracticeProfile):Pract
   switch(kind){
     case 'free':return {kind,focus:'Choose one musical goal.'};
     case 'tempo':return {kind,pulse:pulse(80),technique:'Even tone and relaxed movement',...(profile.family==='percussion'?{sticking:'R L R L'}:{})};
+    case 'drum-grid':return buildDrumGrid('kick-displacement',80,4,0,2);
     case 'repetitions':return {kind,task:'Repeat a short passage with control.',target:10};
     case 'chord-changes':return {kind,chords:['G','C','D','Em'],target:30,technique:'Slow clean changes'};
     case 'groove':return {kind,pulse:pulse(80),key:'C',style:'Straight eighths',focus:profile.instrumentType==='bass'?'muting':'time',progression:'C – F – G – C'};
@@ -30,6 +32,7 @@ export function protocolSummary(p:PracticeProtocol):string {
   switch(p.kind){
     case 'free':return p.focus;
     case 'tempo':return [p.sticking,p.technique,`${p.pulse.bpm} BPM`].filter(Boolean).join(' · ');
+    case 'drum-grid':return `${p.name} · ${p.focus} · ${p.pulse.bpm} BPM · ${p.pulse.subdivision}× subdivision`;
     case 'repetitions':return `${p.target} clean repetitions · ${p.task}`;
     case 'chord-changes':return `${p.chords.join(' → ')} · ${p.target} clean changes`;
     case 'groove':return `${p.style} · ${p.key} · ${p.focus} · ${p.pulse.bpm} BPM`;
