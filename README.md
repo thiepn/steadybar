@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Drum tempo training — 2.21.0
+
+The Focus Player now has six integrated tempo trainers: **Progressive**, **Repetition**, **Ladder**, **Pyramid**, **Burst**, and **Endurance**. They run inside ordinary exercise sessions, so changing the tempo-training method does not create a separate history or scoring system.
+
+**Pyramid** builds a deterministic climb to an exact peak BPM and then mirrors the stages back down. **Burst** alternates a recovery BPM with a faster BPM for short fixed cycles and returns to recovery after the final burst. Ladder, Pyramid, Burst and Endurance set an explicit block target from their configured stages; Progressive and clean-round Repetition remain open-ended. Pausing freezes trainer time.
+
+These tools prescribe metronome conditions, not technique quality. Speed should only rise while timing, sound and relaxed movement remain controlled; Steadybar does not infer physical strain or safe personal limits.
+
 ## Metronome & timing training — 2.7.0
 
 The metronome now supports **Standard**, **2 & 4**, **Sparse**, **One click per bar**, and **Gap click** modes alongside the existing 1×/2×/3×/4× subdivision and per-beat accent controls. Gap training includes 3 bars click → 1 silent, 2 → 2, and 1 → 3 progressions; sparse mode can click every 2, 3, or 4 beats. Count-ins stay audible, while intentionally silent beats do not flash visually.
@@ -200,7 +208,7 @@ See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architec
 
 | Profile | Distinct practice experience |
 |---|---|
-| Drums | Sticking, subdivision, accents, clean-tempo attempts and the four existing tempo trainers. |
+| Drums | Sticking, subdivision, accents, clean-tempo attempts and six integrated tempo trainers, including pyramid and burst work. |
 | Guitar | Chord sequences with clean/total counts, objectively checked fretboard recall, scales with key/position/technique, and repertoire passages. |
 | Bass | Groove/harmonic cues, time/control/muting/articulation reviews, chord-tone work and fretboard recall. |
 | Piano | Scale/key cycles, hands/ motion/fingering, reference patterns, and first-read versus repeated-reading results. |

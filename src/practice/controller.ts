@@ -12,7 +12,7 @@ import { audio } from '../audio/engine.js';
 import { defaultAccents, type BeatEvent } from '../audio/scheduler.js';
 import { blockElapsed, checkpointSession, createSession, finishBlock, pauseSession, preserveReadingIdentity, recoverSession, restartBlock } from './logic.js';
 import { clampBpm, nowISO, uuid } from '../domain/utils.js';
-import { trainerBpm } from '../domain/trainer.js';
+import { trainerBpm, trainerTargetSeconds } from '../domain/trainer.js';
 import { ExclusiveLease, SESSION_LOCK } from '../platform/locks.js';
 import { requireActive } from './guards.js';
 export class PracticeController {
@@ -217,7 +217,7 @@ export class PracticeController {
     this.beat=undefined;this.emit();
   }
   async trainer(config:TrainerConfig | undefined):Promise<void>{
-    await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;if(config)delete block.progressionSnapshot;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;if(config.mode==='endurance')block.targetSeconds=Math.ceil(block.actualActiveSeconds)+config.seconds;}return s;});
+    await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;if(config)delete block.progressionSnapshot;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;const target=trainerTargetSeconds(config);if(target!==undefined)block.targetSeconds=Math.ceil(block.actualActiveSeconds)+target;}return s;});
   }
   async finishBlock(skip=false):Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;await this.mutate(s=>finishBlock(s,skip),ending);this.beat=undefined;this.emit();}
   async restart():Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.mutate(restartBlock);this.beat=undefined;this.emit();}

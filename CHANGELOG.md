@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.21.0 — Drum Tempo Training V2: Pyramids, Bursts & Finite Trainer Targets — 2026-09-25
+
+- Add a **Pyramid** tempo trainer for controlled speed development: climb from a starting BPM to an exact peak, then descend through the same stages instead of ending at maximum effort.
+- Add a **Burst** trainer that alternates explicit recovery tempo with short faster bursts for a fixed number of cycles, then returns to recovery tempo.
+- Keep both modes on Steadybar's existing Web Audio metronome and active-practice clock; pausing freezes trainer time and browser background-pause behavior remains unchanged.
+- Make Ladder, Pyramid, Burst and Endurance trainers expose their exact remaining practice duration through the normal Focus Player block target and progress bar.
+- Improve Ladder completion behavior so it reports completion and safely holds its final tempo instead of appearing to advance forever.
+- Add phase-aware Focus Player status for Pyramid climb / peak / descent and Burst recovery / speed cycles with current BPM and remaining stage time.
+- Keep Progressive and clean-round Repetition trainers open-ended because their useful completion point depends on the player rather than a predetermined timer.
+- Preserve all ordinary practice evidence: attempts, notes, Not Yet / Usable / Solid evaluations, limitation tags, recordings, progression snapshots, PracticeState and Practice Intelligence continue through the same session pipeline.
+- Add validation guards that require a Pyramid peak above its start tempo and a Burst tempo above its recovery tempo.
+- Add deterministic unit coverage for exact non-divisible Pyramid peaks, Pyramid descent, Burst alternation/recovery, finite trainer duration and invalid degenerate configurations.
+- No IndexedDB schema or backup-envelope migration is required. Existing trainer configurations remain valid.
+
 ## 2.20.0 — Advanced Practice Intelligence: Unified Weakness Detection, Progression Decisions & Recommendation Engine — 2026-09-23
 
 - Add a single runtime-only **Practice Intelligence** engine over the existing PracticeState, diagnostics, Priority, progression, guided-learning and repertoire signals.

@@ -4,7 +4,7 @@ import * as analytics from '../dist/app/domain/analytics.js';
 import * as v from '../dist/app/domain/validation.js';
 import * as u from '../dist/app/domain/utils.js';
 import * as logic from '../dist/app/practice/logic.js';
-import { trainerBpm } from '../dist/app/domain/trainer.js';
+import { pyramidBpms, trainerBpm, trainerLabel, trainerTargetSeconds } from '../dist/app/domain/trainer.js';
 import { ScheduleClock, tapTempo, defaultAccents } from '../dist/app/audio/scheduler.js';
 import { DEFAULT_METRONOME, DEFAULT_SETTINGS } from '../dist/app/domain/models.js';
 import { seedData } from '../dist/app/db/seed.js';
@@ -57,7 +57,25 @@ test('progressive trainer clamps at max without wrapping',()=>{const c={mode:'pr
 test('repetition trainer advances only at complete clean-round thresholds',()=>{const c={mode:'repetition',start:80,step:5,rounds:3,max:90};assert.deepEqual([0,2,3,5,6,300].map(n=>trainerBpm(c,900,n)),[80,80,85,85,90,90]);});
 test('ladder follows explicit stages and holds final BPM',()=>{const c={mode:'ladder',bpms:[80,90,100,90,80],seconds:60};assert.deepEqual([0,60,120,180,240,9999].map(t=>trainerBpm(c,t,0)),[80,90,100,90,80,80]);});
 test('endurance trainer remains fixed regardless of elapsed time',()=>assert.equal(trainerBpm({mode:'endurance',bpm:110,seconds:600},5000,99),110));
-test('trainer rejects negative stages and backward maximum',()=>{assert.throws(()=>v.validateTrainer({mode:'progressive',start:100,step:5,seconds:0,max:120}));assert.throws(()=>v.validateTrainer({mode:'progressive',start:100,step:5,seconds:60,max:80}));assert.throws(()=>v.validateTrainer({mode:'ladder',bpms:[80],seconds:10}));});
+test('pyramid trainer reaches the exact peak, descends once, and recovers at start tempo',()=>{
+ const c={mode:'pyramid',start:80,step:15,seconds:10,max:100};
+ assert.deepEqual(pyramidBpms(c),[80,95,100,95,80]);
+ assert.deepEqual([0,10,20,30,40,49.9,50,500].map(t=>trainerBpm(c,t,0)),[80,95,100,95,80,80,80,80]);
+ assert.match(trainerLabel(c,20,0),/Peak/);assert.match(trainerLabel(c,50,0),/complete/i);
+});
+test('burst trainer alternates recovery and speed for exact cycles then returns to recovery',()=>{
+ const c={mode:'burst',recoveryBpm:90,burstBpm:130,recoverySeconds:20,burstSeconds:10,cycles:2};
+ assert.deepEqual([0,19.9,20,29.9,30,49.9,50,59.9,60,600].map(t=>trainerBpm(c,t,0)),[90,90,130,130,90,90,130,130,90,90]);
+ assert.match(trainerLabel(c,20,0),/Burst/);assert.match(trainerLabel(c,60,0),/complete/i);
+});
+test('finite tempo trainers expose exact block targets',()=>{
+ assert.equal(trainerTargetSeconds({mode:'ladder',bpms:[80,90,100],seconds:30}),90);
+ assert.equal(trainerTargetSeconds({mode:'pyramid',start:80,step:10,seconds:20,max:100}),100);
+ assert.equal(trainerTargetSeconds({mode:'burst',recoveryBpm:80,burstBpm:110,recoverySeconds:20,burstSeconds:10,cycles:4}),120);
+ assert.equal(trainerTargetSeconds({mode:'endurance',bpm:100,seconds:180}),180);
+ assert.equal(trainerTargetSeconds({mode:'progressive',start:80,step:5,seconds:30,max:120}),undefined);
+});
+test('trainer rejects negative stages and backward maximum',()=>{assert.throws(()=>v.validateTrainer({mode:'progressive',start:100,step:5,seconds:0,max:120}));assert.throws(()=>v.validateTrainer({mode:'progressive',start:100,step:5,seconds:60,max:80}));assert.throws(()=>v.validateTrainer({mode:'ladder',bpms:[80],seconds:10}));assert.throws(()=>v.validateTrainer({mode:'pyramid',start:100,step:5,seconds:30,max:100}));assert.throws(()=>v.validateTrainer({mode:'burst',recoveryBpm:120,burstBpm:110,recoverySeconds:20,burstSeconds:10,cycles:4}));assert.throws(()=>v.validateTrainer({mode:'burst',recoveryBpm:90,burstBpm:120,recoverySeconds:0,burstSeconds:10,cycles:4}));});
 test('backup rejects unknown format or future version',()=>{const b=createBackup(seedData());assert.throws(()=>v.validateBackup({...b,format:'other'}),/not a Steadybar/);assert.throws(()=>v.validateBackup({...b,version:5}),/unsupported/);});
 test('malformed JSON does not become an empty successful import',()=>assert.throws(()=>parseBackup('{oops'),/not valid JSON/));
 test('backup deeply validates BPMs, time, type, and accent length',()=>{for(const alter of [d=>d.exercises[0].defaultBpm=301,d=>d.exercises[0].defaultBpm='80',d=>d.settings.metronome.accents=[],d=>d.exercises[0].createdAt='2026-02-31T12:00:00.000Z']){const b=createBackup(seedData());alter(b.data);assert.throws(()=>v.validateBackup(b));}});

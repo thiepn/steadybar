@@ -64,6 +64,14 @@ export const validateTrainer: Validator<TrainerConfig> = (v,p = 'Tempo trainer')
       const c = obj({ mode:one('ladder'), bpms:arr(bpm,100), seconds:num(1,86400,true) })(v,p);
       if(c.bpms.length < 2) fail(p,'enter at least two ladder tempos'); return c;
     }
+    case 'pyramid': {
+      const c = obj({ mode:one('pyramid'), start:bpm, step:num(1,100,true), seconds:num(1,86400,true), max:bpm })(v,p);
+      if(c.max <= c.start) fail(p,'peak BPM must be higher than the starting BPM'); return c;
+    }
+    case 'burst': {
+      const c = obj({ mode:one('burst'), recoveryBpm:bpm, burstBpm:bpm, recoverySeconds:num(1,3600,true), burstSeconds:num(1,3600,true), cycles:num(1,100,true) })(v,p);
+      if(c.burstBpm <= c.recoveryBpm) fail(p,'burst BPM must be higher than recovery BPM'); return c;
+    }
     case 'endurance': return obj({ mode:one('endurance'), bpm, seconds:num(1,86400,true) })(v,p);
     default: return fail(p,'unknown tempo trainer mode');
   }

@@ -49,6 +49,8 @@ export type TrainerConfig =
   | { mode: 'progressive'; start: number; step: number; seconds: number; max: number }
   | { mode: 'repetition'; start: number; step: number; rounds: number; max: number }
   | { mode: 'ladder'; bpms: number[]; seconds: number }
+  | { mode: 'pyramid'; start: number; step: number; seconds: number; max: number }
+  | { mode: 'burst'; recoveryBpm: number; burstBpm: number; recoverySeconds: number; burstSeconds: number; cycles: number }
   | { mode: 'endurance'; bpm: number; seconds: number };
 export interface Entity { id: string; createdAt: string; updatedAt: string }
 export interface Exercise extends Entity {
