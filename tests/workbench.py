@@ -859,14 +859,17 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.keyboard.press('Shift+ArrowDown')
         expect(self.page.get_by_label('BPM',exact=True)).to_have_value(str(before['bpm']-4))
 
+        metro_button=self.page.get_by_role('button',name=re.compile(r'^Metronome ')).first
         self.page.keyboard.press('m')
+        expect(metro_button).to_have_attribute('aria-pressed',str(not before['metronome']).lower())
         after_metro=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
         self.assertNotEqual(after_metro,before['metronome'])
         self.page.keyboard.press('PageUp')
+        expect(metro_button).to_have_attribute('aria-pressed',str(before['metronome']).lower())
         restored=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
         self.assertEqual(restored,before['metronome'])
         expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_have_attribute('aria-keyshortcuts','Space PageDown')
-        expect(self.page.get_by_role('button',name=re.compile(r'^Metronome ')).first).to_have_attribute('aria-keyshortcuts','M PageUp')
+        expect(metro_button).to_have_attribute('aria-keyshortcuts','M PageUp')
 
         bpm_field=self.page.get_by_label('BPM',exact=True)
         bpm_field.focus()
