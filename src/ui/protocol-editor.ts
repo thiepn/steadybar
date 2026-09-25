@@ -14,6 +14,10 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
   switch(p.kind){
     case 'free':node.append(textarea('focus','Practice focus',p.focus));break;
     case 'tempo':node.append(text('technique','Technique',p.technique));if(profile.family==='percussion')node.append(text('sticking','Sticking',p.sticking??''),text('orchestration','Limb / orchestration notes',p.orchestration??''));break;
+    case 'drum-grid':{
+      const lane=(voice:string)=>p.lanes.find(row=>row.voice===voice)?.steps??'.'.repeat(p.pulse.beats*p.pulse.subdivision);
+      node.append(text('gridName','Grid name',p.name),textarea('gridFocus','Practice focus',p.focus,3),text('gridRightHand','Right hand cells',lane('right-hand'),'Use . for rest, x for hit, X for accent.'),text('gridLeftHand','Left hand cells',lane('left-hand')),text('gridKick','Kick cells',lane('kick')),text('gridHihatFoot','Hi-hat foot cells',lane('hihat-foot')));break;
+    }
     case 'repetitions':node.append(text('task','Repeated task',p.task),number('target','Target clean repetitions',p.target,1,10000));break;
     case 'chord-changes':node.append(text('chords','Chord sequence',p.chords.join(', '),'Separate chords with commas. Count results after playing; tapping is not required for every change.'),text('technique','Technique / rhythm',p.technique),number('target','Target clean changes',p.target,1,10000));break;
     case 'groove':node.append(el('div',{class:'form-grid'},text('key','Key',p.key),text('style','Style / feel',p.style)),select('grooveFocus','Listening focus',[['time','Time'],['muting','Muting'],['articulation','Articulation'],['coordination','Coordination']],p.focus),text('progression','Progression / groove notes',p.progression));break;
@@ -35,7 +39,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
   }
   let readPulse:((data:FormData)=>Pulse|undefined)|undefined;
   if('pulse' in p || ['free','repetitions','chord-changes','scale-cycle','sight-reading','repertoire'].includes(p.kind)){
-    const mandatory=p.kind==='tempo'||p.kind==='groove',c=protocolPulse(p)??pulse();
+    const mandatory=p.kind==='tempo'||p.kind==='groove'||p.kind==='drum-grid',c=protocolPulse(p)??pulse();
     const enabled=checkbox('useClick','Use a metronome with this exercise',mandatory||!!protocolPulse(p));enabled.hidden=mandatory;
     const controls=el('div',{class:'form-grid'},number('protocolBpm','Starting BPM',c.bpm,20,300),select('beats','Beats per bar',Array.from({length:16},(_,i)=>String(i+1)),String(c.beats)),select('beatUnit','Beat unit',[['4','Quarter note'],['8','Eighth note']],String(c.beatUnit)),select('subdivision','Subdivision',[['1','1 per beat'],['2','2 per beat'],['3','3 per beat'],['4','4 per beat']],String(c.subdivision)));
     const toggle=()=>{const on=mandatory||enabled.querySelector('input')!.checked;controls.hidden=!on;controls.querySelectorAll<HTMLInputElement|HTMLSelectElement>('input,select').forEach(e=>e.disabled=!on);};enabled.addEventListener('change',toggle);toggle();node.append(enabled,controls);
@@ -48,6 +52,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
     switch(p.kind){
       case 'free':candidate={kind:p.kind,focus:text('focus'),pulse:readPulse?.(data)};break;
       case 'tempo':candidate={kind:p.kind,pulse:readPulse?.(data),technique:text('technique'),...(profile.family==='percussion'?{sticking:text('sticking'),orchestration:text('orchestration')}:{})};break;
+      case 'drum-grid':{const gridPulse=readPulse?.(data);if(!gridPulse)throw new Error('Drum grids require a metronome pulse.');const size=gridPulse.beats*gridPulse.subdivision,normalize=(value:string)=>value.replace(/\s+/g,'').slice(0,size).padEnd(size,'.');candidate={kind:p.kind,pulse:gridPulse,name:text('gridName'),focus:text('gridFocus'),lanes:[['right-hand','gridRightHand'],['left-hand','gridLeftHand'],['kick','gridKick'],['hihat-foot','gridHihatFoot']].map(([voice,key])=>({voice,steps:normalize(text(key))}))};break;}
       case 'repetitions':candidate={kind:p.kind,task:text('task'),target:n('target'),pulse:readPulse?.(data)};break;
       case 'chord-changes':candidate={kind:p.kind,chords:list('chords'),target:n('target'),technique:text('technique'),pulse:readPulse?.(data)};break;
       case 'groove':candidate={kind:p.kind,pulse:readPulse?.(data),key:text('key'),style:text('style'),focus:text('grooveFocus'),progression:text('progression')};break;
