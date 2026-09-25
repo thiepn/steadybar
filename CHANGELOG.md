@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.23.0 — Grid-Aware MIDI Performance Analysis — 2026-09-25
+
+- Extend MIDI Lab with **Authored Drum Grid** scoring using the first-class Drum Grid protocol from 2.22.
+- Let users score the current practice grid or any saved Drum Grid exercise without creating a separate score format.
+- Require an explicit grid-lane → MIDI-sound assignment before testing; default suggestions map RH→closed hi-hat, LH→snare, kick→kick and hi-hat foot→pedal hi-hat.
+- Do not infer physical hand identity from MIDI. Grid lanes are evaluated only through the sound assignment explicitly chosen for that test.
+- Expand the authored grid across the test duration and preserve simultaneous expected hits instead of collapsing them into a generic pulse.
+- Match expected hits only to the assigned mapped MIDI sound inside the existing tempo-aware timing window.
+- Report exact expected/matched/missed totals, extras, near-time wrong-sound events, unmapped notes and the existing signed timing/velocity diagnostics.
+- Add per-grid-lane expected / matched / missed summaries with the saved lane→sound assignment.
+- Derive device-relative accent-versus-normal velocity contrast only when matched accent and normal hits are available on the same mapped MIDI sound.
+- Reject duplicate MIDI-sound assignments across active grid lanes because MIDI could not identify per-lane accuracy in that configuration.
+- Persist the exact grid name, lane pattern and lane→sound assignment with the MIDI result so historical evidence remains interpretable after exercise edits.
+- Introduce **MIDI analysis version 2** for authored-grid results while retaining full validation/readability of existing version-1 MIDI history.
+- Keep generic Every subdivision, Beat only and 2 & 4 MIDI timing modes unchanged.
+- Add deterministic domain tests for simultaneous authored hits, perfect matches, wrong sounds, ambiguous assignments, accent contrast and persisted-result validation.
+- Add cross-browser saved-result UI coverage so grid-scored MIDI history remains readable even where live Web MIDI is unavailable.
+- No IndexedDB schema or backup-envelope migration is required.
+
 ## 2.22.0 — Drum Grid & Coordination Lab — 2026-09-25
 
 - Add a first-class **Drum Grid** practice protocol for explicit right-hand, left-hand, kick and hi-hat-foot patterns.
