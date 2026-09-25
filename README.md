@@ -176,6 +176,13 @@ Every grid is fully editable. Cells cycle between rest, hit and accent; whole pa
 
 A grid can be practiced immediately, added to Today, or saved as a normal custom exercise. Saved grid exercises are attached to Drum Coordination with Timing as a secondary skill, so they participate in the existing PracticeState, Priority, progression and Practice Intelligence systems. Historical practice keeps the exact grid snapshot that was actually played.
 
+## Drum Grid & Coordination Lab — 2.22.0
+
+Drum profiles now include a dedicated **Drum Grid Lab** for building explicit four-limb coordination material without turning Steadybar into a sequencer. The lab generates repeatable Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence patterns, with controlled Variation and Complexity instead of hidden randomness.
+
+Each cell is directly editable as rest, hit or accent. Whole grids can be rotated or mirrored, previewed against Steadybar's Web Audio click, launched immediately, added to Today, or saved as a normal exercise. Saved grids use the same session, history, PracticeState, progression, recording, timing-click and Practice Intelligence infrastructure as the rest of the app.
+
+The grid is a practice target, not an automatic technique score. Steadybar records the exact pattern and normal block evidence, but it does not infer limb technique, physical strain, or coordination quality from the grid itself.
 ## Drum tempo training — 2.21.0
 
 The Focus Player now has six integrated tempo trainers: **Progressive**, **Repetition**, **Ladder**, **Pyramid**, **Burst**, and **Endurance**. They run inside ordinary exercise sessions, so changing the tempo-training method does not create a separate history or scoring system.
