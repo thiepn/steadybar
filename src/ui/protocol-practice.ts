@@ -2,6 +2,7 @@ import type { PracticeBlock } from '../domain/models.js';
 import type { ProtocolOutcome } from '../domain/practice-types.js';
 import { protocolDefinition } from '../domain/profiles.js';
 import { fretPrompt, noteName, NOTE_NAMES, patternFits, protocolSummary, scaleOffsets } from '../domain/protocols.js';
+import { DRUM_GRID_VOICES, drumGridStepLabels } from '../domain/drum-grid.js';
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { reference } from '../audio/reference.js';
 import { audio } from '../audio/engine.js';
@@ -78,6 +79,15 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
     actions.append(button('Play reference',()=>listen([p.rootMidi,p.rootMidi+p.interval]),'primary'),button('Stop reference',()=>reference.stop(),'secondary'),
       button('Matched by ear',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:true});},'secondary'),
       button('Needs another listen',()=>{ensureStarted();return log({...base(),kind:'pitch',rootMidi:p.rootMidi,interval:p.interval,matched:false});},'secondary'));
+  }else if(p.kind==='drum-grid'){
+    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision),grid=el('div',{class:'focus-drum-grid','aria-label':'Drum coordination grid'},
+      el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))),
+      ...DRUM_GRID_VOICES.map(voice=>{
+        const lane=p.lanes.find(row=>row.voice===voice.id),steps=lane?.steps??'.'.repeat(labels.length);
+        return el('div',{class:'drum-grid-row'},el('strong',{},voice.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`,'aria-label':`${voice.label} step ${index+1}: ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`},cell==='.'?'·':cell)));
+      }));
+    node.insertBefore(grid,actions);
+    actions.append(button('Record reflection',()=>{ensureStarted();const step=state().step;formDialog('Grid practice reflection',[score('rating','Control / confidence'),textarea('note','What broke down or improved?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save reflection');},'secondary'));
   }else if(p.kind==='sight-reading'){
     actions.append(button('Log reading attempt',()=>{ensureStarted();const step=state().step;formDialog('Reading result',[
       input('errors','Note / rhythm errors',0,'number',{min:0,max:1000,step:1,required:true}),score('continuity','Continuity'),textarea('note','Observation','',2),
@@ -93,6 +103,7 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
     if(p.kind==='scale-cycle')detail.textContent=[p.motion==='contrary'?'Contrary motion':'Parallel motion',p.fingering,p.position].filter(Boolean).join(' · ');
     if(p.kind==='groove')detail.textContent=`${p.progression} · ${p.focus}. ${protocolDefinition(p.kind).description}`;
     if(p.kind==='sight-reading')cue.textContent=p.material||'Choose a short passage from your own score';
+    if(p.kind==='drum-grid'){cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;}
     if(p.kind==='scale-cycle')cue.textContent=`${NOTE_NAMES[p.keys[state.step%p.keys.length]!]} ${p.quality.replaceAll('-',' ')} · ${p.hands==='not-applicable'?p.position:p.hands+' hands'} · ${p.octaves} octave${p.octaves===1?'':'s'}`;
     if(p.kind==='fretboard'){const prompt=fretPrompt(p,state.step);cue.textContent=`String ${prompt.string} · fret ${prompt.fret}`;detail.textContent=`${state.clean} correct / ${state.total} answered · ${p.target} prompt target. String 1 is highest.`;}
     if(p.kind==='pitch-match')detail.textContent=`${state.clean} self-reported matches / ${state.total} attempts · target ${p.target}. No automatic grading.`;
