@@ -264,6 +264,10 @@ export const validateTimingLabResult:Validator<TimingLabResult>=(v,p='Timing Lab
 };
 
 const midiVoice=one('kick','snare','rim','hihat-closed','hihat-open','hihat-pedal','tom-high','tom-mid','tom-low','ride','ride-bell','crash','other');
+const drumGridVoice=one('right-hand','left-hand','kick','hihat-foot');
+const midiGridLane=obj({voice:drumGridVoice,steps:text(64,1)});
+const midiGridAssignment=obj({gridVoice:drumGridVoice,midiVoice});
+const midiGridLaneSummary=obj({gridVoice:drumGridVoice,midiVoice,expectedCount:num(1,100000,true),matchedCount:num(0,100000,true),misses:num(0,100000,true)});
 const midiMapping=obj({note:num(0,127,true),voice:midiVoice,label:text(80,1),enabled:bool});
 const rawMidiDeviceProfile=obj({
   ...entity,profileId:id,deviceKey:text(300,1),inputId:optional(text(300,1)),manufacturer:text(200),name:text(200,1),
@@ -277,17 +281,18 @@ export const validateMidiDeviceProfile:Validator<MidiDeviceProfile>=(v,p='MIDI d
 const midiHit=obj({
   index:num(0,100000,true),elapsedMs:num(0,3600000),offsetMs:num(-1000,1000),
   note:num(0,127,true),velocity:num(1,127,true),channel:num(1,16,true),voice:midiVoice,label:text(80,1),
-  bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),
+  bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),expectedGridVoice:optional(drumGridVoice),expectedAccent:optional(bool),
 });
 const midiVoiceSummary=obj({
   voice:midiVoice,label:text(80,1),count:num(1,10000,true),medianVelocity:num(1,127),velocitySpread:num(0,127),
   meanAbsoluteErrorMs:num(0,1000),timingSpreadMs:num(0,1000),
 });
 const rawMidiPerformanceResult=obj({
-  ...entity,midiAnalysisVersion:one(1),profileId:id,
+  ...entity,midiAnalysisVersion:one(1,2),profileId:id,
   sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),deviceProfileId:optional(id),
   deviceKey:text(300,1),deviceNameSnapshot:text(200,1),manufacturerSnapshot:text(200),
-  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),expectedPattern:one('subdivision','beat','two-four'),analyzedVoice:optional(midiVoice),matchWindowMs:num(10,500),
+  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),expectedPattern:one('subdivision','beat','two-four','drum-grid'),analyzedVoice:optional(midiVoice),
+  gridNameSnapshot:optional(text(120,1)),gridLanesSnapshot:optional(arr(midiGridLane,4)),gridAssignments:optional(arr(midiGridAssignment,4)),wrongVoiceCount:optional(num(0,100000,true)),gridLaneSummaries:optional(arr(midiGridLaneSummary,4)),accentVelocityMean:optional(num(0,127)),normalVelocityMean:optional(num(0,127)),accentVelocityDifference:optional(num(-127,127)),matchWindowMs:num(10,500),
   expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
   misses:num(0,10000,true),extras:num(0,10000,true),unmappedCount:num(0,10000,true),
   meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),driftMsPerMinute:num(-100000,100000),
@@ -302,6 +307,39 @@ export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p
   if(result.misses!==result.expectedCount-result.matchedCount)fail(p,'MIDI miss count must equal expected minus matched hits');
   if(result.extras!==result.detectedCount-result.matchedCount)fail(p,'MIDI extra count must equal detected minus matched hits');
   if(result.velocityMax<result.velocityMin||result.velocityRange!==result.velocityMax-result.velocityMin)fail(p,'MIDI velocity range is inconsistent');
+  const gridFields=[result.gridNameSnapshot,result.gridLanesSnapshot,result.gridAssignments,result.wrongVoiceCount,result.gridLaneSummaries];
+  if(result.expectedPattern==='drum-grid'){
+    if(result.midiAnalysisVersion!==2)fail(p,'Drum Grid MIDI results require analysis version 2');
+    if(gridFields.some(value=>value===undefined))fail(p,'Drum Grid MIDI results require grid snapshots, assignments and lane summaries');
+    const lanes=result.gridLanesSnapshot!,assignments=result.gridAssignments!,summaries=result.gridLaneSummaries!,steps=result.meter.beats*result.subdivision;
+    if(!lanes.length||new Set(lanes.map(lane=>lane.voice)).size!==lanes.length||lanes.some(lane=>lane.steps.length!==steps||!/^[.xX]+$/.test(lane.steps)))fail(p,'Drum Grid MIDI snapshot is malformed');
+    const laneVoices=new Set(lanes.map(lane=>lane.voice));
+    if(new Set(assignments.map(row=>row.gridVoice)).size!==assignments.length||assignments.some(row=>!laneVoices.has(row.gridVoice)))fail(p,'Drum Grid MIDI lane assignments must be unique and belong to saved lanes');
+    const activeVoices=new Set(lanes.filter(lane=>/[xX]/.test(lane.steps)).map(lane=>lane.voice));
+    if([...activeVoices].some(voice=>!assignments.some(row=>row.gridVoice===voice)))fail(p,'Drum Grid MIDI assignments must cover every active lane');
+    const activeAssignments=assignments.filter(row=>activeVoices.has(row.gridVoice)),assignmentByLane=new Map(activeAssignments.map(row=>[row.gridVoice,row.midiVoice]));
+    if(new Set(activeAssignments.map(row=>row.midiVoice)).size!==activeAssignments.length)fail(p,'active Drum Grid MIDI lanes need unique assigned sounds');
+    if(new Set(summaries.map(row=>row.gridVoice)).size!==summaries.length||summaries.length!==activeVoices.size)fail(p,'Drum Grid MIDI lane summaries must cover each active lane once');
+    if(summaries.some(row=>!activeVoices.has(row.gridVoice)||assignmentByLane.get(row.gridVoice)!==row.midiVoice))fail(p,'Drum Grid MIDI lane summaries must match saved assignments');
+    if(summaries.reduce((sum,row)=>sum+row.expectedCount,0)!==result.expectedCount||summaries.reduce((sum,row)=>sum+row.matchedCount,0)!==result.matchedCount)fail(p,'Drum Grid MIDI lane summaries must reconcile with result totals');
+    if(summaries.some(row=>row.misses!==row.expectedCount-row.matchedCount))fail(p,'Drum Grid MIDI lane miss counts are inconsistent');
+    if(result.wrongVoiceCount!>result.extras)fail(p,'wrong-voice count cannot exceed MIDI extras');
+    if(result.hits.some(hit=>hit.expectedGridVoice===undefined||hit.expectedAccent===undefined||!activeVoices.has(hit.expectedGridVoice)||assignmentByLane.get(hit.expectedGridVoice)!==hit.voice))fail(p,'Drum Grid MIDI matched hits must match expected lanes and assigned sounds');
+    const accentMetricFields=[result.accentVelocityMean,result.normalVelocityMean,result.accentVelocityDifference];
+    if(accentMetricFields.some(value=>value!==undefined)){
+      if(accentMetricFields.some(value=>value===undefined))fail(p,'Drum Grid accent velocity comparison requires both means and their difference');
+      const accentHits=result.hits.filter(hit=>hit.expectedAccent===true),accentVoices=[...new Set(accentHits.map(hit=>hit.voice))];
+      if(accentVoices.length!==1)fail(p,'Drum Grid accent velocity comparison must use one mapped MIDI sound');
+      const voice=accentVoices[0]!,normalHits=result.hits.filter(hit=>hit.expectedAccent===false&&hit.voice===voice);
+      if(!accentHits.length||!normalHits.length)fail(p,'Drum Grid accent velocity comparison needs accent and normal hits on the same mapped sound');
+      const mean=(values:number[])=>values.reduce((sum,value)=>sum+value,0)/values.length;
+      const accentMean=mean(accentHits.map(hit=>hit.velocity)),normalMean=mean(normalHits.map(hit=>hit.velocity));
+      if(Math.abs(result.accentVelocityMean!-accentMean)>.11||Math.abs(result.normalVelocityMean!-normalMean)>.11||Math.abs(result.accentVelocityDifference!-(accentMean-normalMean))>.11)fail(p,'Drum Grid accent velocity comparison does not match saved MIDI hits');
+    }
+  }else{
+    if(result.midiAnalysisVersion!==1)fail(p,'generic MIDI results require analysis version 1');
+    if(gridFields.some(value=>value!==undefined)||result.accentVelocityMean!==undefined||result.normalVelocityMean!==undefined||result.accentVelocityDifference!==undefined)fail(p,'non-grid MIDI results cannot carry Drum Grid scoring metadata');
+  }
   for(const hit of result.hits){
     if(hit.beat>=result.meter.beats)fail(p,'MIDI hit beat exceeds the stored meter');
     if(hit.part>=result.subdivision)fail(p,'MIDI hit subdivision part exceeds the stored subdivision');
