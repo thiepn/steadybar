@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Drum Grid & Coordination Lab — 2.22.0
+
+Drum profiles now include a dedicated **Drum Grid Lab** for explicit hand/foot coordination work. It can generate five deterministic pattern families—Accent Grid, Kick Displacement, Linear Flow, Four-Limb Cycle and Independence Builder—across eighth-note, triplet and sixteenth-note subdivisions.
+
+Every grid is fully editable. Cells cycle between rest, hit and accent; whole patterns can be rotated or mirrored between hands; complexity and variation controls regenerate bounded deterministic alternatives. A live Web Audio preview provides a one-bar count-in and highlights the current subdivision position without pretending to synthesize or grade the drum part itself.
+
+A grid can be practiced immediately, added to Today, or saved as a normal custom exercise. Saved grid exercises are attached to Drum Coordination with Timing as a secondary skill, so they participate in the existing PracticeState, Priority, progression and Practice Intelligence systems. Historical practice keeps the exact grid snapshot that was actually played.
+
 ## Drum tempo training — 2.21.0
 
 The Focus Player now has six integrated tempo trainers: **Progressive**, **Repetition**, **Ladder**, **Pyramid**, **Burst**, and **Endurance**. They run inside ordinary exercise sessions, so changing the tempo-training method does not create a separate history or scoring system.
@@ -208,7 +216,7 @@ See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architec
 
 | Profile | Distinct practice experience |
 |---|---|
-| Drums | Sticking, subdivision, accents, clean-tempo attempts and six integrated tempo trainers, including pyramid and burst work. |
+| Drums | Drum Grid coordination work, sticking, subdivisions, accents, clean-tempo attempts and six integrated tempo trainers, including pyramid and burst work. |
 | Guitar | Chord sequences with clean/total counts, objectively checked fretboard recall, scales with key/position/technique, and repertoire passages. |
 | Bass | Groove/harmonic cues, time/control/muting/articulation reviews, chord-tone work and fretboard recall. |
 | Piano | Scale/key cycles, hands/ motion/fingering, reference patterns, and first-read versus repeated-reading results. |
