@@ -1216,7 +1216,12 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
         bpm=self.page.get_by_label('BPM',exact=True)
         bpm.fill('112');bpm.press('Tab')
-        self.page.wait_for_function("()=>load('practice/controller.js').practice.session.runtime.bpm===112")
+        live_bpm=None
+        for _ in range(70):
+            live_bpm=self.read("load('practice/controller.js').practice.session.runtime.bpm")
+            if live_bpm==112:break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(live_bpm,112)
         self.route('/midi-lab')
         expect(self.page.get_by_role('heading',name='MIDI Drum Lab',exact=True)).to_be_visible()
         self.page.get_by_label('Expected hits',exact=True).select_option('drum-phrase')
