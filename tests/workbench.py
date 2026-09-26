@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/pocket','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -1046,8 +1046,8 @@ class Workbench(e2e.MusicPracticeTests):
     def test_72_drum_practice_surfaces_prioritize_playing_on_phone_and_desktop(self):
         self.onboard()
         self.route('/practice')
-        expect(self.page.locator('.drum-tool-card')).to_have_count(5)
-        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','MIDI Lab'):
+        expect(self.page.locator('.drum-tool-card')).to_have_count(6)
+        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','Pocket Lab','MIDI Lab'):
             expect(self.page.locator('.drum-tool-card').filter(has_text=label)).to_have_count(1)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height})
@@ -1231,6 +1231,52 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.locator('.midi-phrase-preview')).to_contain_text('RETURN')
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_76_pocket_lab_v2_history_targets_and_timing_history_stay_separate(self):
+        self.onboard()
+        self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId);
+          const timing=load('domain/timing-analysis.js'),pocket=load('domain/pocket-analysis.js'),config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:1},expected=timing.buildExpectedTimingGrid(config,5,4);
+          const offsets=[-22,-18,-20,-5,-22,-18,-20,-5],detected=expected.map((hit,index)=>({time:hit.time+offsets[index]/1000,strength:.5}));
+          const analysis=timing.analyzeTiming(expected,detected,0,80),target=pocket.analyzePocket(analysis.hits,-20,5),now=new Date().toISOString(),earlier=new Date(Date.now()-1000).toISOString();
+          const base={profileId:profile.id,bpm:120,meter:{beats:4,beatUnit:4},subdivision:1,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:4,threshold:.08,inputOffsetMs:0,matchWindowMs:analysis.matchWindowMs,expectedCount:analysis.expectedCount,detectedCount:analysis.detectedCount,matchedCount:analysis.matchedCount,misses:analysis.misses,extras:analysis.extras,meanOffsetMs:analysis.meanOffsetMs,medianOffsetMs:analysis.medianOffsetMs,meanAbsoluteErrorMs:analysis.meanAbsoluteErrorMs,spreadMs:analysis.spreadMs,driftMsPerMinute:analysis.driftMsPerMinute,confidence:analysis.confidence,hits:analysis.hits};
+          d.timingResults=[
+            {id:'qa-timing-v1',createdAt:earlier,updatedAt:earlier,timingLabVersion:1,...base},
+            {id:'qa-pocket-v2',createdAt:now,updatedAt:now,timingLabVersion:2,...base,...target},
+          ];
+          await load('db/database.js').replaceData(d);await store.refresh();return target;
+        })()""")
+        self.route('/pocket')
+        expect(self.page.get_by_role('heading',name='Pocket Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Latest pocket result',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Ahead 20 ms',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('75% target band',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('6 / 8',exact=True).first).to_be_visible()
+        expect(self.page.locator('.timing-target-line')).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Pocket history',exact=True)).to_be_visible()
+
+        target_select=self.page.get_by_label('Placement target',exact=True)
+        target_offset=self.page.get_by_label('Target offset (ms)',exact=True)
+        target_band=self.page.get_by_label('Target band ± (ms)',exact=True)
+        target_select.select_option('-20')
+        expect(target_offset).to_have_value('-20')
+        target_offset.fill('-17')
+        expect(target_select).to_have_value('custom')
+        expect(target_band).to_have_value('12')
+
+        self.page.set_viewport_size({'width':390,'height':844})
+        pocket_columns=self.page.locator('.pocket-lab-grid').evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(pocket_columns,2)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+        self.route('/timing-lab')
+        expect(self.page.get_by_role('heading',name='Timing Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Latest result',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Timing history',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Pocket history',exact=True)).to_have_count(0)
+        expect(self.page.get_by_text('Ahead 20 ms',exact=True)).to_have_count(0)
 
 
 if __name__=='__main__':
