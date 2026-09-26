@@ -42,13 +42,13 @@ for(const type of Object.keys(baseCounts)){
 }
 test('drum starter content ships dedicated dynamics scores and reconciliation never overwrites user edits',()=>{
  const d=dataset('drums'),dynamic=d.exercises.filter(e=>e.skillArea==='dynamics');
- assert.equal(dynamic.length,3);assert.deepEqual(dynamic.map(e=>e.id).sort(),['dynamics-1','dynamics-2','dynamics-3']);
+ assert.equal(dynamic.length,3);assert.deepEqual(dynamic.map(e=>e.id.split('.').at(-1)).sort(),['dynamics-1','dynamics-2','dynamics-3']);
  for(const e of dynamic){assert.equal(e.primarySkillId,'drums.dynamics');assert.equal(e.protocol.kind,'drum-dynamics');assertProtocolCompatible(e.protocol,d.profiles[0]);}
- const existing=d.exercises.find(e=>e.id==='rudiment-1');existing.name='User-edited single strokes';
- d.exercises=d.exercises.filter(e=>!e.id.startsWith('dynamics-'));
+ const existing=d.exercises.find(e=>e.id.endsWith('rudiment-1'));assert.ok(existing);existing.name='User-edited single strokes';
+ const existingId=existing.id;d.exercises=d.exercises.filter(e=>!/dynamics-\d+$/.test(e.id));
  const reconciled=reconcileStarterContent(d);
- assert.equal(reconciled.exercises.find(e=>e.id==='rudiment-1').name,'User-edited single strokes');
- assert.equal(reconciled.exercises.filter(e=>e.id.startsWith('dynamics-')).length,3);
+ assert.equal(reconciled.exercises.find(e=>e.id===existingId).name,'User-edited single strokes');
+ assert.equal(reconciled.exercises.filter(e=>/dynamics-\d+$/.test(e.id)).length,3);
  assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
 });
 
