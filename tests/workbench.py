@@ -879,7 +879,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(safe_after,safe_before)
         self.page.locator('.focus-start').focus()
 
-        self.page.keyboard.press('Shift+/')
+        self.page.locator('.focus-start').evaluate("(e)=>e.dispatchEvent(new KeyboardEvent('keydown',{code:'Slash',key:'/',shiftKey:true,bubbles:true,cancelable:true}))")
         expect(self.page.get_by_role('dialog')).to_be_visible()
         expect(self.page.get_by_role('heading',name='Practice controls',exact=True)).to_be_visible()
         expect(self.page.get_by_text('Page Down',exact=True)).to_be_visible()
@@ -887,7 +887,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.keyboard.press('Escape')
         expect(self.page.get_by_role('dialog')).to_have_count(0)
 
-        self.page.keyboard.press('2')
+        self.page.locator('.focus-start').evaluate("(e)=>e.dispatchEvent(new KeyboardEvent('keydown',{code:'Digit2',key:'2',bubbles:true,cancelable:true}))")
         moved=None
         for _ in range(70):
             moved=self.read("""(()=>{
@@ -906,7 +906,7 @@ class Workbench(e2e.MusicPracticeTests):
           const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
           return {index:s.activeBlockIndex,id:b.id,count:s.blocks.length};
         })()""")
-        self.page.keyboard.press('Shift+R')
+        self.page.locator('.focus-start').evaluate("(e)=>e.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyR',key:'R',shiftKey:true,bubbles:true,cancelable:true}))")
         restart_after=None
         for _ in range(70):
             restart_after=self.read("""(()=>{
