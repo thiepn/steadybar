@@ -4,7 +4,7 @@ import { deleteTimingLabResult, saveTimingLabResult } from '../app/timing-lab.js
 import { store } from '../app/store.js';
 import { activeProfile } from '../domain/profiles.js';
 import { analyzeTiming, buildExpectedTimingGrid, timingBiasLabel, timingMatchWindowMs } from '../domain/timing-analysis.js';
-import { analyzePocket, pocketErrorLabel, pocketTargetLabel } from '../domain/pocket-analysis.js';
+import { analyzePocketTiming, pocketErrorLabel, pocketTargetLabel } from '../domain/pocket-analysis.js';
 import type { ClickMode, MetronomeConfig, Subdivision, TimingLabResult } from '../domain/models.js';
 import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
 import type { Page } from '../app/navigation.js';
@@ -113,8 +113,8 @@ export function timingLabPage(mode:'timing'|'pocket'='timing'):Page{
     const relevant=detected.filter(hit=>hit.time>=start-windowMs/1000&&hit.time<=end+windowMs/1000);
     resetTransport();
     if(!save||!wasMeasured||!start){status.textContent='Test canceled. No result was saved.';return;}
-    const expected=buildExpectedTimingGrid(testConfig,start,durationSeconds),analysis=analyzeTiming(expected,relevant,inputOffsetMs,windowMs),pocket=pocketMode?analyzePocket(analysis.hits,targetOffsetMs,targetBandMs):undefined;
-    const saved=await saveTimingLabResult({profileId:profile.id,config:testConfig,durationSeconds,threshold,inputOffsetMs,analysis,pocket});
+    const expected=buildExpectedTimingGrid(testConfig,start,durationSeconds),resolved=pocketMode?analyzePocketTiming(expected,relevant,inputOffsetMs,targetOffsetMs,targetBandMs,windowMs):{timing:analyzeTiming(expected,relevant,inputOffsetMs,windowMs),pocket:undefined};
+    const analysis=resolved.timing,pocket=resolved.pocket,saved=await saveTimingLabResult({profileId:profile.id,config:testConfig,durationSeconds,threshold,inputOffsetMs,analysis,pocket});
     status.textContent=pocketMode?`Saved pocket result · ${saved.targetBandHits??0}/${saved.matchedCount} matched hits inside the target band.`:`Saved · ${saved.matchedCount} of ${saved.expectedCount} expected hits matched.`;
   };
 
