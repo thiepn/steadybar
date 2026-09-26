@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/rudiments','/drum-grid','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -1046,8 +1046,8 @@ class Workbench(e2e.MusicPracticeTests):
     def test_72_drum_practice_surfaces_prioritize_playing_on_phone_and_desktop(self):
         self.onboard()
         self.route('/practice')
-        expect(self.page.locator('.drum-tool-card')).to_have_count(4)
-        for label in ('Rudiment Lab','Grid Lab','Timing Lab','MIDI Lab'):
+        expect(self.page.locator('.drum-tool-card')).to_have_count(5)
+        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','MIDI Lab'):
             expect(self.page.locator('.drum-tool-card').filter(has_text=label)).to_have_count(1)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height})
@@ -1077,6 +1077,80 @@ class Workbench(e2e.MusicPracticeTests):
         beat_color=beats.first.evaluate("(e)=>getComputedStyle(e).color")
         self.assertNotIn('rgba(0, 0, 0, 0)',beat_color)
         self.assert_bounds(390)
+
+
+    def test_73_phrase_lab_preserves_fill_and_return_through_today_library_and_focus_player(self):
+        self.onboard()
+        self.route('/phrases')
+        expect(self.page.get_by_role('heading',name='Phrase Lab',exact=True)).to_be_visible()
+        self.page.get_by_label('Groove',exact=True).select_option('syncopated')
+        self.page.get_by_label('Fill',exact=True).select_option('linear-r-l-k')
+        self.page.get_by_label('Fill length',exact=True).select_option('beat')
+        self.page.get_by_label('Setup phrase',exact=True).select_option('4')
+        self.page.get_by_label('Subdivision',exact=True).select_option('4')
+        self.page.get_by_label('BPM',exact=True).fill('96')
+        self.page.get_by_label('BPM',exact=True).press('Tab')
+        self.page.get_by_label('Practice minutes',exact=True).fill('6')
+        self.page.get_by_role('button',name='Next variation',exact=True).click()
+
+        expect(self.page.locator('.phrase-bar-button')).to_have_count(5)
+        expect(self.page.locator('.phrase-bar-button.role-fill')).to_have_count(1)
+        expect(self.page.locator('.phrase-bar-button.role-return')).to_have_count(1)
+        expect(self.page.get_by_text('Variation 2',exact=True)).to_be_visible()
+        self.page.locator('.phrase-bar-button.role-return').click()
+        expect(self.page.get_by_text('Return · land beat 1',exact=False).first).to_be_visible()
+
+        self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),p=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=p?.blocks.at(-1);
+              return b?{kind:b.protocol?.kind,bpm:b.bpm,targetSeconds:b.targetSeconds,roles:b.protocol?.bars?.map(bar=>bar.role),bars:b.protocol?.bars?.map(bar=>bar.lanes.map(lane=>lane.steps.length)),name:b.protocol?.name}:null;
+            })()""")
+            if plan and plan.get('kind')=='drum-phrase':break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan['bpm'],96)
+        self.assertEqual(plan['targetSeconds'],360)
+        self.assertEqual(plan['roles'],['groove','groove','groove','fill','return'])
+        self.assertTrue(all(all(length==16 for length in bar) for bar in plan['bars']))
+        self.assertIn('return',plan['name'].lower())
+
+        self.page.get_by_role('button',name='Save as exercise',exact=True).click()
+        dialog=self.page.get_by_role('dialog');expect(dialog).to_be_visible()
+        dialog.get_by_label('Exercise name',exact=True).fill('QA Groove Fill Return')
+        dialog.get_by_role('button',name='Save exercise',exact=True).click()
+        expect(dialog).to_have_count(0)
+        saved=self.read("""(()=>{
+          const e=load('app/store.js').store.snapshot().exercises.find(row=>row.name==='QA Groove Fill Return');
+          return e?{id:e.id,category:e.category,skillArea:e.skillArea,primary:e.primarySkillId,secondary:e.secondarySkillIds,kind:e.protocol?.kind,roles:e.protocol?.bars?.map(bar=>bar.role)}:null;
+        })()""")
+        self.assertIsNotNone(saved)
+        self.assertEqual(saved['category'],'coordination')
+        self.assertEqual(saved['skillArea'],'fills')
+        self.assertEqual(saved['primary'],'drums.fills')
+        self.assertIn('drums.groove',saved['secondary'])
+        self.assertEqual(saved['kind'],'drum-phrase')
+        self.assertEqual(saved['roles'][-2:],['fill','return'])
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        expect(self.page.locator('.focus-phrase-timeline')).to_be_visible()
+        expect(self.page.locator('.phrase-bar-chip')).to_have_count(5)
+        expect(self.page.locator('.phrase-bar-chip.role-fill')).to_have_count(1)
+        expect(self.page.locator('.phrase-bar-chip.role-return')).to_have_count(1)
+        expect(self.page.locator('.focus-phrase-grid')).to_be_visible()
+        snapshot=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {kind:b.protocolSnapshot?.kind,bpm:s.runtime.bpm,roles:b.protocolSnapshot?.bars?.map(bar=>bar.role),subdivision:b.subdivisionSnapshot,targetSeconds:b.targetSeconds};
+        })()""")
+        self.assertEqual(snapshot['kind'],'drum-phrase')
+        self.assertEqual(snapshot['roles'],['groove','groove','groove','fill','return'])
+        self.assertEqual(snapshot['bpm'],96)
+        self.assertEqual(snapshot['subdivision'],4)
+        self.assertEqual(snapshot['targetSeconds'],360)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

@@ -50,7 +50,7 @@ export function rudimentLabPage():Page{
   let subdivision=(savedDraft?.subdivision??(initialProtocol.kind==='tempo'&&initialProtocol.pulse.subdivision>1?initialProtocol.pulse.subdivision:4)) as Subdivision;
 
   const page=el('div',{class:'page rudiment-lab-page'},pageHeader('Drum technique workstation','Rudiment Lab',profile.name+' · Visualize sticking, reverse the lead, shape accents, attach tempo training, and launch the exact variant.',[
-    link('Drum Grid Lab','/drum-grid','button secondary','routine'),link('MIDI Drum Lab','/midi-lab','button secondary','pulse'),
+    link('Phrase Lab','/phrases','button secondary','routine'),link('Drum Grid Lab','/drum-grid','button secondary','routine'),link('MIDI Drum Lab','/midi-lab','button secondary','pulse'),
   ]));
   const rudimentSelect=select('rudimentExercise','Rudiment',exercises.map(row=>[row.id,row.name] as [string,string]),exercise.id);
   const leadSelect=select('rudimentLead','Lead / direction',[['original','Original sticking'],['mirror','Mirror right ↔ left']],lead);

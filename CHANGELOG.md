@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.27.0 — Groove, Fill & Return Phrase Lab — 2026-09-25
+
+- Add a first-class **drum-phrase** practice protocol for multi-bar groove phrasing instead of treating fills as isolated one-bar events.
+- Every generated phrase follows an explicit structure: one or more groove bars → exactly one fill bar → exactly one return bar.
+- Add four groove families: Straight Backbeat, Four on the Floor, Half-time Backbeat, and Syncopated Kick.
+- Add four fill families: Alternating Hands, Linear R-L-K, Hands → Kick, and Quarter-note Setup.
+- Add bounded fill lengths: last beat, half bar, or full bar. Short fills preserve the authored groove before the fill window.
+- Add 2 / 4 / 8 / 16 setup-bar phrases, followed by a mandatory landing bar that returns to the groove.
+- Add deterministic numbered variations without hidden randomness.
+- Add Phrase Lab controls for groove, fill, fill length, phrase length, subdivision, BPM and practice duration.
+- Add a clickable phrase timeline plus a large current-bar four-limb grid; preview follows the audio clock across groove, fill and return bars.
+- Add **Start practice**, **Add to Today**, and **Save as exercise** with immutable phrase snapshots.
+- Saved phrase exercises use Coordination as the broad exercise category while keeping `skillArea: fills`, `primarySkillId: drums.fills`, and Groove/Timing secondary skills.
+- Render phrase timeline + current bar in Focus Player and highlight the active bar/subdivision from the metronome audio clock.
+- Keep phrase evidence as explicit reflection / block evaluation rather than inventing an automatic fill-quality score.
+- Add editable Task Settings for phrase name, focus, pulse and every bar/lane while preserving the required groove → fill → return order.
+- Extend percussion progression with phrase-appropriate accent, orchestration and musical-context dimensions.
+- Exclude explicit Drum Grid and Drum Phrase scores from the generic subdivision progression dimension so authored cell lengths cannot be invalidated by a click-support change.
+- Add strict restore validation for lane uniqueness, cell symbols, pulse length, exactly one fill, exactly one return and required phrase order.
+- Add deterministic unit coverage for phrase structure, short-fill windows, return bars, variation, validation and text notation.
+- Add cross-browser Lab → Today → Library → Focus Player coverage, including saved fills-skill attribution and responsive layouts.
+- No IndexedDB schema or backup-format migration is required.
 ## 2.26.0 — Drum Practice Surface UX Polish — 2026-09-25
 
 - Promote **Rudiment Lab, Grid Lab, Timing Lab, and MIDI Lab** into a dedicated fast-launch Drum Tools strip at the top of the Practice surface for drum profiles.

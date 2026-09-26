@@ -27,7 +27,7 @@ export function drumGridPage():Page{
   let preset:DrumGridPresetId=savedDraft?.preset??'kick-displacement',variation=savedDraft?.variation??0,complexity=savedDraft?.complexity??2,subdivision:1|2|3|4=savedDraft?.subdivision??4;
   let protocol=savedDraft?.protocol?structuredClone(savedDraft.protocol):buildDrumGrid(preset,snapshot.settings.metronome.bpm,subdivision,variation,complexity),previewing=false,disposed=false;
   const page=el('div',{class:'page drum-grid-page'},pageHeader('Drum coordination workstation','Drum Grid Lab',profile.name+' · Generate, edit, displace, mirror, preview, save, and practice coordination grids.',[
-    link('Rudiment Lab','/rudiments','button secondary','routine'),link('MIDI Drum Lab','/midi-lab','button secondary','pulse'),link('Timing Lab','/timing-lab','button secondary','pulse'),
+    link('Rudiment Lab','/rudiments','button secondary','routine'),link('Phrase Lab','/phrases','button secondary','routine'),link('MIDI Drum Lab','/midi-lab','button secondary','pulse'),link('Timing Lab','/timing-lab','button secondary','pulse'),
   ]));
   const bpm=input('gridBpm','BPM',protocol.pulse.bpm,'number',{min:20,max:300,step:1,required:true});
   const minutes=input('gridMinutes','Practice minutes',savedDraft?.minutes??10,'number',{min:1,max:180,step:1,required:true});

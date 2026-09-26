@@ -45,6 +45,7 @@ export const PROTOCOLS:readonly ProtocolDefinition[]=[
   {id:'free',label:'Free practice',needs:[],description:'A timed task with an optional click.',metric:'Reflection'},
   {id:'tempo',label:'Tempo practice',needs:['tempo'],description:'Play a defined technique at a chosen tempo.',metric:'Clean BPM'},
   {id:'drum-grid',label:'Drum grid',needs:['sticking'],description:'Practice an explicit hand/foot coordination grid at a chosen pulse.',metric:'Block evaluation'},
+  {id:'drum-phrase',label:'Groove → fill → return',needs:['sticking'],description:'Practice a multi-bar groove phrase, one fill bar, and the landing groove after it.',metric:'Block evaluation'},
   {id:'repetitions',label:'Clean repetitions',needs:[],description:'Count clean and attempted repetitions.',metric:'Clean repetitions'},
   {id:'chord-changes',label:'Chord changes',needs:['chords'],description:'Practice a specific sequence; log the totals after playing.',metric:'Clean transitions'},
   {id:'groove',label:'Groove & control',needs:['tempo'],description:'Hold a groove, then assess time and control.',metric:'Time / control / articulation'},

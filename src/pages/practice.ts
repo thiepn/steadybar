@@ -30,6 +30,7 @@ export function practicePage():Page{
     el('div',{class:'drum-tool-strip-head'},el('strong',{},'Drum tools'),el('span',{class:'muted small'},'Jump straight into focused playing')),
     el('div',{class:'drum-tool-grid'},
       link('Rudiment Lab','/rudiments','drum-tool-card','routine'),
+      link('Phrase Lab','/phrases','drum-tool-card','routine'),
       link('Grid Lab','/drum-grid','drum-tool-card','routine'),
       link('Timing Lab','/timing-lab','drum-tool-card','pulse'),
       link('MIDI Lab','/midi-lab','drum-tool-card','pulse'))));
