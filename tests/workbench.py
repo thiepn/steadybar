@@ -851,6 +851,10 @@ class Workbench(e2e.MusicPracticeTests):
         if media!='unsupported':self.assertEqual(media,'paused')
         self.page.keyboard.press('PageDown')
         expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
+        for _ in range(70):
+            if self.read("load('practice/controller.js').practice.session.runtime.phase")=='running':break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'running')
         media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
         if media!='unsupported':self.assertEqual(media,'playing')
 
@@ -862,12 +866,20 @@ class Workbench(e2e.MusicPracticeTests):
         metro_button=self.page.get_by_role('button',name=re.compile(r'^Metronome ')).first
         self.page.keyboard.press('m')
         expect(metro_button).to_have_attribute('aria-pressed',str(not before['metronome']).lower())
+        for _ in range(70):
+            if self.read("load('practice/controller.js').practice.session.runtime.phase")=='running':break
+            self.page.wait_for_timeout(100)
         after_metro=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
         self.assertNotEqual(after_metro,before['metronome'])
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'running')
         self.page.keyboard.press('PageUp')
         expect(metro_button).to_have_attribute('aria-pressed',str(before['metronome']).lower())
+        for _ in range(70):
+            if self.read("load('practice/controller.js').practice.session.runtime.phase")=='running':break
+            self.page.wait_for_timeout(100)
         restored=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
         self.assertEqual(restored,before['metronome'])
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'running')
         expect(self.page.locator('.focus-start')).to_have_attribute('aria-keyshortcuts','Space PageDown')
         expect(metro_button).to_have_attribute('aria-keyshortcuts','M PageUp')
 
