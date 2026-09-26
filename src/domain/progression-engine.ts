@@ -96,7 +96,7 @@ function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|unde
   const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),out:ProgressionDimension[]=[],family=profileFamily(data,exercise);
   if(family==='voice')return out;
   if(pulse)out.push('tempo','click-density','gap-click');
-  if(pulse?.subdivision&&pulse.subdivision>1&&!['drum-grid','drum-phrase','drum-dynamics'].includes(protocol.kind))out.push('subdivision');
+  if(pulse?.subdivision&&pulse.subdivision>1&&!['drum-grid','drum-phrase','drum-dynamics','drum-meter'].includes(protocol.kind))out.push('subdivision');
   if(!options.strictDuration)out.push('duration');
   const nonListening=!['fretboard','pitch-match','vocal-pattern','sight-reading'].includes(protocol.kind);
   if(nonListening&&protocol.kind!=='drum-dynamics')out.push('dynamics');
