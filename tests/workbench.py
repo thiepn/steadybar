@@ -1319,7 +1319,7 @@ class Workbench(e2e.MusicPracticeTests):
         saved=None
         for _ in range(70):
             saved=self.read("""(()=>{
-              const rows=load('app/store.js').store.snapshot().exercises.filter(e=>e.protocol?.kind==='drum-dynamics'&&!e.archived),e=rows.at(-1);
+              const rows=load('app/store.js').store.snapshot().exercises.filter(e=>e.protocol?.kind==='drum-dynamics'&&!e.archived&&!e.builtin),e=rows.at(-1);
               return e?{id:e.id,name:e.name,category:e.category,skillArea:e.skillArea,primary:e.primarySkillId,secondary:e.secondarySkillIds,kind:e.protocol.kind,lanes:e.protocol.lanes}:null;
             })()""")
             if saved:break
