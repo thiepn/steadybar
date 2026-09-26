@@ -980,7 +980,8 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertIsNone(plan['trainer'])
 
         self.page.get_by_role('button',name='Start practice',exact=True).click()
-        self.page.wait_for_url(re.compile(r'.*#/practice/active        expect(self.page.get_by_role('heading',name='Single Paradiddle',exact=True)).to_be_visible()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        expect(self.page.get_by_role('heading',name='Single Paradiddle',exact=True)).to_be_visible()
         expect(self.page.locator('.active-sticking')).to_have_text('L R L L  R L R R')
         session=self.read("""(()=>{
           const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
@@ -994,7 +995,6 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(session['targetSeconds'],360)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
-
 
     def test_71_rudiment_lab_finite_trainer_owns_start_tempo_and_duration(self):
         self.onboard()
