@@ -24,7 +24,7 @@ const active=()=>{const data=migratePracticeData(seedData());return createSessio
 
 test('repository initialization commits all starter tables without fake history',async()=>{
   await db.initializeDatabase();const data=await db.readData();
-  assert.equal(data.exercises.length,36);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);assert.deepEqual(data.audioTracks,[]);
+  assert.equal(data.exercises.length,39);assert.equal(data.routines.length,8);assert.equal(data.sessions.length,0);assert.deepEqual(data.trainingPlans,[]);assert.deepEqual(data.weeklySchedules,[]);assert.deepEqual(data.recordings,[]);assert.deepEqual(data.timingResults,[]);assert.deepEqual(data.midiDeviceProfiles,[]);assert.deepEqual(data.midiResults,[]);assert.deepEqual(data.audioTracks,[]);
   assert.equal(adapter.state.aborted,0);
 });
 test('initialization adds missing Phase 19 built-ins without overwriting edited built-ins',async()=>{
