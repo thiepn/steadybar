@@ -15,7 +15,7 @@ import { el } from './dom.js';
 
 export interface TaskPanel {node:HTMLElement;update:(block:PracticeBlock)=>void;cleanup:()=>void}
 export function taskPanel(initial:PracticeBlock):TaskPanel {
-  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined;
+  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined,phraseTimeline:HTMLElement|undefined,phraseGrid:HTMLElement|undefined,phraseBarIndex=-1;let renderPhraseBar:((index:number)=>void)|undefined;
   const p=initial.protocolSnapshot;
   const node=el('section',{class:'protocol-task','data-protocol':p?.kind??'legacy'}),heading=el('h2',{class:'task-heading'}),cue=el('p',{class:'task-cue'}),detail=el('p',{class:'muted small'}),actions=el('div',{class:'task-actions'}),feedback=el('p',{class:'task-feedback',role:'status'}),recent=el('p',{class:'muted small task-result'});
   if(!p||p.kind==='tempo')return {node,update:()=>{},cleanup:()=>reference.stop()};
@@ -89,6 +89,24 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       }));
     node.insertBefore(drumGrid,actions);
     actions.append(button('Record reflection',()=>{ensureStarted();const step=state().step;formDialog('Grid practice reflection',[score('rating','Control / confidence'),textarea('note','What broke down or improved?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save reflection');},'secondary'));
+  }else if(p.kind==='drum-phrase'){
+    phraseTimeline=el('div',{class:'focus-phrase-timeline','aria-label':'Groove fill return phrase'},...p.bars.map((bar,index)=>el('span',{class:`phrase-bar-chip role-${bar.role}`,'data-bar':index},el('strong',{},String(index+1)),el('small',{},bar.label))));
+    phraseGrid=el('div',{class:'focus-drum-grid focus-phrase-grid','aria-label':'Current phrase bar'});
+    renderPhraseBar=(index:number)=>{
+      const bar=p.bars[index]??p.bars[0],labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision);if(!bar)return;
+      phraseGrid!.style.setProperty('--grid-steps',String(labels.length));
+      phraseGrid!.replaceChildren(
+        el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},bar.role.toUpperCase()),...labels.map(label=>el('span',{},label))),
+        ...DRUM_GRID_VOICES.map(voice=>{
+          const lane=bar.lanes.find(row=>row.voice===voice.id),steps=lane?.steps??'.'.repeat(labels.length);
+          return el('div',{class:'drum-grid-row'},el('strong',{},voice.short),...[...steps].map((cell,step)=>el('span',{class:`drum-grid-cell ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`,'data-index':step,'aria-label':`${bar.label}, ${voice.label} step ${step+1}: ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`},cell==='.'?'·':cell)));
+        })
+      );
+      phraseBarIndex=index;
+      phraseTimeline!.querySelectorAll<HTMLElement>('[data-bar]').forEach(chip=>chip.classList.toggle('current',Number(chip.dataset.bar)===index));
+    };
+    renderPhraseBar(0);node.insertBefore(phraseTimeline,actions);node.insertBefore(phraseGrid,actions);
+    actions.append(button('Review phrase',()=>{ensureStarted();const step=state().step;formDialog('Phrase review',[score('rating','Phrase control / landing'),textarea('note','Did the groove stay stable, did the fill keep its spacing, and did beat 1 land?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save review');},'secondary'));
   }else if(p.kind==='sight-reading'){
     actions.append(button('Log reading attempt',()=>{ensureStarted();const step=state().step;formDialog('Reading result',[
       input('errors','Note / rhythm errors',0,'number',{min:0,max:1000,step:1,required:true}),score('continuity','Continuity'),textarea('note','Observation','',2),
@@ -107,6 +125,14 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;
       const currentIndex=practice.beat&&['running','countin'].includes(practice.session?.runtime.phase??'')?practice.beat.beat*p.pulse.subdivision+practice.beat.part:-1;
       drumGrid?.querySelectorAll<HTMLElement>('.drum-grid-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
+    }
+    if(p.kind==='drum-phrase'){
+      const beat=practice.beat,phase=practice.session?.runtime.phase??'ready',countIn=store.snapshot().settings.metronome.countIn;
+      const running=!!beat&&phase==='running'&&!beat.countingIn,barIndex=running?Math.max(0,beat.bar-countIn)%p.bars.length:phraseBarIndex<0?0:phraseBarIndex;
+      if(barIndex!==phraseBarIndex)renderPhraseBar?.(barIndex);
+      const phraseBar=p.bars[barIndex]??p.bars[0],currentIndex=running&&beat?beat.beat*p.pulse.subdivision+beat.part:-1;
+      cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=phraseBar?`Bar ${barIndex+1} / ${p.bars.length} · ${phraseBar.label}. ${p.focus}`:p.focus;
+      phraseGrid?.querySelectorAll<HTMLElement>('.drum-grid-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
     }
     if(p.kind==='sight-reading')cue.textContent=p.material||'Choose a short passage from your own score';
     if(p.kind==='scale-cycle')cue.textContent=`${NOTE_NAMES[p.keys[state.step%p.keys.length]!]} ${p.quality.replaceAll('-',' ')} · ${p.hands==='not-applicable'?p.position:p.hands+' hands'} · ${p.octaves} octave${p.octaves===1?'':'s'}`;

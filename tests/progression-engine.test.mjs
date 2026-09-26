@@ -8,6 +8,8 @@ import { createSession } from '../dist/app/practice/logic.js';
 import { exerciseBpm } from '../dist/app/domain/protocols.js';
 import { practiceTargetKey } from '../dist/app/domain/practice-state.js';
 import { validateData } from '../dist/app/domain/validation.js';
+import { buildDrumGrid } from '../dist/app/domain/drum-grid.js';
+import { buildDrumPhrase } from '../dist/app/domain/drum-phrase.js';
 
 const at='2026-09-22T08:00:00.000Z';
 
@@ -161,6 +163,22 @@ test('session snapshot applies click/subdivision progression and preserves it hi
   assert.deepEqual(saved.progressionSnapshot,progression);
   assert.equal(saved.subdivisionSnapshot,2);
   assert.deepEqual(saved.timingClickSnapshot,progression.timingClick);
+});
+
+test('explicit Drum Grid and Drum Phrase scores never use subdivision as a progression axis',()=>{
+  const run=(protocol,id)=>{
+    const d=modern(),source=tempoExercise(d),exercise={...structuredClone(source),id,name:id,protocol,defaultSeconds:1800,maxBpm:100,targetBpm:100};
+    d.exercises.push(exercise);
+    d.practiceStates=[exerciseState(exercise,{challenge:'advance',mastery:'retest',tempo:{peak:100,working:100,peakAt:at,workingAt:at}})];
+    const saturated=['click-density','gap-click','memory','accent-pattern','dynamics'];
+    saturated.forEach((dimension,index)=>addProgressionHistory(d,exercise,{engineVersion:1,direction:'advance',dimension,level:3,summary:dimension,cue:'Saturated.'},{seconds:300,when:`2026-09-${15+index}T08:00:00.000Z`}));
+    addProgressionHistory(d,exercise,{engineVersion:1,direction:'advance',dimension:'duration',level:3,summary:'Long set',cue:'Saturated.',targetSeconds:1800},{seconds:1800,when:'2026-09-21T08:00:00.000Z'});
+    const plan=buildExerciseProgression(d,exercise);
+    assert.equal(plan.direction,'advance');assert.equal(plan.dimension,'orchestration');
+    assert.equal(plan.subdivision,protocol.pulse.subdivision);
+  };
+  run(buildDrumGrid('kick-displacement',100,4,0,3),'grid-progression-fixture');
+  run(buildDrumPhrase('backbeat','alternating',100,4,4,'bar',0),'phrase-progression-fixture');
 });
 
 test('new progression fields validate while older blocks without them remain compatible',()=>{

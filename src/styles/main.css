@@ -921,3 +921,55 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .button.drum-grid-edit-cell{width:40px;height:40px;min-height:40px;font-size:13px}
   .drum-grid-header span{min-height:28px;font-size:11px}
 }
+
+
+/* Phase 27 — groove → fill → return Phrase Lab. */
+.drum-phrase-page{display:grid;gap:20px}
+.drum-phrase-setup,.drum-phrase-score{display:grid;gap:16px}
+.drum-phrase-controls{grid-template-columns:repeat(4,minmax(0,1fr))}
+.drum-phrase-focus{max-width:82ch}
+.drum-phrase-status{padding:10px 12px;border-left:2px solid var(--accent);background:var(--surface-soft);font-size:12px}
+.phrase-variations{align-items:center}
+.phrase-timeline{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:5px}
+.phrase-timeline>div{min-width:0}
+.button.phrase-bar-button{width:100%;min-height:58px;display:grid;place-items:center;gap:1px;padding:7px 4px;border:1px solid var(--border);background:var(--surface);font-family:var(--mono)}
+.button.phrase-bar-button small{font-family:inherit;font-size:9px;color:var(--muted);text-transform:uppercase}
+.button.phrase-bar-button.role-fill{border-color:var(--border-strong);background:var(--surface-soft)}
+.button.phrase-bar-button.role-return{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-text)}
+.button.phrase-bar-button.current{outline:2px solid var(--focus);outline-offset:1px;font-weight:750}
+.phrase-current-bar{display:grid;gap:9px;min-width:0}
+.phrase-current-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.phrase-inspect-grid{padding:0;overflow-x:auto}
+.drum-phrase-text{margin:10px 0 0;padding:12px;border:1px solid var(--border);background:var(--surface-soft);overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre}
+.drum-phrase-method{margin:0;padding-left:22px;display:grid;gap:8px;font-size:13px;color:var(--muted)}
+.phrase-bar-editor{margin:14px 0;padding:12px;border:1px solid var(--border)}
+.phrase-bar-editor>legend{padding:0 6px;font-size:12px;font-weight:650;color:var(--muted)}
+.focus-phrase-timeline{display:flex;flex-wrap:wrap;gap:5px;padding:10px 0;border-block:1px solid var(--border)}
+.phrase-bar-chip{display:grid;grid-template-columns:auto auto;gap:4px;align-items:center;min-height:34px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);font-family:var(--mono);font-size:10px;color:var(--muted)}
+.phrase-bar-chip strong{color:var(--text);font-size:11px}
+.phrase-bar-chip small{font-size:8px;text-transform:uppercase}
+.phrase-bar-chip.role-fill{border-color:var(--border-strong);background:var(--surface-soft)}
+.phrase-bar-chip.role-return{border-color:var(--accent);background:var(--accent-soft)}
+.phrase-bar-chip.current{outline:2px solid var(--focus);outline-offset:1px;color:var(--accent-text)}
+.focus-phrase-grid{padding-top:0}
+@media(min-width:1000px){.drum-tool-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(min-width:760px) and (max-width:999px){.drum-tool-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){
+  .drum-phrase-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .phrase-inspect-grid{width:100%;min-width:0}
+  .phrase-inspect-grid .drum-grid-row{width:100%;grid-template-columns:44px repeat(var(--grid-steps),minmax(0,1fr));gap:2px}
+  .phrase-inspect-grid .drum-grid-cell{width:100%;min-width:0}
+}
+@media(max-width:560px){
+  .drum-phrase-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+  .drum-phrase-controls>.field:first-child,.drum-phrase-controls>.field:nth-child(2){grid-column:1/-1}
+  .phrase-timeline{grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+  .button.phrase-bar-button{min-height:52px;font-size:11px}
+  .focus-phrase-timeline{gap:3px}
+  .phrase-bar-chip{padding:4px 6px;min-height:30px}
+}
+@media(max-width:359px){
+  .drum-phrase-controls{grid-template-columns:1fr}
+  .drum-phrase-controls>.field:first-child,.drum-phrase-controls>.field:nth-child(2){grid-column:auto}
+  .phrase-timeline{grid-template-columns:repeat(4,minmax(0,1fr))}
+}

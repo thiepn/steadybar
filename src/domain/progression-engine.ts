@@ -96,14 +96,14 @@ function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|unde
   const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),out:ProgressionDimension[]=[],family=profileFamily(data,exercise);
   if(family==='voice')return out;
   if(pulse)out.push('tempo','click-density','gap-click');
-  if(pulse?.subdivision&&pulse.subdivision>1)out.push('subdivision');
+  if(pulse?.subdivision&&pulse.subdivision>1&&!['drum-grid','drum-phrase'].includes(protocol.kind))out.push('subdivision');
   if(!options.strictDuration)out.push('duration');
   const nonListening=!['fretboard','pitch-match','vocal-pattern','sight-reading'].includes(protocol.kind);
   if(nonListening)out.push('dynamics');
-  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
-  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||!!exercise.sticking))out.push('orchestration');
+  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||protocol.kind==='drum-phrase'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
+  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||protocol.kind==='drum-phrase'||!!exercise.sticking))out.push('orchestration');
   if(!['sight-reading','fretboard','pitch-match','vocal-pattern'].includes(protocol.kind))out.push('memory');
-  if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire')out.push('musical-context');
+  if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire'||protocol.kind==='drum-phrase')out.push('musical-context');
   return [...new Set(out)];
 }
 

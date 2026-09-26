@@ -168,6 +168,15 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Groove, Fill & Return Phrase Lab — 2.27.0
+
+Drum profiles now have a dedicated **Phrase Lab** for the musical problem that one-bar grid practice cannot solve: keeping a groove stable, placing one bounded fill inside the phrase, and proving the landing on the following beat 1.
+
+A phrase contains setup groove bars, exactly one fill bar, and an explicit return bar. Choose a groove family, fill family, last-beat / half-bar / full-bar fill length, 2 / 4 / 8 / 16 setup bars, subdivision, BPM and deterministic variation. The score timeline stays compact while the current bar is rendered as a full four-limb grid.
+
+Phrase Lab can preview the score against Steadybar’s audio-time click, launch it immediately, add it to Today, or save it as a normal exercise attributed to **Fills & Phrasing** with Groove and Timing support. Focus Player follows the phrase bar-by-bar and highlights the current subdivision.
+
+Phrase outcomes remain normal self-reflection and Not Yet / Usable / Solid evidence. Steadybar does not infer fill taste, limb technique or acoustic performance quality from the authored score alone.
 ## Drum practice surface UX polish — 2.26.0
 
 The drum workflow is faster to enter and easier to read from behind a kit. Practice now surfaces **Rudiment Lab, Grid Lab, Timing Lab and MIDI Lab** in a compact dedicated strip near the top of the page, while unfinished-session recovery takes precedence over secondary learning content.
