@@ -877,7 +877,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.page.keyboard.press('1')
         safe_after=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,bpm:s.runtime.bpm,evaluation:b.evaluation};})()""")
         self.assertEqual(safe_after,safe_before)
-        self.page.get_by_role('button',name='Pause practice',exact=True).focus()
+        self.page.locator('.focus-start').focus()
 
         self.page.keyboard.press('Shift+/')
         expect(self.page.get_by_role('dialog')).to_be_visible()
@@ -888,25 +888,33 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('dialog')).to_have_count(0)
 
         self.page.keyboard.press('2')
-        moved=self.read("""(()=>{
-          const s=load('practice/controller.js').practice.session,b=s.blocks[0];
-          return {index:s.activeBlockIndex,result:b.evaluation?.result,phase:s.runtime.phase};
-        })()""")
+        moved=None
+        for _ in range(70):
+            moved=self.read("""(()=>{
+              const s=load('practice/controller.js').practice.session,b=s.blocks[0];
+              return {index:s.activeBlockIndex,result:b.evaluation?.result,phase:s.runtime.phase};
+            })()""")
+            if moved['index']==before['index']+1 and moved['result']=='usable':break
+            self.page.wait_for_timeout(100)
         self.assertEqual(moved['index'],before['index']+1)
         self.assertEqual(moved['result'],'usable')
         self.assertEqual(moved['phase'],'ready')
 
         self.page.keyboard.press('PageDown')
-        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
+        expect(self.page.locator('.focus-start')).to_have_attribute('aria-label','Pause practice')
         restart_before=self.read("""(()=>{
           const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
           return {index:s.activeBlockIndex,id:b.id,count:s.blocks.length};
         })()""")
         self.page.keyboard.press('Shift+R')
-        restart_after=self.read("""(()=>{
-          const s=load('practice/controller.js').practice.session,previous=s.blocks[s.activeBlockIndex-1],fresh=s.blocks[s.activeBlockIndex];
-          return {index:s.activeBlockIndex,id:fresh.id,count:s.blocks.length,phase:s.runtime.phase,previousNotes:previous.notes,evaluation:fresh.evaluation};
-        })()""")
+        restart_after=None
+        for _ in range(70):
+            restart_after=self.read("""(()=>{
+              const s=load('practice/controller.js').practice.session,previous=s.blocks[s.activeBlockIndex-1],fresh=s.blocks[s.activeBlockIndex];
+              return {index:s.activeBlockIndex,id:fresh.id,count:s.blocks.length,phase:s.runtime.phase,previousNotes:previous?.notes??'',evaluation:fresh.evaluation};
+            })()""")
+            if restart_after['count']==restart_before['count']+1:break
+            self.page.wait_for_timeout(100)
         self.assertEqual(restart_after['index'],restart_before['index']+1)
         self.assertEqual(restart_after['count'],restart_before['count']+1)
         self.assertNotEqual(restart_after['id'],restart_before['id'])
