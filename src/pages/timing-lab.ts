@@ -88,60 +88,66 @@ export function timingLabPage(mode:'timing'|'pocket'='timing'):Page{
   const live=el('div',{class:'timing-live',hidden:true},el('strong',{class:'timing-live-clock'},'00.0'),el('span',{class:'muted'},'seconds'),el('span',{class:'timing-live-hits'},'0 detected attacks'));
   const resultHost=el('div',{class:'timing-result-host'});
 
+  const readPocket=()=>{
+    if(!pocketMode)return undefined;
+    const target=targetOffset.querySelector<HTMLInputElement>('input')!,band=targetBand.querySelector<HTMLInputElement>('input')!;
+    if(!target.reportValidity()||!band.reportValidity())throw new Error('Correct the Pocket target settings before starting.');
+    return {targetOffsetMs:Number(target.value),targetBandMs:Number(band.value)};
+  };
   const readConfig=():MetronomeConfig=>{
-    const bpmInput=bpm.querySelector('input')!,duration=durationInput.querySelector('input')!,threshold=thresholdInput.querySelector('input')!,offset=offsetInput.querySelector('input')!;
-    if(!bpmInput.reportValidity()||!duration.reportValidity()||!threshold.reportValidity()||!offset.reportValidity())throw new Error('Correct the Timing Lab settings before starting.');
+    const bpmInput=bpm.querySelector<HTMLInputElement>('input')!,duration=durationInput.querySelector<HTMLInputElement>('input')!,threshold=thresholdInput.querySelector<HTMLInputElement>('input')!,offset=offsetInput.querySelector<HTMLInputElement>('input')!;
+    if(!bpmInput.reportValidity()||!duration.reportValidity()||!threshold.reportValidity()||!offset.reportValidity())throw new Error(`Correct the ${pocketMode?'Pocket':'Timing'} Lab settings before starting.`);
+    readPocket();
     return {...config,bpm:Number(bpmInput.value),subdivision:Number(subdivision.querySelector('select')!.value) as Subdivision,countIn:1,timing:{...resolvedTiming(config),mode:clickMode.querySelector('select')!.value as ClickMode}};
   };
   const stopTimers=()=>{clearTimeout(finishTimer);clearInterval(tickTimer);finishTimer=undefined;tickTimer=undefined;};
-  const setupFields=[bpm,subdivision,clickMode,durationInput,thresholdInput,offsetInput];
+  const setupFields=[bpm,subdivision,clickMode,durationInput,thresholdInput,offsetInput,...(pocketMode?[targetPreset,targetOffset,targetBand]:[])];
   const setSetupDisabled=(disabled:boolean)=>{for(const wrapper of setupFields){const control=wrapper.querySelector<HTMLInputElement|HTMLSelectElement>('input,select');if(control)control.disabled=disabled;}if(calibrateButton)calibrateButton.disabled=disabled||!MicrophoneTimingInput.supported();};
-  const resetTransport=()=>{active=false;measurementStarted=false;stopTimers();audio.stop();timingInput.stop();runningConfig=undefined;runningDuration=0;runningThreshold=0;runningOffset=0;setSetupDisabled(false);startButton.querySelector('span')!.textContent='Start timing test';startButton.setAttribute('aria-pressed','false');live.hidden=true;};
+  const resetTransport=()=>{active=false;measurementStarted=false;stopTimers();audio.stop();timingInput.stop();runningConfig=undefined;runningDuration=0;runningThreshold=0;runningOffset=0;runningTargetOffset=0;runningTargetBand=0;setSetupDisabled(false);startButton.querySelector('span')!.textContent=pocketMode?'Start pocket test':'Start timing test';startButton.setAttribute('aria-pressed','false');live.hidden=true;};
 
   const finish=async(save=true)=>{
     if(!active)return;
-    const testConfig=runningConfig;if(!testConfig)throw new Error('The active timing test configuration was lost.');
-    const durationSeconds=runningDuration,threshold=runningThreshold,inputOffsetMs=runningOffset;
+    const testConfig=runningConfig;if(!testConfig)throw new Error(`The active ${pocketMode?'pocket':'timing'} test configuration was lost.`);
+    const durationSeconds=runningDuration,threshold=runningThreshold,inputOffsetMs=runningOffset,targetOffsetMs=runningTargetOffset,targetBandMs=runningTargetBand;
     const start=startAudioTime,end=endAudioTime||start+durationSeconds,windowMs=timingMatchWindowMs(testConfig),wasMeasured=measurementStarted;
     const relevant=detected.filter(hit=>hit.time>=start-windowMs/1000&&hit.time<=end+windowMs/1000);
     resetTransport();
     if(!save||!wasMeasured||!start){status.textContent='Test canceled. No result was saved.';return;}
-    const expected=buildExpectedTimingGrid(testConfig,start,durationSeconds),analysis=analyzeTiming(expected,relevant,inputOffsetMs,windowMs);
-    const saved=await saveTimingLabResult({profileId:profile.id,config:testConfig,durationSeconds,threshold,inputOffsetMs,analysis});
-    status.textContent=`Saved · ${saved.matchedCount} of ${saved.expectedCount} expected hits matched.`;
+    const expected=buildExpectedTimingGrid(testConfig,start,durationSeconds),analysis=analyzeTiming(expected,relevant,inputOffsetMs,windowMs),pocket=pocketMode?analyzePocket(analysis.hits,targetOffsetMs,targetBandMs):undefined;
+    const saved=await saveTimingLabResult({profileId:profile.id,config:testConfig,durationSeconds,threshold,inputOffsetMs,analysis,pocket});
+    status.textContent=pocketMode?`Saved pocket result · ${saved.targetBandHits??0}/${saved.matchedCount} matched hits inside the target band.`:`Saved · ${saved.matchedCount} of ${saved.expectedCount} expected hits matched.`;
   };
 
   const start=async()=>{
     if(active){await finish(false);return;}
-    if(!MicrophoneTimingInput.supported())throw new Error('Timing Lab needs microphone access and AudioWorklet support.');
-    const testConfig=readConfig(),durationSeconds=Number(durationInput.querySelector('input')!.value),threshold=Number(thresholdInput.querySelector('input')!.value);
-    config=testConfig;runningConfig=structuredClone(testConfig);runningDuration=durationSeconds;runningThreshold=threshold;runningOffset=Number(offsetInput.querySelector('input')!.value);detected=[];startAudioTime=0;endAudioTime=0;measurementStarted=false;
+    if(!MicrophoneTimingInput.supported())throw new Error(`${pocketMode?'Pocket':'Timing'} Lab needs microphone access and AudioWorklet support.`);
+    const testConfig=readConfig(),durationSeconds=Number(durationInput.querySelector('input')!.value),threshold=Number(thresholdInput.querySelector('input')!.value),pocket=readPocket();
+    config=testConfig;runningConfig=structuredClone(testConfig);runningDuration=durationSeconds;runningThreshold=threshold;runningOffset=Number(offsetInput.querySelector('input')!.value);runningTargetOffset=pocket?.targetOffsetMs??0;runningTargetBand=pocket?.targetBandMs??0;detected=[];startAudioTime=0;endAudioTime=0;measurementStarted=false;
     status.textContent='Opening microphone…';
     const context=await audio.prepareContext();
     await timingInput.start(context,threshold,hit=>{detected.push(hit);const target=live.querySelector('.timing-live-hits');if(target)target.textContent=`${detected.length} detected attack${detected.length===1?'':'s'}`;});
-    active=true;setSetupDisabled(true);startButton.querySelector('span')!.textContent='Cancel timing test';startButton.setAttribute('aria-pressed','true');live.hidden=false;
+    active=true;setSetupDisabled(true);startButton.querySelector('span')!.textContent=pocketMode?'Cancel pocket test':'Cancel timing test';startButton.setAttribute('aria-pressed','true');live.hidden=false;
     status.textContent='Count-in · measurement starts on the first practice beat.';
     try{
       await audio.start(testConfig,{
         onReady:(_wallTime,audioTime)=>{
           if(disposed||!active)return;
           startAudioTime=audioTime;endAudioTime=audioTime+durationSeconds;measurementStarted=true;
-          status.textContent=`Measuring · ${testConfig.bpm} BPM · ${testConfig.subdivision}× subdivision · ${timingClickLabel(testConfig)}`;
+          status.textContent=pocketMode?`Measuring · ${pocketTargetLabel(runningTargetOffset)} · ±${runningTargetBand} ms band · ${testConfig.bpm} BPM`:`Measuring · ${testConfig.bpm} BPM · ${testConfig.subdivision}× subdivision · ${timingClickLabel(testConfig)}`;
           const started=performance.now();
           tickTimer=setInterval(()=>{
             const elapsed=Math.min(durationSeconds,(performance.now()-started)/1000),clock=live.querySelector('.timing-live-clock');
             if(clock)clock.textContent=elapsed.toFixed(1);
           },100);
-          finishTimer=setTimeout(()=>{void finish(true).catch(error=>notify(error instanceof Error?error.message:'Timing result could not be saved.','error'));},durationSeconds*1000+80);
+          finishTimer=setTimeout(()=>{void finish(true).catch(error=>notify(error instanceof Error?error.message:`${pocketMode?'Pocket':'Timing'} result could not be saved.`,'error'));},durationSeconds*1000+80);
         },
         onInterrupted:()=>{
           if(!active)return;
-          resetTransport();status.textContent='Audio was interrupted. The test was canceled.';notify('Timing Lab audio was interrupted. Retry when the app can stay in the foreground.','info');
+          resetTransport();status.textContent='Audio was interrupted. The test was canceled.';notify(`${pocketMode?'Pocket':'Timing'} Lab audio was interrupted. Retry when the app can stay in the foreground.`,'info');
         },
       });
     }catch(error){resetTransport();throw error;}
   };
-
   const calibrate=async()=>{
     if(active)throw new Error('Stop the current test before calibrating.');
     if(!MicrophoneTimingInput.supported())throw new Error('Microphone calibration is unavailable in this browser.');
