@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { analyzePocket, pocketErrorLabel, pocketTargetLabel } from '../dist/app/domain/pocket-analysis.js';
+import { analyzePocket, analyzePocketTiming, pocketErrorLabel, pocketTargetLabel } from '../dist/app/domain/pocket-analysis.js';
+import { analyzeTiming, buildExpectedTimingGrid } from '../dist/app/domain/timing-analysis.js';
 import { validateTimingLabResult } from '../dist/app/domain/validation.js';
 
 const hits=[-22,-18,-20,-5].map((offsetMs,index)=>({index,elapsedMs:index*500,offsetMs,strength:.5,bar:0,beat:index,part:0}));
@@ -14,6 +15,18 @@ test('Pocket analysis measures matched hits relative to a chosen feel target',()
   assert.equal(pocketErrorLabel(-4),'earlier-than-target');
   assert.equal(pocketErrorLabel(0),'on-target');
   assert.equal(pocketErrorLabel(4),'later-than-target');
+});
+
+test('Pocket matching is centered on the chosen target instead of the raw grid',()=>{
+  const config={bpm:240,meter:{beats:4,beatUnit:4},subdivision:4},expected=buildExpectedTimingGrid(config,10,1);
+  const detected=expected.map(hit=>({time:hit.time-.05,strength:.5}));
+  const raw=analyzeTiming(expected,detected,0,35);
+  assert.ok(raw.matchedCount<expected.length);
+  const result=analyzePocketTiming(expected,detected,0,-50,5,35);
+  assert.equal(result.timing.matchedCount,expected.length);
+  assert.equal(result.timing.meanOffsetMs,-50);
+  assert.equal(result.pocket.meanTargetErrorMs,0);
+  assert.equal(result.pocket.targetBandHits,expected.length);
 });
 
 test('Pocket target and band bounds reject nonsensical diagnostics',()=>{
