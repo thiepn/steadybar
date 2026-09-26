@@ -952,7 +952,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .phrase-bar-chip.role-return{border-color:var(--accent);background:var(--accent-soft)}
 .phrase-bar-chip.current{outline:2px solid var(--focus);outline-offset:1px;color:var(--accent-text)}
 .focus-phrase-grid{padding-top:0}
-@media(min-width:1000px){.drum-tool-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(min-width:1000px){.drum-tool-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media(min-width:760px) and (max-width:999px){.drum-tool-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){
   .drum-phrase-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1001,3 +1001,24 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .midi-phrase-bar-row>span:nth-child(4)::before{content:'Missed ';font-size:10px}
   .midi-phrase-bar-row>span:nth-child(5){grid-column:3;grid-row:2;color:var(--muted)}
 }
+
+/* Phase 29 — Time Feel & Pocket Lab. */
+.pocket-lab-page{display:grid;gap:20px}
+.pocket-lab-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.timing-target-line{position:absolute;left:0;right:0;border-top:2px solid var(--accent);opacity:.82;z-index:1}
+.pocket-result-card .timing-zero-line{opacity:.45}
+.pocket-result-card .timing-hit-dot{z-index:2}
+.pocket-result-card .timing-offset-plot{background:var(--surface)}
+.pocket-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){
+  .pocket-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .pocket-lab-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+  .pocket-lab-grid>.field:first-child,.pocket-lab-grid>.field:nth-child(2),.pocket-lab-grid>.field:nth-child(3){grid-column:auto}
+  .pocket-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:359px){
+  .pocket-lab-grid,.pocket-stats{grid-template-columns:1fr}
+}
+
