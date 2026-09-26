@@ -157,39 +157,55 @@ export function timingLabPage(mode:'timing'|'pocket'='timing'):Page{
     status.textContent=calibration.samples?`Calibrated · ambient peak ${calibration.noisePeak.toFixed(3)} · onset threshold ${calibration.threshold.toFixed(3)}.`:'Calibration heard no usable samples. The conservative default threshold remains available.';
   };
 
-  const startButton=button(MicrophoneTimingInput.supported()?'Start timing test':'Timing Lab unavailable',start,'primary','pulse');
+  const startButton=button(MicrophoneTimingInput.supported()?(pocketMode?'Start pocket test':'Start timing test'):(pocketMode?'Pocket Lab unavailable':'Timing Lab unavailable'),start,'primary','pulse');
   startButton.disabled=!MicrophoneTimingInput.supported();startButton.setAttribute('aria-pressed','false');
   const calibrateButton=button('Calibrate microphone',calibrate,'secondary');
   calibrateButton.disabled=!MicrophoneTimingInput.supported();
 
-  const setup=el('section',{class:'panel timing-setup'},sectionHeader('Test setup','One bar count-in; expected strokes follow the selected subdivision.'),el('div',{class:'form-grid timing-lab-grid'},bpm,subdivision,clickMode,durationInput,thresholdInput,offsetInput),
+  const setupGrid=el('div',{class:`form-grid timing-lab-grid ${pocketMode?'pocket-lab-grid':''}`},bpm,subdivision,clickMode,durationInput,thresholdInput,offsetInput,pocketMode?targetPreset:null,pocketMode?targetOffset:null,pocketMode?targetBand:null);
+  const setup=el('section',{class:'panel timing-setup'},sectionHeader('Test setup',pocketMode?'One bar count-in; choose the placement you intend before playing.':'One bar count-in; expected strokes follow the selected subdivision.'),setupGrid,
     el('div',{class:'actions wrap'},startButton,calibrateButton),status,live,
-    el('p',{class:'field-hint'},'Use headphones when possible. Speaker clicks can enter the microphone and be detected as attacks. Positive offsets mean late; negative offsets mean early. Input compensation shifts detected attacks earlier/later to account for known hardware latency.'));
+    el('p',{class:'field-hint'},pocketMode
+      ?'Use headphones when possible. Negative target offsets mean ahead of the reference grid; positive offsets mean behind. The target band is your own diagnostic window, not a universal standard. Input compensation is separate and should represent known microphone/hardware latency.'
+      :'Use headphones when possible. Speaker clicks can enter the microphone and be detected as attacks. Positive offsets mean late; negative offsets mean early. Input compensation shifts detected attacks earlier/later to account for known hardware latency.'));
 
-  const how=el('section',{class:'panel'},sectionHeader('What this measures','Deterministic onset matching; no automatic technique judgment.'),
-    el('p',{},'Timing Lab detects short microphone attacks on the audio sample clock and matches them one-to-one to the nearest expected subdivision position inside a bounded window.'),
-    el('ul',{class:'plain-list'},el('li',{},'Average bias · systematic early/late tendency.'),el('li',{},'Typical error · mean absolute distance from the expected grid.'),el('li',{},'Spread · consistency of matched offsets around their mean.'),el('li',{},'Drift · change in offset over time.'),el('li',{},'Misses / extras · unmatched expected and detected events.')),
-    el('p',{class:'field-hint'},'Measurement confidence describes whether enough clean events were matched. It is not a skill rating, health assessment, or professional benchmark.'));
+  const how=pocketMode
+    ?el('section',{class:'panel'},sectionHeader('What Pocket Lab measures','Intentional placement, not “correct” feel.'),
+      el('p',{},'Pocket Lab first performs the same deterministic microphone onset matching as Timing Lab. It then measures each matched attack relative to the placement target you chose before the test.'),
+      el('ul',{class:'plain-list'},
+        el('li',{},'Average placement · where you actually sat relative to the reference grid.'),
+        el('li',{},'Average target error · whether your average landed earlier or later than the chosen feel.'),
+        el('li',{},'Target distance · average absolute distance from the chosen feel.'),
+        el('li',{},'Target band · how many matched attacks fell inside your own ±ms window.'),
+        el('li',{},'Spread / drift · consistency and movement over time, independent of whether the target itself is ahead or behind.')),
+      el('p',{class:'field-hint'},'There is no universally “best” ahead/behind value. Feel depends on tempo, style, ensemble context, sound, touch, and intent. These numbers help you reproduce a chosen placement; they do not define groove quality.'))
+    :el('section',{class:'panel'},sectionHeader('What this measures','Deterministic onset matching; no automatic technique judgment.'),
+      el('p',{},'Timing Lab detects short microphone attacks on the audio sample clock and matches them one-to-one to the nearest expected subdivision position inside a bounded window.'),
+      el('ul',{class:'plain-list'},el('li',{},'Average bias · systematic early/late tendency.'),el('li',{},'Typical error · mean absolute distance from the expected grid.'),el('li',{},'Spread · consistency of matched offsets around their mean.'),el('li',{},'Drift · change in offset over time.'),el('li',{},'Misses / extras · unmatched expected and detected events.')),
+      el('p',{class:'field-hint'},'Measurement confidence describes whether enough clean events were matched. It is not a skill rating, health assessment, or professional benchmark.'));
 
   page.append(el('div',{class:'two-column wide-left'},setup,how),resultHost);
 
   const renderHistory=()=>{
-    const rows=(store.snapshot().timingResults??[]).filter(row=>row.profileId===profile.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    const rows=(store.snapshot().timingResults??[]).filter(row=>row.profileId===profile.id&&(pocketMode?row.timingLabVersion===2:row.timingLabVersion===1)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
     resultHost.replaceChildren();
     if(rows[0])resultHost.append(resultCard(rows[0]));
-    const history=el('section',{class:'timing-history'},sectionHeader('Timing history',rows.length?`${rows.length} saved test${rows.length===1?'':'s'}`:'No saved tests yet'));
-    if(!rows.length)history.append(el('p',{class:'muted'},'Run a test to create your first microphone timing result.'));
+    const history=el('section',{class:'timing-history'},sectionHeader(pocketMode?'Pocket history':'Timing history',rows.length?`${rows.length} saved ${pocketMode?'pocket ':'timing '}test${rows.length===1?'':'s'}`:`No saved ${pocketMode?'pocket':'timing'} tests yet`));
+    if(!rows.length)history.append(el('p',{class:'muted'},pocketMode?'Run a Pocket test to save your first intentional-placement result.':'Run a test to create your first microphone timing result.'));
     else for(const row of rows.slice(0,30))history.append(el('article',{class:'timing-history-row'},
-      el('div',{},el('strong',{},`${row.bpm} BPM · ${row.subdivision}×`),el('span',{class:'muted small'},`${formatDate(row.createdAt,true)} · ${titleCase(row.confidence)} confidence`)),
-      el('div',{class:'tag-row'},row.matchedCount?badge(`bias ${signed(row.meanOffsetMs)}`):badge('no matched hits'),row.matchedCount?badge(`error ${row.meanAbsoluteErrorMs.toFixed(1)} ms`):null,row.matchedCount>1?badge(`spread ${row.spreadMs.toFixed(1)} ms`):null,badge(`${row.matchedCount}/${row.expectedCount} matched`)),
-      button('Delete',async()=>{if(await confirmAction('Delete this timing result?','This diagnostic result will be permanently removed.','Delete result',true))await deleteTimingLabResult(row.id);},'ghost compact danger-text')));
+      el('div',{},el('strong',{},pocketMode?`${pocketTargetLabel(row.targetOffsetMs??0)} · ${row.bpm} BPM`:`${row.bpm} BPM · ${row.subdivision}×`),el('span',{class:'muted small'},`${formatDate(row.createdAt,true)} · ${titleCase(row.confidence)} confidence`)),
+      el('div',{class:'tag-row'},
+        pocketMode&&row.matchedCount?badge(`target error ${signed(row.meanTargetErrorMs??0)}`):row.matchedCount?badge(`bias ${signed(row.meanOffsetMs)}`):badge('no matched hits'),
+        pocketMode&&row.matchedCount?badge(`distance ${(row.meanAbsoluteTargetErrorMs??0).toFixed(1)} ms`):row.matchedCount?badge(`error ${row.meanAbsoluteErrorMs.toFixed(1)} ms`):null,
+        pocketMode&&row.matchedCount?badge(`${row.targetBandHits??0}/${row.matchedCount} in ±${row.targetBandMs??0} ms`):row.matchedCount>1?badge(`spread ${row.spreadMs.toFixed(1)} ms`):null,
+        badge(`${row.matchedCount}/${row.expectedCount} matched`)),
+      button('Delete',async()=>{if(await confirmAction(`Delete this ${pocketMode?'pocket':'timing'} result?`,'This diagnostic result will be permanently removed.','Delete result',true))await deleteTimingLabResult(row.id);},'ghost compact danger-text')));
     resultHost.append(history);
   };
   renderHistory();
-
   return {
     node:page,
-    beforeLeave:async()=>!active||await confirmAction('Leave Timing Lab?','The active timing test will be canceled and no result will be saved.','Leave Timing Lab',true),
+    beforeLeave:async()=>!active||await confirmAction(`Leave ${pocketMode?'Pocket':'Timing'} Lab?`,'The active test will be canceled and no result will be saved.',`Leave ${pocketMode?'Pocket':'Timing'} Lab`,true),
     isDirty:()=>active,
     cleanup:()=>{disposed=true;resetTransport();},
   };
