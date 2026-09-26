@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseMidiNoteMessage,midiTimestampToAudioTime} from '../dist/app/midi/input.js';
-import {analyzeMidiGridPerformance,analyzeMidiPerformance,defaultMidiMappings,expectedMidiDrumGrid,expectedMidiGrid,mapMidiEvents,midiDeviceKey} from '../dist/app/domain/midi-analysis.js';
+import {analyzeMidiGridPerformance,analyzeMidiPerformance,analyzeMidiPhrasePerformance,defaultMidiMappings,drumPhraseCycleSeconds,expectedMidiDrumGrid,expectedMidiDrumPhrase,expectedMidiGrid,mapMidiEvents,midiDeviceKey} from '../dist/app/domain/midi-analysis.js';
 import {buildExpectedTimingGrid} from '../dist/app/domain/timing-analysis.js';
+import {buildDrumPhrase} from '../dist/app/domain/drum-phrase.js';
+import {resolveMidiEvidenceSource} from '../dist/app/domain/midi-evidence.js';
 import {validateMidiPerformanceResult,validateTimingLabResult} from '../dist/app/domain/validation.js';
 
 const config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:2};
@@ -158,11 +160,33 @@ test('generic MIDI analysis refuses Drum Grid mode without an authored score',()
   assert.throws(()=>expectedMidiGrid(config,5,2,'drum-grid'),/authored grid/i);
 });
 
+test('dense long authored Grid matching remains exact with thousands of events',()=>{
+  const denseConfig={bpm:240,meter:{beats:4,beatUnit:4},subdivision:4},denseGrid={kind:'drum-grid',pulse:{bpm:240,beats:4,beatUnit:4,subdivision:4},name:'Dense stress grid',focus:'Matcher regression',lanes:[
+    {voice:'right-hand',steps:'xxxxxxxxxxxxxxxx'},
+    {voice:'left-hand',steps:'xxxxxxxxxxxxxxxx'},
+    {voice:'kick',steps:'xxxxxxxxxxxxxxxx'},
+    {voice:'hihat-foot',steps:'xxxxxxxxxxxxxxxx'},
+  ]};
+  const expected=expectedMidiDrumGrid(denseConfig,2,120,denseGrid,gridAssignments);
+  assert.equal(expected.length,7680);
+  const events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:90,channel:10}));
+  const result=analyzeMidiGridPerformance(denseConfig,2,120,events,gridProfile,denseGrid,gridAssignments,60);
+  assert.equal(result.matchedCount,expected.length);assert.equal(result.misses,0);assert.equal(result.extras,0);assert.equal(result.wrongVoiceCount,0);
+});
+
 test('authored Drum Grid rejects duplicate MIDI sounds across active lanes',()=>{
   const ambiguous=gridAssignments.map(row=>row.gridVoice==='left-hand'?{...row,midiVoice:'hihat-closed'}:row);
   assert.throws(()=>expectedMidiDrumGrid(config,5,2,grid,ambiguous),/different MIDI sounds/i);
 });
 
+
+test('saved authored MIDI scores own evidence attribution over unrelated active practice',()=>{
+  const active={activeSessionId:'session-a',activeBlockId:'block-a',activeSourceExerciseId:'exercise-a'};
+  assert.deepEqual(resolveMidiEvidenceSource({expectedPattern:'drum-grid',...active,gridExerciseId:'saved-grid'}),{sourceExerciseId:'saved-grid'});
+  assert.deepEqual(resolveMidiEvidenceSource({expectedPattern:'drum-phrase',...active,phraseExerciseId:'saved-phrase'}),{sourceExerciseId:'saved-phrase'});
+  assert.deepEqual(resolveMidiEvidenceSource({expectedPattern:'drum-grid',...active}),{sessionId:'session-a',blockId:'block-a',sourceExerciseId:'exercise-a'});
+  assert.deepEqual(resolveMidiEvidenceSource({expectedPattern:'subdivision',...active}),{sessionId:'session-a',blockId:'block-a',sourceExerciseId:'exercise-a'});
+});
 
 test('generic MIDI persistence remains version 1',()=>{
   const start=5,expected=buildExpectedTimingGrid(config,start,2),events=expected.map(hit=>({time:hit.time,note:38,velocity:90,channel:10}));
@@ -206,5 +230,79 @@ test('ordinary Timing Lab hit schema stays independent of Drum Grid MIDI metadat
   assert.deepEqual(validateTimingLabResult(base),base);
   const polluted=structuredClone(base);polluted.hits[0].expectedGridVoice='kick';polluted.hits[0].expectedAccent=true;
   assert.deepEqual(validateTimingLabResult(polluted),base);
+});
+
+const phrase=buildDrumPhrase('backbeat','alternating',80,2,2,'beat',0);
+const phraseConfig={bpm:120,meter:{beats:4,beatUnit:4},subdivision:2};
+
+test('Drum Phrase MIDI requires one complete phrase cycle at the actual test tempo',()=>{
+  assert.equal(drumPhraseCycleSeconds(phrase,120),6);
+  assert.throws(()=>expectedMidiDrumPhrase(phraseConfig,10,5.9,phrase,gridAssignments),/complete phrase cycle/i);
+  const expected=expectedMidiDrumPhrase(phraseConfig,10,6,phrase,gridAssignments);
+  assert.ok(expected.length>0);
+  assert.ok(expected.some(hit=>hit.phraseBarRole==='fill'));
+  assert.ok(expected.some(hit=>hit.phraseBarRole==='return'&&hit.beat===0));
+});
+
+test('authored Drum Phrase rejects duplicate mapped sounds across active lanes',()=>{
+  const ambiguous=gridAssignments.map(row=>row.gridVoice==='left-hand'?{...row,midiVoice:'hihat-closed'}:row);
+  assert.throws(()=>expectedMidiDrumPhrase(phraseConfig,10,6,phrase,ambiguous),/different MIDI sounds/i);
+});
+
+test('perfect authored Drum Phrase MIDI reports every bar and an exact return-beat landing',()=>{
+  const start=10,duration=6,expected=expectedMidiDrumPhrase(phraseConfig,start,duration,phrase,gridAssignments);
+  const events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:hit.accent?110:80,channel:10}));
+  const result=analyzeMidiPhrasePerformance(phraseConfig,start,duration,events,gridProfile,phrase,gridAssignments,80);
+  assert.equal(result.expectedCount,expected.length);assert.equal(result.matchedCount,expected.length);assert.equal(result.misses,0);assert.equal(result.extras,0);assert.equal(result.wrongVoiceCount,0);
+  assert.deepEqual(result.phraseBarSummaries.map(row=>row.role),['groove','fill','return']);
+  assert.ok(result.phraseBarSummaries.every(row=>row.misses===0&&row.matchedCount===row.expectedCount));
+  assert.equal(result.landingExpectedCount,2);assert.equal(result.landingMatchedCount,2);assert.equal(result.landingMisses,0);assert.equal(result.landingMeanOffsetMs,0);assert.equal(result.landingMeanAbsoluteErrorMs,0);
+  assert.ok(result.hits.filter(hit=>hit.expectedPhraseBarRole==='return'&&hit.beat===0).every(hit=>hit.expectedPhraseBarIndex===2));
+});
+
+test('phrase landing bias keeps early/late direction on the return downbeat',()=>{
+  const start=10,duration=6,expected=expectedMidiDrumPhrase(phraseConfig,start,duration,phrase,gridAssignments);
+  const events=expected.map(hit=>({time:hit.time+(hit.phraseBarRole==='return'&&hit.beat===0&&hit.part===0?.025:0),note:noteForVoice[hit.midiVoice],velocity:90,channel:10}));
+  const result=analyzeMidiPhrasePerformance(phraseConfig,start,duration,events,gridProfile,phrase,gridAssignments,80);
+  assert.equal(result.landingMatchedCount,result.landingExpectedCount);
+  assert.equal(result.landingMeanOffsetMs,25);
+  assert.equal(result.landingMeanAbsoluteErrorMs,25);
+});
+
+test('multi-cycle Drum Phrase MIDI accumulates bar, lane and landing evidence deterministically',()=>{
+  const start=10,duration=12,expected=expectedMidiDrumPhrase(phraseConfig,start,duration,phrase,gridAssignments);
+  const events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:90,channel:10}));
+  const result=analyzeMidiPhrasePerformance(phraseConfig,start,duration,events,gridProfile,phrase,gridAssignments,80);
+  assert.equal(result.landingExpectedCount,4);assert.equal(result.landingMatchedCount,4);assert.equal(result.landingMisses,0);
+  assert.equal(result.phraseBarSummaries.length,3);
+  assert.ok(result.phraseBarSummaries.every(row=>row.matchedCount===row.expectedCount&&row.expectedCount>0));
+  assert.equal(result.phraseBarSummaries.reduce((sum,row)=>sum+row.expectedCount,0),result.expectedCount);
+  assert.equal(result.phraseLaneSummaries.reduce((sum,row)=>sum+row.expectedCount,0),result.expectedCount);
+});
+
+test('phrase landing metric isolates a missing/wrong sound on return beat 1',()=>{
+  const start=10,duration=6,expected=expectedMidiDrumPhrase(phraseConfig,start,duration,phrase,gridAssignments),landingKick=expected.find(hit=>hit.phraseBarRole==='return'&&hit.beat===0&&hit.gridVoice==='kick');
+  assert.ok(landingKick);
+  const events=expected.filter(hit=>hit!==landingKick).map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:90,channel:10}));
+  events.push({time:landingKick.time,note:38,velocity:95,channel:10});
+  const result=analyzeMidiPhrasePerformance(phraseConfig,start,duration,events,gridProfile,phrase,gridAssignments,80);
+  assert.equal(result.landingExpectedCount,2);assert.equal(result.landingMatchedCount,1);assert.equal(result.landingMisses,1);
+  assert.equal(result.wrongVoiceCount,1);assert.equal(result.extras,1);
+  const returnBar=result.phraseBarSummaries.find(row=>row.role==='return');assert.ok(returnBar);assert.equal(returnBar.misses,1);
+});
+
+test('persisted Drum Phrase MIDI v3 validates exact phrase, bar, lane and landing evidence',()=>{
+  const start=10,duration=6,expected=expectedMidiDrumPhrase(phraseConfig,start,duration,phrase,gridAssignments),events=expected.map(hit=>({time:hit.time,note:noteForVoice[hit.midiVoice],velocity:90,channel:10}));
+  const analysis=analyzeMidiPhrasePerformance(phraseConfig,start,duration,events,gridProfile,phrase,gridAssignments,80),at='2026-09-25T06:00:00.000Z';
+  const result={id:'phrase-midi',createdAt:at,updatedAt:at,midiAnalysisVersion:3,profileId:'profile-drums',deviceKey:'test::kit',deviceNameSnapshot:'Test Kit',manufacturerSnapshot:'Test',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:6,expectedPattern:'drum-phrase',phraseNameSnapshot:phrase.name,phraseFocusSnapshot:phrase.focus,phraseBarsSnapshot:phrase.bars,phraseAssignments:gridAssignments,...analysis};
+  assert.deepEqual(validateMidiPerformanceResult(result),result);
+  const wrongBar=structuredClone(result);wrongBar.phraseBarSummaries[2].role='fill';assert.throws(()=>validateMidiPerformanceResult(wrongBar),/saved phrase/i);
+  const wrongHit=structuredClone(result);wrongHit.hits.find(hit=>hit.expectedPhraseBarRole==='return').expectedPhraseBarRole='fill';assert.throws(()=>validateMidiPerformanceResult(wrongHit),/saved bars/i);
+  const wrongLanding=structuredClone(result);wrongLanding.landingMatchedCount--;wrongLanding.landingMisses++;assert.throws(()=>validateMidiPerformanceResult(wrongLanding),/landing matches/i);
+  const truncated=structuredClone(result);truncated.durationSeconds=5.5;assert.throws(()=>validateMidiPerformanceResult(truncated),/complete phrase cycle/i);
+});
+
+test('generic expected-pattern helper refuses Drum Phrase mode without an authored phrase',()=>{
+  assert.throws(()=>expectedMidiGrid(config,5,2,'drum-phrase'),/authored phrase/i);
 });
 

@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.28.0 — Phrase-Aware MIDI Landing Analysis — 2026-09-26
+
+- Extend MIDI Drum Lab with **Authored Drum Phrase** scoring for Groove → Fill → Return exercises.
+- Allow phrase scoring from the current active phrase block or any saved `drum-phrase` exercise.
+- Add MIDI analysis **version 3** while preserving generic v1 and Drum Grid v2 history.
+- Reuse explicit lane → MIDI-sound assignments; MIDI still identifies mapped sounds, not physical hand identity.
+- Require unique enabled MIDI sounds for every active authored phrase lane so lane-level accuracy stays identifiable.
+- Require at least one complete phrase cycle at the actual **test BPM** before measurement can start.
+- Use 1-second duration precision in Phrase mode so exact cycle minima such as 9 seconds remain valid form values.
+- Expand the frozen phrase across the requested duration and match every authored hit, including simultaneous mapped sounds.
+- Persist the exact phrase name, focus, bars and lane assignments with each v3 result.
+- Add per-lane and per-bar expected / matched / missed summaries with per-bar timing error.
+- Add dedicated **return downbeat** evidence for part 1 of beat 1 only: expected hits, matched hits, misses, signed early/late bias and mean absolute timing distance.
+- Keep wrong-sound detection, signed whole-phrase timing, spread, drift, unmapped-note counts and device-relative velocity diagnostics.
+- Keep accent velocity comparison same-sound only; different pads are never treated as acoustically equivalent.
+- Recompute persisted expected counts from the frozen phrase during restore validation and cross-check lane totals, bar totals, matched-hit metadata, cell accents, landing counts, landing bias and landing distance against saved hits.
+- Require first-class Drum Phrase scores themselves to retain an actual return-bar downbeat.
+- Add Phrase mode setup with current/saved score selection, active-lane mapping controls, fill/return preview and automatic cycle-duration adjustment.
+- Add responsive result UI with a prominent return-downbeat summary, bar-by-bar phrase table and lane/sound breakdown.
+- Add phrase-aware history labels and direct source exercise/session links.
+- Fix authored MIDI source attribution: an explicitly selected saved Grid/Phrase score owns `sourceExerciseId`; unrelated active-session/block IDs are omitted.
+- Align MIDI result validation with the live 20,000-event capture buffer so dense authored tests cannot analyze successfully and then fail persistence because of the older 10,000-hit limit.
+- Replace authored Grid/Phrase full-array matching rescans with bounded same-voice timing-window searches plus indexed wrong-sound slots, preserving nearest-event semantics while scaling dense long tests far better.
+- Add deterministic coverage for full-cycle enforcement, ambiguous mappings, perfect phrase performance, signed landing bias, broken return downbeats, v3 persistence, source attribution and corruption rejection.
+- Add cross-browser saved-result/setup coverage so phrase MIDI history remains readable in Firefox/WebKit without live Web MIDI.
+- Phrase MIDI remains diagnostic evidence only; it does **not** automatically convert match rate or landing milliseconds into Not Yet / Usable / Solid mastery.
+- No IndexedDB schema or backup-envelope migration is required.
+
 ## 2.27.0 — Groove, Fill & Return Phrase Lab — 2026-09-25
 
 - Add a first-class **drum-phrase** practice protocol for multi-bar groove phrasing instead of treating fills as isolated one-bar events.
