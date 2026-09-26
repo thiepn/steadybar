@@ -47,7 +47,7 @@ export class RhythmLabAudioEngine {
     while(this.countInIndex<this.settings.countInBeats){
       const time=this.startTime+this.countInIndex*beatSeconds;if(time>=horizon)break;
       const index=this.countInIndex++;if(time<stale)continue;
-      const event:RhythmPlaybackEvent={time,layer:'primary',accent:index===0?2:1,cycle:-1,cyclePosition:index,label:`Count-in ${index+1}`,countingIn:true};
+      const event:RhythmPlaybackEvent={offsetSeconds:index*beatSeconds,time,layer:'primary',accent:index===0?2:1,cycle:-1,cyclePosition:index,label:`Count-in ${index+1}`,countingIn:true};
       this.click(event);this.visuals.push(event);
     }
     while(this.countInIndex>=this.settings.countInBeats){
