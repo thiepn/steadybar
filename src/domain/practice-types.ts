@@ -23,6 +23,7 @@ export type PracticeProtocol =
   | { kind: 'drum-grid'; pulse: Pulse; name: string; focus: string; lanes: DrumGridLane[] }
   | { kind: 'drum-phrase'; pulse: Pulse; name: string; focus: string; bars: DrumPhraseBar[] }
   | { kind: 'drum-dynamics'; pulse: Pulse; name: string; focus: string; lanes: DrumDynamicsLane[] }
+  | { kind: 'drum-meter'; pulse: Pulse; name: string; focus: string; grouping: number[]; lanes: DrumGridLane[] }
   | { kind: 'repetitions'; task: string; target: number; pulse?: Pulse }
   | { kind: 'chord-changes'; chords: string[]; target: number; technique: string; pulse?: Pulse }
   | { kind: 'groove'; pulse: Pulse; key: string; style: string; focus: 'time' | 'muting' | 'articulation' | 'coordination'; progression: string }
