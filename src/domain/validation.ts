@@ -362,7 +362,7 @@ export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p
       const phraseBarIndex=Math.floor(position/perBar)%bars.length,step=position%perBar,bar=bars[phraseBarIndex]!;
       for(const lane of bar.lanes){
         const cell=lane.steps[step];if(cell!=='x'&&cell!=='X')continue;
-        expectedByBar[phraseBarIndex]++;expectedByLane.set(lane.voice,(expectedByLane.get(lane.voice)??0)+1);
+        expectedByBar[phraseBarIndex]=(expectedByBar[phraseBarIndex]??0)+1;expectedByLane.set(lane.voice,(expectedByLane.get(lane.voice)??0)+1);
         if(bar.role==='return'&&step===0)landingExpectedFromScore++;
       }
     }
