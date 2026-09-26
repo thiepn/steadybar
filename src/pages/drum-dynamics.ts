@@ -44,7 +44,7 @@ export function drumDynamicsPage():Page{
         const cell=button(level==='.'?'·':level,()=>{
           if(!activeLane(surface.id))protocol={...protocol,lanes:[...protocol.lanes,{surface:surface.id,steps:'.'.repeat(labels.length)}]};
           protocol=cycleDrumDynamicsCell(protocol,surface.id,index);render();
-        },`dynamics-edit-cell level-${level}`);
+        },`dynamics-edit-cell ${level==='.'?'rest':'level-'+level}`);
         cell.setAttribute('aria-label',`${surface.label}, step ${index+1}: ${drumDynamicsLevelLabel(level)}`);
         row.append(cell);
       });
