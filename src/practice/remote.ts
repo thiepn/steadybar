@@ -61,6 +61,6 @@ export function practiceRemoteCommand(input:PracticeShortcutInput):PracticeRemot
   if(key==='r')return {kind:'record'};
   if(key==='n')return {kind:'note'};
   if(key==='f')return {kind:'fullscreen'};
-  if(input.key==='?'||(input.shiftKey&&input.key==='/'))return {kind:'help'};
+  if(input.key==='?'||(input.shiftKey&&(input.key==='/'||input.code==='Slash')))return {kind:'help'};
   return undefined;
 }
