@@ -585,7 +585,8 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-player .session-recovery{margin:0 0 18px}
 .focus-player .practice-error:not(:empty){margin:0}
 .focus-workspace.without-tempo .focus-readouts{grid-template-columns:minmax(0,1fr)}
-.focus-workspace.without-tempo .focus-readouts .time-readout{border-right:0}\n.focus-workspace.without-tempo .focus-transport{grid-template-columns:minmax(0,1fr)}
+.focus-workspace.without-tempo .focus-readouts .time-readout{border-right:0}
+.focus-workspace.without-tempo .focus-transport{grid-template-columns:minmax(0,1fr)}
 .focus-player.protocol-practice .focus-readouts{max-width:430px;width:100%;margin-inline:auto}
 .focus-player.protocol-practice .focus-identity{margin-bottom:2px}
 @media (max-width:640px){
@@ -879,4 +880,44 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 @media(max-width:359px){
   .rudiment-controls{grid-template-columns:1fr}
   .rudiment-controls>.field:first-child,.rudiment-controls>.field:nth-child(5){grid-column:auto}
+}
+
+
+/* Phase 26 — drum practice surface UX polish. */
+.drum-tool-strip{display:grid;gap:10px;margin:-8px 0 24px;padding:12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface)}
+.drum-tool-strip-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:0 2px}
+.drum-tool-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.drum-tool-card{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-height:48px;padding:10px 12px;border:1px solid var(--border);border-radius:5px;background:var(--surface-soft);font-size:12px;font-weight:550}
+.drum-tool-card>svg{width:17px;height:17px;color:var(--accent-text)}
+.drum-tool-card:hover{border-color:var(--border-strong);background:var(--surface-hover);color:var(--text)}
+.focus-stage{width:min(100%,900px)}
+.focus-player .practice-beats{justify-content:center;min-height:30px;gap:7px}
+.focus-player .practice-beat{height:30px;line-height:28px;color:var(--muted);font-size:10px;font-weight:600;border-radius:6px;background:var(--surface);border-color:var(--border-strong)}
+.focus-player .practice-beat.on{color:var(--on-accent);font-weight:750;box-shadow:0 0 0 2px var(--accent-soft)}
+@media(max-width:759px){
+  .drum-tool-strip{margin:-4px 0 18px;padding:10px}
+  .drum-tool-strip-head .small{font-size:10px}
+  .drum-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .drum-tool-card{min-height:46px;padding:8px 10px}
+}
+@media(max-width:640px){
+  .focus-player .practice-beats{min-height:26px;gap:4px}
+  .focus-player .practice-beat{height:26px;line-height:24px;font-size:9px;border-radius:5px}
+}
+@media(max-width:600px){
+  .midi-device-grid{grid-template-columns:1fr}
+  .midi-test-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .drum-grid-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+  .drum-grid-controls>.field:first-child{grid-column:1/-1}
+}
+@media(max-width:359px){
+  .midi-test-grid,.drum-grid-controls{grid-template-columns:1fr}
+  .drum-grid-controls>.field:first-child{grid-column:auto}
+}
+
+@media(min-width:901px){
+  .drum-grid-row{grid-template-columns:60px repeat(var(--grid-steps),40px);gap:5px}
+  .drum-grid-row>strong{min-height:40px}
+  .button.drum-grid-edit-cell{width:40px;height:40px;min-height:40px;font-size:13px}
+  .drum-grid-header span{min-height:28px;font-size:11px}
 }

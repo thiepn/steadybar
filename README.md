@@ -168,6 +168,13 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Drum practice surface UX polish — 2.26.0
+
+The drum workflow is faster to enter and easier to read from behind a kit. Practice now surfaces **Rudiment Lab, Grid Lab, Timing Lab and MIDI Lab** in a compact dedicated strip near the top of the page, while unfinished-session recovery takes precedence over secondary learning content.
+
+Focus Player’s beat strip is now a real visual pulse reference rather than a row of nearly invisible bars: beat numbers stay readable, the current beat has stronger contrast, and the working surface uses desktop space more effectively. On phones, the pulse stays legible without competing with the fixed Not Yet / Usable / Solid controls.
+
+Grid and MIDI setup also require less vertical scrolling on normal phones. Their compact two-column layouts retain normal input sizes and collapse to one column only on the narrowest supported widths. Wide desktop Grid Lab cells are larger for direct editing from a music-stand distance.
 ## Rudiment Lab — 2.25.0
 
 Drum profiles now include an interactive **Rudiment Lab** built on the existing exercise library. It does not create separate rudiment records: the selected sticking, mirrored lead, accent focus, subdivision, orchestration cue and tempo setup are snapshotted into a normal practice block while the source exercise ID remains intact.

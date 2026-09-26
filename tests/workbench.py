@@ -1042,6 +1042,42 @@ class Workbench(e2e.MusicPracticeTests):
         expect(minutes).to_be_enabled()
         expect(self.page.get_by_text('No tempo trainer · steady tempo',exact=True)).to_be_visible()
 
+
+    def test_72_drum_practice_surfaces_prioritize_playing_on_phone_and_desktop(self):
+        self.onboard()
+        self.route('/practice')
+        expect(self.page.locator('.drum-tool-card')).to_have_count(4)
+        for label in ('Rudiment Lab','Grid Lab','Timing Lab','MIDI Lab'):
+            expect(self.page.locator('.drum-tool-card').filter(has_text=label)).to_have_count(1)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height})
+            self.assert_bounds(width)
+            for card in self.page.locator('.drum-tool-card').all():
+                box=card.bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],44)
+
+        self.route('/drum-grid')
+        self.page.set_viewport_size({'width':390,'height':844})
+        self.assert_bounds(390)
+        grid_columns=self.page.locator('.drum-grid-controls').evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(grid_columns,2)
+
+        self.route('/midi-lab')
+        self.page.set_viewport_size({'width':390,'height':844})
+        self.assert_bounds(390)
+        midi_columns=self.page.locator('.midi-test-grid').evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(midi_columns,2)
+
+        self.route('/library/rudiment-1')
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        self.page.set_viewport_size({'width':390,'height':844})
+        beats=self.page.locator('.practice-beat')
+        expect(beats).to_have_count(4)
+        beat_box=beats.first.bounding_box();self.assertIsNotNone(beat_box);self.assertGreaterEqual(beat_box['height'],24)
+        beat_color=beats.first.evaluate("(e)=>getComputedStyle(e).color")
+        self.assertNotIn('rgba(0, 0, 0, 0)',beat_color)
+        self.assert_bounds(390)
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
