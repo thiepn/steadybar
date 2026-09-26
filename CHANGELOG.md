@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.24.0 — Hands-Free Practice Control — 2026-09-25
+
+- Centralize Focus Player keyboard / pedal input in a deterministic practice-remote command mapper rather than scattering shortcut behavior through the page.
+- Add **Page Down** as a pedal-friendly Start / Pause alias and **Page Up** as a pedal-friendly metronome toggle.
+- Fix metronome toggling during count-in: switching the click now preserves active practice and restarts the count-in instead of leaving the session paused.
+- Keep **Space** for transport, **Arrow Up / Down** for ±1 BPM and **Shift + Arrow** for ±5 BPM.
+- Add direct block-evaluation shortcuts: **1 = Not yet, 2 = Usable, 3 = Solid**. These call the normal block-completion path and retain selected limitation tags.
+- Add **R** for attempt recording, **Shift + R** for normal block restart, **N** for quick note and **F** for fullscreen.
+- Add **?** / Shift+/ to open a first-class Practice Controls reference inside Focus Player.
+- Route Shift+R through the existing recording-safe restart flow; previous segment time and attempts remain in history exactly as with the visible Restart block action.
+- Ignore shortcuts while dialogs, inputs, textareas, selects or editable content are active, and ignore Ctrl/Cmd/Alt-modified or repeated key events.
+- Prevent result shortcuts during Ready / Count-in and prevent tempo/metronome shortcuts on self-paced tasks.
+- Add `aria-keyshortcuts` to the corresponding visible Focus Player controls for assistive-technology discoverability.
+- Add browser Media Session play/pause handlers and synchronize Media Session playback state with the actual practice phase; remove handlers when Focus Player unmounts.
+- Add deterministic unit coverage for every shortcut family plus browser coverage for pedal transport, tempo changes, metronome aliases, controls help and keyboard block evaluation.
+- No persistence schema or backup-format migration is required.
 ## 2.23.0 — Grid-Aware MIDI Performance Analysis — 2026-09-25
 
 - Extend MIDI Lab with **Authored Drum Grid** scoring using the first-class Drum Grid protocol from 2.22.

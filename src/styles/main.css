@@ -831,3 +831,14 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .midi-grid-lane-summary{overflow-x:auto}
   .midi-grid-lane-head,.midi-grid-lane-row{min-width:500px}
 }
+
+
+/* Phase 24 — hands-free practice controls. */
+.practice-shortcut-list{display:grid;gap:0;min-width:min(520px,80vw);border-top:1px solid var(--border)}
+.practice-shortcut-row{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.practice-shortcut-keys{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.practice-shortcut-row>span{font-size:13px;color:var(--muted)}
+@media(max-width:520px){
+  .practice-shortcut-list{min-width:0;width:100%}
+  .practice-shortcut-row{grid-template-columns:1fr;gap:6px}
+}

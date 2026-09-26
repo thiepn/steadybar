@@ -833,6 +833,115 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_69_focus_player_hands_free_shortcuts_use_normal_practice_actions(self):
+        self.onboard(True)
+        self.page.get_by_role('button',name='Start full session',exact=True).click()
+        self.start()
+        before=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session;
+          return {phase:s.runtime.phase,bpm:s.runtime.bpm,metronome:s.runtime.metronomeOn,index:s.activeBlockIndex};
+        })()""")
+        media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
+        if media!='unsupported':self.assertEqual(media,'playing')
+        self.page.keyboard.press('PageDown')
+        expect(self.page.get_by_role('button',name='Resume practice',exact=True)).to_be_visible()
+        paused=self.read("load('practice/controller.js').practice.session.runtime.phase")
+        self.assertEqual(paused,'paused')
+        media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
+        if media!='unsupported':self.assertEqual(media,'paused')
+        self.page.keyboard.press('PageDown')
+        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
+        for _ in range(70):
+            if self.read("load('practice/controller.js').practice.session.runtime.phase")=='running':break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'running')
+        media=self.page.evaluate("'mediaSession' in navigator?navigator.mediaSession.playbackState:'unsupported'")
+        if media!='unsupported':self.assertEqual(media,'playing')
+
+        self.page.keyboard.press('ArrowUp')
+        expect(self.page.get_by_label('BPM',exact=True)).to_have_value(str(before['bpm']+1))
+        self.page.keyboard.press('Shift+ArrowDown')
+        expect(self.page.get_by_label('BPM',exact=True)).to_have_value(str(before['bpm']-4))
+
+        metro_button=self.page.get_by_role('button',name=re.compile(r'^Metronome ')).first
+        self.page.keyboard.press('m')
+        expect(metro_button).to_have_attribute('aria-pressed',str(not before['metronome']).lower())
+        for _ in range(70):
+            if self.read("load('practice/controller.js').practice.session.runtime.phase")=='running':break
+            self.page.wait_for_timeout(100)
+        after_metro=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
+        self.assertNotEqual(after_metro,before['metronome'])
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'running')
+        self.page.keyboard.press('PageUp')
+        expect(metro_button).to_have_attribute('aria-pressed',str(before['metronome']).lower())
+        for _ in range(70):
+            if self.read("load('practice/controller.js').practice.session.runtime.phase")=='running':break
+            self.page.wait_for_timeout(100)
+        restored=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
+        self.assertEqual(restored,before['metronome'])
+        self.assertEqual(self.read("load('practice/controller.js').practice.session.runtime.phase"),'running')
+        expect(self.page.locator('.focus-start')).to_have_attribute('aria-keyshortcuts','Space PageDown')
+        expect(metro_button).to_have_attribute('aria-keyshortcuts','M PageUp')
+
+        bpm_field=self.page.get_by_label('BPM',exact=True)
+        bpm_field.focus()
+        safe_before=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,bpm:s.runtime.bpm,evaluation:b.evaluation};})()""")
+        self.page.keyboard.press('1')
+        safe_after=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,bpm:s.runtime.bpm,evaluation:b.evaluation};})()""")
+        self.assertEqual(safe_after,safe_before)
+        self.page.locator('.focus-start').focus()
+
+        self.page.locator('.focus-start').evaluate("(e)=>e.dispatchEvent(new KeyboardEvent('keydown',{code:'Slash',key:'/',shiftKey:true,bubbles:true,cancelable:true}))")
+        expect(self.page.get_by_role('dialog')).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Practice controls',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Page Down',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('Finish block · Usable',exact=True)).to_be_visible()
+        self.page.keyboard.press('Escape')
+        expect(self.page.get_by_role('dialog')).to_have_count(0)
+
+        self.page.locator('.focus-start').evaluate("(e)=>e.dispatchEvent(new KeyboardEvent('keydown',{code:'Digit2',key:'2',bubbles:true,cancelable:true}))")
+        moved=None
+        for _ in range(70):
+            moved=self.read("""(()=>{
+              const s=load('practice/controller.js').practice.session,b=s.blocks[0];
+              return {index:s.activeBlockIndex,result:b.evaluation?.result,phase:s.runtime.phase};
+            })()""")
+            if moved['index']==before['index']+1 and moved['result']=='usable':break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(moved['index'],before['index']+1)
+        self.assertEqual(moved['result'],'usable')
+        self.assertEqual(moved['phase'],'ready')
+
+        self.page.keyboard.press('PageDown')
+        expect(self.page.locator('.focus-start')).to_have_attribute('aria-label','Pause practice')
+        restart_before=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {index:s.activeBlockIndex,id:b.id,count:s.blocks.length};
+        })()""")
+        self.page.locator('.focus-start').evaluate("(e)=>e.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyR',key:'R',shiftKey:true,bubbles:true,cancelable:true}))")
+        restart_after=None
+        for _ in range(70):
+            restart_after=self.read("""(()=>{
+              const s=load('practice/controller.js').practice.session,previous=s.blocks[s.activeBlockIndex-1],fresh=s.blocks[s.activeBlockIndex];
+              return {index:s.activeBlockIndex,id:fresh.id,count:s.blocks.length,phase:s.runtime.phase,previousNotes:previous?.notes??'',evaluation:fresh.evaluation};
+            })()""")
+            if restart_after['count']==restart_before['count']+1:break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(restart_after['index'],restart_before['index']+1)
+        self.assertEqual(restart_after['count'],restart_before['count']+1)
+        self.assertNotEqual(restart_after['id'],restart_before['id'])
+        self.assertIn('Restarted: time and attempts retained',restart_after['previousNotes'])
+        self.assertEqual(restart_after['phase'],'ready')
+
+        self.page.keyboard.press('3')
+        gated=self.read("""(()=>{const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];return {index:s.activeBlockIndex,evaluation:b.evaluation,phase:s.runtime.phase};})()""")
+        self.assertEqual(gated['index'],restart_after['index'])
+        self.assertIsNone(gated['evaluation'])
+        self.assertEqual(gated['phase'],'ready')
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))

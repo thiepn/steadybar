@@ -168,6 +168,13 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Hands-free practice control — 2.24.0
+
+Focus Player now has a documented keyboard / pedal control layer for practicing without repeatedly reaching for the screen. **Space** or **Page Down** starts and pauses, **Page Up** or **M** toggles the metronome, arrow keys adjust tempo, and **1 / 2 / 3** record Not yet / Usable / Solid and advance through the normal evidence path. **R** controls attempt recording, **Shift+R** restarts the current block through the same history-preserving path as the visible button, **N** opens a quick note, **F** toggles fullscreen and **?** opens the complete control reference.
+
+Page Up / Page Down are intentionally included for Bluetooth page-turn and foot pedals that emit ordinary keyboard events. Browsers that expose Media Session also receive play/pause handlers and keep hardware playback state synchronized with the current practice phase.
+
+Shortcuts are suppressed in dialogs and editable fields, modified/repeating key events are ignored, block-result keys cannot fire during Ready or Count-in, and tempo/click commands do nothing on self-paced tasks. The corresponding visible controls expose `aria-keyshortcuts` so the feature is discoverable rather than hidden.
 ## Grid-aware MIDI performance analysis — 2.23.0
 
 MIDI Drum Lab can now score an **authored Drum Grid** instead of only comparing events with a generic pulse lane. Choose the current practice grid or a saved Drum Grid exercise, then explicitly assign each active grid lane to the MIDI drum sound you will play. This lets Steadybar compare the authored rests/hits/accents with mapped electronic-kit note-on events while remaining clear about what the hardware can and cannot prove.
