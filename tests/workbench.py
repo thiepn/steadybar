@@ -868,7 +868,7 @@ class Workbench(e2e.MusicPracticeTests):
         expect(metro_button).to_have_attribute('aria-pressed',str(before['metronome']).lower())
         restored=self.read("load('practice/controller.js').practice.session.runtime.metronomeOn")
         self.assertEqual(restored,before['metronome'])
-        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_have_attribute('aria-keyshortcuts','Space PageDown')
+        expect(self.page.locator('.focus-start')).to_have_attribute('aria-keyshortcuts','Space PageDown')
         expect(metro_button).to_have_attribute('aria-keyshortcuts','M PageUp')
 
         bpm_field=self.page.get_by_label('BPM',exact=True)
