@@ -3,6 +3,7 @@ import type { PracticeProfile, PracticeProtocol, ProtocolKind, Pulse } from './p
 import { buildDrumGrid } from './drum-grid.js';
 import { buildDrumPhrase } from './drum-phrase.js';
 import { buildDrumDynamics } from './drum-dynamics.js';
+import { buildDrumMeter, drumMeterGroupingText } from './drum-meter.js';
 export const NOTE_NAMES = ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'] as const;
 export function noteName(midi:number):string{return `${NOTE_NAMES[((midi%12)+12)%12]}${Math.floor(midi/12)-1}`;}
 export function frequency(midi:number):number{return 440*2**((midi-69)/12);}
@@ -21,6 +22,7 @@ export function defaultProtocol(kind:ProtocolKind,profile:PracticeProfile):Pract
     case 'drum-grid':return buildDrumGrid('kick-displacement',80,4,0,2);
     case 'drum-phrase':return buildDrumPhrase('backbeat','alternating',80,4,4,'bar',0);
     case 'drum-dynamics':return buildDrumDynamics('ghost-backbeat',80,4,0);
+    case 'drum-meter':return buildDrumMeter('7-8-2-2-3','anchors');
     case 'repetitions':return {kind,task:'Repeat a short passage with control.',target:10};
     case 'chord-changes':return {kind,chords:['G','C','D','Em'],target:30,technique:'Slow clean changes'};
     case 'groove':return {kind,pulse:pulse(80),key:'C',style:'Straight eighths',focus:profile.instrumentType==='bass'?'muting':'time',progression:'C – F – G – C'};
@@ -39,6 +41,7 @@ export function protocolSummary(p:PracticeProtocol):string {
     case 'drum-grid':return `${p.name} · ${p.focus} · ${p.pulse.bpm} BPM · ${p.pulse.subdivision}× subdivision`;
     case 'drum-phrase':return `${p.name} · ${p.bars.length-1} setup bars + return · ${p.pulse.bpm} BPM`;
     case 'drum-dynamics':return `${p.name} · ${p.focus} · ${p.pulse.bpm} BPM · relative levels 1–3`;
+    case 'drum-meter':return `${p.pulse.beats}/${p.pulse.beatUnit} · ${drumMeterGroupingText(p.grouping)} · ${p.name} · ${p.pulse.bpm} BPM`;
     case 'repetitions':return `${p.target} clean repetitions · ${p.task}`;
     case 'chord-changes':return `${p.chords.join(' → ')} · ${p.target} clean changes`;
     case 'groove':return `${p.style} · ${p.key} · ${p.focus} · ${p.pulse.bpm} BPM`;
