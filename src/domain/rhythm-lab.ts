@@ -47,8 +47,8 @@ export function rhythmCycle(config:RhythmLabConfig):RhythmCycle{
     const offbeatPhase=config.ratio/100;
     for(let beat=0;beat<config.beats;beat++){
       const beatStart=beat*beatSeconds;
-      events.push({offsetSeconds:rounded(beatStart),layer:'primary',accent:beat===0?2:1,cyclePosition:beat*2,label:`Beat ${beat+1}`});
-      events.push({offsetSeconds:rounded(beatStart+beatSeconds*offbeatPhase),layer:'secondary',accent:1,cyclePosition:beat*2+1,label:`Beat ${beat+1} offbeat`});
+      events.push({offsetSeconds:rounded(beatStart),layer:'primary',accent:beat===0?2:1,cyclePosition:beat,label:`Beat ${beat+1}`});
+      events.push({offsetSeconds:rounded(beatStart+beatSeconds*offbeatPhase),layer:'secondary',accent:1,cyclePosition:beat,label:`Beat ${beat+1} offbeat`});
     }
     return {durationSeconds:rounded(config.beats*beatSeconds),events,divisions:config.beats*2,summary:`${swingFeelLabel(config.ratio)} · ${config.ratio.toFixed(1)}:${(100-config.ratio).toFixed(1)}`};
   }
