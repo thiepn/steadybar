@@ -15,6 +15,7 @@ test('rudiment mirroring swaps right and left in primary and grace strokes witho
   assert.equal(mirrorRudimentSticking('R L R R  lR rrL'),'L R L L  rL llR');
   assert.equal(mirrorRudimentSticking(mirrorRudimentSticking('R L R R  lR rrL')),'R L R R  lR rrL');
   assert.equal(mirrorRudimentSticking('R L custom-label'),'L R custom-label');
+  assert.equal(mirrorRudimentSticking('R K L K'),'L K R K');
 });
 
 test('rudiment accent modes mark only primary sticking positions deterministically',()=>{
