@@ -98,6 +98,13 @@ export function buildDrumMeter(
   };
 }
 
+export function cycleDrumMeterCell(protocol:Extract<PracticeProtocol,{kind:'drum-meter'}>,voice:DrumGridVoice,index:number):Extract<PracticeProtocol,{kind:'drum-meter'}>{
+  const next=structuredClone(protocol),lane=next.lanes.find(row=>row.voice===voice);
+  if(!lane||index<0||index>=lane.steps.length)return next;
+  const chars=[...lane.steps],current=chars[index];chars[index]=current==='.'?'x':current==='x'?'X':'.';lane.steps=chars.join('');
+  return next;
+}
+
 export function drumMeterText(protocol:Extract<PracticeProtocol,{kind:'drum-meter'}>):string{
   const short:Record<DrumGridVoice,string>={'right-hand':'RH','left-hand':'LH',kick:'K','hihat-foot':'HF'};
   return protocol.lanes.map(row=>`${short[row.voice]}  ${[...row.steps].map(cell=>cell==='.'?'·':cell).join(' ')}`).join('\n');
