@@ -191,7 +191,7 @@ export interface TimingLabMatchedHit {
   part: number;
 }
 export interface TimingLabResult extends Entity {
-  timingLabVersion: 1;
+  timingLabVersion: 1 | 2;
   profileId: string;
   sessionId?: string;
   blockId?: string;
@@ -215,6 +215,12 @@ export interface TimingLabResult extends Entity {
   spreadMs: number;
   driftMsPerMinute: number;
   confidence: TimingLabConfidence;
+  targetOffsetMs?: number;
+  targetBandMs?: number;
+  meanTargetErrorMs?: number;
+  medianTargetErrorMs?: number;
+  meanAbsoluteTargetErrorMs?: number;
+  targetBandHits?: number;
   hits: TimingLabMatchedHit[];
 }
 export type MidiExpectedPattern = 'subdivision' | 'beat' | 'two-four' | 'drum-grid' | 'drum-phrase';
