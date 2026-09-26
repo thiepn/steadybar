@@ -4,6 +4,7 @@ import { protocolDefinition } from '../domain/profiles.js';
 import { fretPrompt, noteName, NOTE_NAMES, patternFits, protocolSummary, scaleOffsets } from '../domain/protocols.js';
 import { drumGridStepLabels, DRUM_GRID_VOICES } from '../domain/drum-grid.js';
 import { DRUM_DYNAMIC_SURFACES, drumDynamicsLevelLabel } from '../domain/drum-dynamics.js';
+import { drumMeterGroupingText, drumMeterStepGroupStarts } from '../domain/drum-meter.js';
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { reference } from '../audio/reference.js';
 import { audio } from '../audio/engine.js';
@@ -16,7 +17,7 @@ import { el } from './dom.js';
 
 export interface TaskPanel {node:HTMLElement;update:(block:PracticeBlock)=>void;cleanup:()=>void}
 export function taskPanel(initial:PracticeBlock):TaskPanel {
-  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined,dynamicsGrid:HTMLElement|undefined,phraseTimeline:HTMLElement|undefined,phraseGrid:HTMLElement|undefined,phraseBarIndex=-1;let renderPhraseBar:((index:number)=>void)|undefined;
+  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined,dynamicsGrid:HTMLElement|undefined,meterGrid:HTMLElement|undefined,phraseTimeline:HTMLElement|undefined,phraseGrid:HTMLElement|undefined,phraseBarIndex=-1;let renderPhraseBar:((index:number)=>void)|undefined;
   const p=initial.protocolSnapshot;
   const node=el('section',{class:'protocol-task','data-protocol':p?.kind??'legacy'}),heading=el('h2',{class:'task-heading'}),cue=el('p',{class:'task-cue'}),detail=el('p',{class:'muted small'}),actions=el('div',{class:'task-actions'}),feedback=el('p',{class:'task-feedback',role:'status'}),recent=el('p',{class:'muted small task-result'});
   if(!p||p.kind==='tempo')return {node,update:()=>{},cleanup:()=>reference.stop()};
@@ -118,6 +119,16 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       }));
     node.insertBefore(dynamicsGrid,actions);
     actions.append(button('Review dynamics',()=>{ensureStarted();const step=state().step;formDialog('Dynamics review',[score('rating','Dynamic control / contrast'),textarea('note','Did the intended levels stay distinct without changing pulse, tone, or relaxation?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save review');},'secondary'));
+  }else if(p.kind==='drum-meter'){
+    const labels=drumGridStepLabels(p.pulse.beats,p.pulse.subdivision),groupStarts=new Set(drumMeterStepGroupStarts(p.grouping,p.pulse.subdivision));
+    meterGrid=el('div',{class:'focus-drum-grid focus-meter-grid',style:'--grid-steps:'+labels.length,'aria-label':`${p.pulse.beats}/${p.pulse.beatUnit} grouping ${drumMeterGroupingText(p.grouping)}`},
+      el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},drumMeterGroupingText(p.grouping)),...labels.map((label,index)=>el('span',{class:groupStarts.has(index)?'group-start':''},label))),
+      ...DRUM_GRID_VOICES.map(voice=>{
+        const lane=p.lanes.find(row=>row.voice===voice.id),steps=lane?.steps??'.'.repeat(labels.length);
+        return el('div',{class:'drum-grid-row'},el('strong',{},voice.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell ${cell==='X'?'accent':cell==='x'?'hit':'rest'} ${groupStarts.has(index)?'group-start':''}`,'data-index':index,'aria-label':`${voice.label} step ${index+1}: ${cell==='X'?'accent':cell==='x'?'hit':'rest'}`},cell==='.'?'·':cell)));
+      }));
+    node.insertBefore(meterGrid,actions);
+    actions.append(button('Review grouping',()=>{ensureStarted();const step=state().step;formDialog('Meter review',[score('rating','Grouping / pulse control'),textarea('note','Did each group stay the intended length without adding, dropping, or rushing a beat?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save review');},'secondary'));
   }else if(p.kind==='sight-reading'){
     actions.append(button('Log reading attempt',()=>{ensureStarted();const step=state().step;formDialog('Reading result',[
       input('errors','Note / rhythm errors',0,'number',{min:0,max:1000,step:1,required:true}),score('continuity','Continuity'),textarea('note','Observation','',2),
@@ -149,6 +160,11 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;
       const currentIndex=practice.beat&&['running','countin'].includes(practice.session?.runtime.phase??'')?practice.beat.beat*p.pulse.subdivision+practice.beat.part:-1;
       dynamicsGrid?.querySelectorAll<HTMLElement>('.dynamics-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
+    }
+    if(p.kind==='drum-meter'){
+      cue.textContent=`${p.pulse.beats}/${p.pulse.beatUnit} · ${drumMeterGroupingText(p.grouping)} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;
+      const currentIndex=practice.beat&&['running','countin'].includes(practice.session?.runtime.phase??'')?practice.beat.beat*p.pulse.subdivision+practice.beat.part:-1;
+      meterGrid?.querySelectorAll<HTMLElement>('.drum-grid-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
     }
     if(p.kind==='sight-reading')cue.textContent=p.material||'Choose a short passage from your own score';
     if(p.kind==='scale-cycle')cue.textContent=`${NOTE_NAMES[p.keys[state.step%p.keys.length]!]} ${p.quality.replaceAll('-',' ')} · ${p.hands==='not-applicable'?p.position:p.hands+' hands'} · ${p.octaves} octave${p.octaves===1?'':'s'}`;
