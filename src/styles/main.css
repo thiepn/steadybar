@@ -1022,3 +1022,43 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .pocket-lab-grid,.pocket-stats{grid-template-columns:1fr}
 }
 
+
+/* Phase 30 — Dynamics & Touch Lab. */
+.drum-dynamics-page{display:grid;gap:20px}
+.dynamics-setup,.dynamics-score{display:grid;gap:16px}
+.dynamics-controls{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dynamics-focus{max-width:82ch}
+.dynamics-variations{align-items:center}
+.dynamics-status{padding:10px 12px;border-left:2px solid var(--accent);background:var(--surface-soft);font-size:12px}
+.dynamics-grid-editor{display:grid;gap:4px;min-width:max-content;overflow-x:auto;padding-bottom:4px}
+.dynamics-grid-row{display:grid;grid-template-columns:58px repeat(16,40px);gap:4px;align-items:center}
+.dynamics-grid-row>strong{display:flex;align-items:center;min-height:40px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.dynamics-grid-header span{display:flex;align-items:center;justify-content:center;min-height:28px;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.button.dynamics-edit-cell{width:40px;height:40px;min-height:40px;padding:0;border:1px solid var(--border);font-family:var(--mono);font-size:12px}
+.button.dynamics-edit-cell.rest{color:var(--faint);background:var(--surface)}
+.button.dynamics-edit-cell.level-1,.focus-dynamics-grid .level-1{color:var(--muted);background:var(--surface-soft)}
+.button.dynamics-edit-cell.level-2,.focus-dynamics-grid .level-2{color:var(--text);background:var(--surface-hover);border-color:var(--border-strong);font-weight:650}
+.button.dynamics-edit-cell.level-3,.focus-dynamics-grid .level-3{color:var(--on-accent);background:var(--accent);border-color:var(--accent);font-weight:750}
+.dynamics-text{margin:10px 0 0;padding:12px;border:1px solid var(--border);background:var(--surface-soft);overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre}
+.dynamics-method{margin:0;padding-left:22px;display:grid;gap:8px;font-size:13px;color:var(--muted)}
+.focus-dynamics-grid .dynamics-cell{font-variant-numeric:tabular-nums}
+@media(min-width:1200px){.drum-tool-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
+@media(min-width:760px) and (max-width:1199px){.drum-tool-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:900px){
+  .dynamics-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dynamics-grid-editor{width:100%;min-width:0;overflow-x:hidden}
+  .dynamics-grid-row{width:100%;grid-template-columns:44px repeat(16,minmax(0,1fr));gap:2px}
+  .button.dynamics-edit-cell{width:100%;min-width:0}
+}
+@media(max-width:560px){
+  .dynamics-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+  .dynamics-controls>.field:first-child{grid-column:1/-1}
+  .dynamics-grid-row{grid-template-columns:38px repeat(16,minmax(0,1fr));gap:1px}
+  .dynamics-grid-row>strong{font-size:9px}
+  .dynamics-grid-header span{font-size:8px}
+  .button.dynamics-edit-cell{height:34px;min-height:34px;font-size:10px}
+}
+@media(max-width:359px){
+  .dynamics-controls{grid-template-columns:1fr}
+  .dynamics-controls>.field:first-child{grid-column:auto}
+}
