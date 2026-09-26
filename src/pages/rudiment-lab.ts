@@ -29,7 +29,7 @@ export function rudimentLabPage():Page{
     pageHeader('Drum practice tool','Rudiment Lab','Turn saved rudiments into focused tempo, accent and orchestration drills.'),
     empty('Switch to a drum profile','Rudiment Lab is limited to drum profiles so sticking and limb cues remain meaningful.',link('Manage practice profiles','/profiles','button primary','settings')))};
 
-  const exercises=snapshot.exercises.filter(exercise=>!exercise.archived&&exercise.profileId===profile.id&&exercise.category==='rudiment'&&exerciseProtocol(exercise).kind==='tempo'&&!!exerciseProtocol(exercise).sticking);
+  const exercises=snapshot.exercises.filter(exercise=>{const protocol=exerciseProtocol(exercise);return !exercise.archived&&exercise.profileId===profile.id&&exercise.category==='rudiment'&&protocol.kind==='tempo'&&!!protocol.sticking;});
   if(!exercises.length)return {node:el('div',{class:'page rudiment-lab-page'},pageHeader('Drum practice tool','Rudiment Lab','Interactive sticking practice.'),empty('No rudiments available','Add or restore a drum rudiment exercise with a sticking pattern first.',link('Open exercise library','/library','button primary','library')))};
 
   const clean=buildCleanTempoIndex(snapshot.sessions);
