@@ -4,6 +4,7 @@ import { deleteTimingLabResult, saveTimingLabResult } from '../app/timing-lab.js
 import { store } from '../app/store.js';
 import { activeProfile } from '../domain/profiles.js';
 import { analyzeTiming, buildExpectedTimingGrid, timingBiasLabel, timingMatchWindowMs } from '../domain/timing-analysis.js';
+import { analyzePocket, pocketErrorLabel, pocketTargetLabel } from '../domain/pocket-analysis.js';
 import type { ClickMode, MetronomeConfig, Subdivision, TimingLabResult } from '../domain/models.js';
 import { resolvedTiming, timingClickLabel } from '../audio/scheduler.js';
 import type { Page } from '../app/navigation.js';
@@ -20,31 +21,43 @@ const signed=(value:number)=>`${value>0?'+':''}${value.toFixed(1)} ms`;
 const confidenceLabel=(value:TimingLabResult['confidence'])=>value==='high'?'High measurement confidence':value==='medium'?'Medium measurement confidence':'Low measurement confidence';
 
 function resultCard(result:TimingLabResult,allowDelete=false):HTMLElement{
-  const hasMatches=result.matchedCount>0,hasSpread=result.matchedCount>1,hasDrift=result.matchedCount>2;
+  const pocket=result.timingLabVersion===2,hasMatches=result.matchedCount>0,hasSpread=result.matchedCount>1,hasDrift=result.matchedCount>2;
   const bias=hasMatches?timingBiasLabel(result.meanOffsetMs):undefined,matchRate=result.expectedCount?Math.round(result.matchedCount/result.expectedCount*100):0;
-  const card=el('article',{class:'panel timing-result-card'},
-    sectionHeader(allowDelete?'Saved test':'Latest result',`${result.bpm} BPM · ${result.subdivision}× subdivision · ${timingClickLabel({...store.snapshot().settings.metronome,bpm:result.bpm,meter:result.meter,subdivision:result.subdivision,timing:result.timingClick})}`,
+  const targetRate=pocket&&result.matchedCount?Math.round((result.targetBandHits??0)/result.matchedCount*100):0;
+  const stats=pocket?[
+    stat('Target offset',pocketTargetLabel(result.targetOffsetMs??0),signed(result.targetOffsetMs??0)),
+    stat('Average placement',hasMatches?signed(result.meanOffsetMs):'—','Grid-relative placement · negative ahead, positive behind'),
+    stat('Average target error',hasMatches?signed(result.meanTargetErrorMs??0):'—',hasMatches?titleCase(pocketErrorLabel(result.meanTargetErrorMs??0).replaceAll('-',' ')):'No matched hits'),
+    stat('Target distance',hasMatches?`${(result.meanAbsoluteTargetErrorMs??0).toFixed(1)} ms`:'—','Mean absolute distance from your chosen placement'),
+    stat('Within target band',hasMatches?`${result.targetBandHits??0} / ${result.matchedCount}`:'—',hasMatches?`${targetRate}% inside ±${result.targetBandMs??0} ms around target`:'No matched hits'),
+    stat('Spread',hasSpread?`${result.spreadMs.toFixed(1)} ms`:'—',hasSpread?'Consistency around your average placement':'Needs at least two matched hits'),
+    stat('Drift',hasDrift?`${result.driftMsPerMinute>0?'+':''}${result.driftMsPerMinute.toFixed(1)} ms/min`:'—',hasDrift?'Change in placement over the test':'Needs at least three matched hits'),
+  ]:[
+    stat('Average bias',hasMatches?signed(result.meanOffsetMs):'—',!hasMatches?'No matched hits':bias==='centered'?'Centered within ±5 ms':bias==='early'?'Negative = early':'Positive = late'),
+    stat('Typical error',hasMatches?`${result.meanAbsoluteErrorMs.toFixed(1)} ms`:'—',hasMatches?'Mean absolute distance from grid':'No matched hits'),
+    stat('Spread',hasSpread?`${result.spreadMs.toFixed(1)} ms`:'—',hasSpread?'Standard deviation of matched offsets':'Needs at least two matched hits'),
+    stat('Drift',hasDrift?`${result.driftMsPerMinute>0?'+':''}${result.driftMsPerMinute.toFixed(1)} ms/min`:'—',hasDrift?'Trend across the test':'Needs at least three matched hits'),
+  ];
+  const card=el('article',{class:`panel timing-result-card ${pocket?'pocket-result-card':''}`},
+    sectionHeader(allowDelete?(pocket?'Saved pocket test':'Saved test'):(pocket?'Latest pocket result':'Latest result'),`${result.bpm} BPM · ${result.subdivision}× subdivision · ${timingClickLabel({...store.snapshot().settings.metronome,bpm:result.bpm,meter:result.meter,subdivision:result.subdivision,timing:result.timingClick})}`,
       allowDelete?[button('Delete',async()=>{if(await confirmAction('Delete this timing result?','The saved timing diagnostics will be permanently removed.','Delete result',true))await deleteTimingLabResult(result.id);},'ghost danger-text')]:[]),
-    el('div',{class:'tag-row'},badge(confidenceLabel(result.confidence),result.confidence==='high'?'accent':'neutral'),badge(`${matchRate}% matched`),badge(`${result.misses} missed`),badge(`${result.extras} extra`)),
-    el('div',{class:'stats-strip timing-stats'},
-      stat('Average bias',hasMatches?signed(result.meanOffsetMs):'—',!hasMatches?'No matched hits':bias==='centered'?'Centered within ±5 ms':bias==='early'?'Negative = early':'Positive = late'),
-      stat('Typical error',hasMatches?`${result.meanAbsoluteErrorMs.toFixed(1)} ms`:'—',hasMatches?'Mean absolute distance from grid':'No matched hits'),
-      stat('Spread',hasSpread?`${result.spreadMs.toFixed(1)} ms`:'—',hasSpread?'Standard deviation of matched offsets':'Needs at least two matched hits'),
-      stat('Drift',hasDrift?`${result.driftMsPerMinute>0?'+':''}${result.driftMsPerMinute.toFixed(1)} ms/min`:'—',hasDrift?'Trend across the test':'Needs at least three matched hits')),
-    el('p',{class:'field-hint'},`Matched ${result.matchedCount} of ${result.expectedCount} expected hits inside a ±${result.matchWindowMs} ms window. Input compensation: ${result.inputOffsetMs} ms. These metrics describe detected timing only; they are not a musicianship score.`));
+    el('div',{class:'tag-row'},badge(confidenceLabel(result.confidence),result.confidence==='high'?'accent':'neutral'),badge(`${matchRate}% matched`),pocket?badge(`${targetRate}% target band`):null,badge(`${result.misses} missed`),badge(`${result.extras} extra`)),
+    el('div',{class:`stats-strip timing-stats ${pocket?'pocket-stats':''}`},...stats),
+    el('p',{class:'field-hint'},pocket
+      ?`Matched ${result.matchedCount} of ${result.expectedCount} expected hits. Grid placement is still preserved; target diagnostics compare those matched hits with ${pocketTargetLabel(result.targetOffsetMs??0)} inside your ±${result.targetBandMs??0} ms band. Input compensation: ${result.inputOffsetMs} ms. This is a placement diagnostic, not a definition of good groove.`
+      :`Matched ${result.matchedCount} of ${result.expectedCount} expected hits inside a ±${result.matchWindowMs} ms window. Input compensation: ${result.inputOffsetMs} ms. These metrics describe detected timing only; they are not a musicianship score.`));
   if(result.hits.length){
-    const limit=Math.max(result.matchWindowMs,20);
+    const target=pocket?result.targetOffsetMs??0:0,limit=Math.max(result.matchWindowMs,Math.abs(target)+(result.targetBandMs??0)+10,20);
     const plot=el('div',{class:'timing-offset-plot','aria-hidden':'true'},el('div',{class:'timing-zero-line'}));
+    if(pocket){const targetY=50-clamp(target/limit,-1,1)*42;plot.append(el('div',{class:'timing-target-line',style:`top:${targetY}%`}));}
     for(const hit of result.hits){
-      const x=result.durationSeconds?clamp(hit.elapsedMs/(result.durationSeconds*1000)*100,0,100):0;
-      const y=50-clamp(hit.offsetMs/limit,-1,1)*42;
-      plot.append(el('span',{class:`timing-hit-dot ${hit.offsetMs<-5?'early':hit.offsetMs>5?'late':'centered'}`,style:`left:${x}%;top:${y}%`}));
+      const x=result.durationSeconds?clamp(hit.elapsedMs/(result.durationSeconds*1000)*100,0,100):0,y=50-clamp(hit.offsetMs/limit,-1,1)*42,relative=pocket?hit.offsetMs-target:hit.offsetMs;
+      plot.append(el('span',{class:`timing-hit-dot ${pocket?(relative<-2?'early':relative>2?'late':'centered'):(hit.offsetMs<-5?'early':hit.offsetMs>5?'late':'centered')}`,style:`left:${x}%;top:${y}%`}));
     }
-    card.append(el('div',{class:'timing-plot-wrap'},el('div',{class:'split'},el('strong',{},'Offset over time'),el('span',{class:'muted small'},'up = late · down = early')),plot));
+    card.append(el('div',{class:'timing-plot-wrap'},el('div',{class:'split'},el('strong',{},pocket?'Placement over time':'Offset over time'),el('span',{class:'muted small'},pocket?'target line = chosen feel · dots above/below are later/earlier':'up = late · down = early')),plot));
   }
   return card;
 }
-
 export function timingLabPage():Page{
   const snapshot=store.snapshot(),profile=activeProfile(snapshot);
   let config:MetronomeConfig={...structuredClone(snapshot.settings.metronome),countIn:1,timing:resolvedTiming(snapshot.settings.metronome)};
