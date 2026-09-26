@@ -1,4 +1,5 @@
 import type { TimingLabMatchedHit } from './models.js';
+import { analyzeTiming, type TimingAnalysis, type TimingDetectedHit, type TimingExpectedHit } from './timing-analysis.js';
 
 export interface PocketAnalysis {
   targetOffsetMs:number;
@@ -43,3 +44,33 @@ export function pocketTargetLabel(offsetMs:number):string{
 export function pocketErrorLabel(errorMs:number):'earlier-than-target'|'on-target'|'later-than-target'{
   return errorMs<-2?'earlier-than-target':errorMs>2?'later-than-target':'on-target';
 }
+
+export interface PocketTimingAnalysis {
+  timing:TimingAnalysis;
+  pocket:PocketAnalysis;
+}
+
+export function analyzePocketTiming(
+  expected:readonly TimingExpectedHit[],
+  detected:readonly TimingDetectedHit[],
+  inputOffsetMs:number,
+  targetOffsetMs:number,
+  targetBandMs:number,
+  matchWindowMs?:number,
+):PocketTimingAnalysis{
+  analyzePocket([],targetOffsetMs,targetBandMs);
+  const shiftedDetected=detected.map(hit=>({...hit,time:hit.time-targetOffsetMs/1000}));
+  const relative=analyzeTiming(expected,shiftedDetected,inputOffsetMs,matchWindowMs);
+  const hits=relative.hits.map(hit=>({...hit,offsetMs:round1(hit.offsetMs+targetOffsetMs)}));
+  const offsets=hits.map(hit=>hit.offsetMs),average=mean(offsets);
+  const spread=Math.sqrt(mean(offsets.map(value=>(value-average)**2)));
+  const timing:TimingAnalysis={
+    ...relative,hits,
+    meanOffsetMs:round1(average),
+    medianOffsetMs:round1(median(offsets)),
+    meanAbsoluteErrorMs:round1(mean(offsets.map(Math.abs))),
+    spreadMs:round1(spread),
+  };
+  return {timing,pocket:analyzePocket(hits,targetOffsetMs,targetBandMs)};
+}
+
