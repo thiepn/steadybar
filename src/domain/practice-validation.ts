@@ -33,6 +33,14 @@ export const validateProtocol:Validator<PracticeProtocol>=(v,p='Protocol')=>{
       if(!landing.lanes.some(lane=>lane.steps[0]==='x'||lane.steps[0]==='X'))fail(p,'drum phrase return bar needs at least one hit on beat 1');
       return r;
     }
+    case 'drum-dynamics':{
+      const lane=obj({surface:one('snare','hihat','kick','ride','tom'),steps:text(64,1)});
+      const r=obj({kind:one('drum-dynamics'),pulse,name:text(160,1),focus:text(2000,1),lanes:arr(lane,5)})(v,p),expected=r.pulse.beats*r.pulse.subdivision;
+      if(!r.lanes.length||new Set(r.lanes.map(row=>row.surface)).size!==r.lanes.length)fail(p,'drum dynamics lanes must use unique kit surfaces');
+      if(r.lanes.some(row=>row.steps.length!==expected||!/^[.123]+$/.test(row.steps)))fail(p,'drum dynamics steps must match the pulse length and use only ., 1, 2, or 3');
+      if(!r.lanes.some(row=>/[123]/.test(row.steps)))fail(p,'drum dynamics score needs at least one active hit');
+      return r;
+    }
     case 'repetitions':return obj({kind:one('repetitions'),task:text(),target:num(1,10000,true),pulse:optional(pulse)})(v,p);
     case 'chord-changes':{const r=obj({kind:one('chord-changes'),chords:arr(text(40,1),24),target:num(1,10000,true),technique:text(1000),pulse:optional(pulse)})(v,p);if(r.chords.length<2)fail(p,'choose at least two chords');return r;}
     case 'groove':return obj({kind:one('groove'),pulse,key:text(40),style:text(200),focus:one('time','muting','articulation','coordination'),progression:text(1000)})(v,p);
@@ -64,10 +72,10 @@ export const validateProtocolState:Validator<ProtocolState>=obj({step:num(0,1000
 export function assertProtocolCompatible(p:PracticeProtocol,profile:PracticeProfile):void {
   if(!supportedProtocols(profile).some(s=>s.id===p.kind))fail('Protocol',`${p.kind} is not supported by this profile family`);
   if(p.kind==='tempo'&&p.sticking&&profile.family!=='percussion')fail('Protocol','sticking is only available for percussion');
-  if((p.kind==='drum-grid'||p.kind==='drum-phrase')&&profile.family!=='percussion')fail('Protocol','drum grid and phrase tasks are only available for percussion profiles');
+  if((p.kind==='drum-grid'||p.kind==='drum-phrase'||p.kind==='drum-dynamics')&&profile.family!=='percussion')fail('Protocol','drum grid, phrase and dynamics tasks are only available for percussion profiles');
 }
 export function assertOutcomeMatches(outcome:ProtocolOutcome,protocol:PracticeProtocol):void {
-  const map:Record<PracticeProtocol['kind'],readonly ProtocolOutcome['kind'][]>={free:['reflection'],tempo:['reflection'],'drum-grid':['reflection'],'drum-phrase':['reflection'],repetitions:['count'],'chord-changes':['count'],groove:['groove'],'scale-cycle':['scale'],fretboard:['recall'],'vocal-pattern':['voice'],'pitch-match':['pitch'],'sight-reading':['reading'],repertoire:['reflection']};
+  const map:Record<PracticeProtocol['kind'],readonly ProtocolOutcome['kind'][]>={free:['reflection'],tempo:['reflection'],'drum-grid':['reflection'],'drum-phrase':['reflection'],'drum-dynamics':['reflection'],repetitions:['count'],'chord-changes':['count'],groove:['groove'],'scale-cycle':['scale'],fretboard:['recall'],'vocal-pattern':['voice'],'pitch-match':['pitch'],'sight-reading':['reading'],repertoire:['reflection']};
   if(!map[protocol.kind].includes(outcome.kind))fail('Outcome','result does not belong to this protocol');
   if(outcome.kind==='count'&&outcome.protocol!==protocol.kind)fail('Outcome','count result belongs to a different protocol');
   if(outcome.kind==='scale'&&protocol.kind==='scale-cycle'&&(!protocol.keys.includes(outcome.key)||outcome.hands!==protocol.hands||outcome.quality!==protocol.quality))fail('Outcome','scale result does not match the exercise');
