@@ -15,6 +15,17 @@ import { trainerDialog } from '../ui/editors.js';
 
 type LeadMode='original'|'mirror';
 type OrchestrationMode='pad'|'split-hands'|'group-surfaces'|'free';
+interface RudimentLabDraft {
+  exerciseId:string;
+  lead:LeadMode;
+  accent:RudimentAccentMode;
+  orchestration:OrchestrationMode;
+  subdivision:Subdivision;
+  bpm:number;
+  minutes:number;
+  trainer?:TrainerConfig;
+}
+const rudimentDrafts=new Map<string,RudimentLabDraft>();
 
 const orchestrationOptions:[OrchestrationMode,string,string][]=[
   ['pad','Pad / snare only','Keep every primary stroke on one surface.'],
@@ -33,9 +44,10 @@ export function rudimentLabPage():Page{
   if(!exercises.length)return {node:el('div',{class:'page rudiment-lab-page'},pageHeader('Drum practice tool','Rudiment Lab','Interactive sticking practice.'),empty('No rudiments available','Add or restore a drum rudiment exercise with a sticking pattern first.',link('Open exercise library','/library','button primary','library')))};
 
   const clean=buildCleanTempoIndex(snapshot.sessions);
-  let exercise=exercises[0]!,lead:LeadMode='original',accent:RudimentAccentMode='none',orchestration:OrchestrationMode='pad',trainer:TrainerConfig|undefined,previewing=false,disposed=false;
+  const savedDraft=rudimentDrafts.get(profile.id);
+  let exercise=exercises.find(row=>row.id===savedDraft?.exerciseId)??exercises[0]!,lead:LeadMode=savedDraft?.lead??'original',accent:RudimentAccentMode=savedDraft?.accent??'none',orchestration:OrchestrationMode=savedDraft?.orchestration??'pad',trainer:TrainerConfig|undefined=savedDraft?.trainer?structuredClone(savedDraft.trainer):undefined,previewing=false,disposed=false;
   const initialProtocol=exerciseProtocol(exercise);
-  let subdivision=(initialProtocol.kind==='tempo'&&initialProtocol.pulse.subdivision>1?initialProtocol.pulse.subdivision:4) as Subdivision;
+  let subdivision=(savedDraft?.subdivision??(initialProtocol.kind==='tempo'&&initialProtocol.pulse.subdivision>1?initialProtocol.pulse.subdivision:4)) as Subdivision;
 
   const page=el('div',{class:'page rudiment-lab-page'},pageHeader('Drum technique workstation','Rudiment Lab',profile.name+' · Visualize sticking, reverse the lead, shape accents, attach tempo training, and launch the exact variant.',[
     link('Drum Grid Lab','/drum-grid','button secondary','routine'),link('MIDI Drum Lab','/midi-lab','button secondary','pulse'),
@@ -45,8 +57,8 @@ export function rudimentLabPage():Page{
   const accentSelect=select('rudimentAccent','Accent focus',[['none','Even primary strokes'],['group-start','Accent group starts'],['every-fourth','Accent every fourth position']],accent);
   const subdivisionSelect=select('rudimentSubdivision','Stroke subdivision',[['2','Eighth-note grid'],['3','Triplet grid'],['4','Sixteenth-note grid']],String(subdivision));
   const orchestrationSelect=select('rudimentOrchestration','Orchestration',orchestrationOptions.map(([value,label])=>[value,label] as [string,string]),orchestration);
-  const bpm=input('rudimentBpm','BPM',exerciseBpm(exercise)??80,'number',{min:20,max:300,step:1,required:true});
-  const minutes=input('rudimentMinutes','Practice minutes',8,'number',{min:1,max:180,step:1,required:true});
+  const bpm=input('rudimentBpm','BPM',savedDraft?.bpm??exerciseBpm(exercise)??80,'number',{min:20,max:300,step:1,required:true});
+  const minutes=input('rudimentMinutes','Practice minutes',savedDraft?.minutes??8,'number',{min:1,max:180,step:1,required:true});
   const visual=el('div',{class:'rudiment-visual',role:'group','aria-label':'Rudiment sticking visualization'}),stickingText=el('p',{class:'rudiment-sticking-text'}),cue=el('p',{class:'pre-line rudiment-cue'}),trainerStatus=el('p',{class:'rudiment-trainer-status muted small'}),previewStatus=el('p',{class:'rudiment-preview-status',role:'status'},'Ready.');
   const best=el('div',{class:'stats-strip rudiment-stats'});
   let previewButton!:HTMLButtonElement;
@@ -55,6 +67,12 @@ export function rudimentLabPage():Page{
   const orchestrationCue=()=>orchestrationOptions.find(([value])=>value===orchestration)?.[2]??'';
   const trainerSummary=()=>{if(!trainer)return 'No tempo trainer · steady tempo';const target=trainerTargetSeconds(trainer);return `${trainer.mode.replaceAll('-',' ')} · ${trainerLabel(trainer,0,0)}${target!==undefined?` · ${Math.round(target)} sec total`:''}`;};
   const effectiveStartBpm=()=>trainer?trainerBpm(trainer,0,0):Number(bpm.querySelector<HTMLInputElement>('input')!.value);
+  const persistDraft=()=>rudimentDrafts.set(profile.id,{
+    exerciseId:exercise.id,lead,accent,orchestration,subdivision,
+    bpm:Number(bpm.querySelector<HTMLInputElement>('input')!.value),
+    minutes:Number(minutes.querySelector<HTMLInputElement>('input')!.value),
+    trainer:trainer?structuredClone(trainer):undefined,
+  });
 
   const previewConfig=():MetronomeConfig=>{
     const base=store.snapshot().settings.metronome,bpmValue=effectiveStartBpm(),source=exerciseProtocol(exercise);
@@ -88,6 +106,7 @@ export function rudimentLabPage():Page{
     const bpmControl=bpm.querySelector<HTMLInputElement>('input')!,minutesControl=minutes.querySelector<HTMLInputElement>('input')!,finiteTrainer=trainer?trainerTargetSeconds(trainer):undefined;
     bpmControl.disabled=!!trainer;minutesControl.disabled=finiteTrainer!==undefined;
     if(trainer)bpmControl.value=String(effectiveStartBpm());
+    persistDraft();
     const bestClean=clean.get(exercise.id);
     best.replaceChildren(stat('Starting tempo',`${effectiveStartBpm()} BPM`,trainer?'Trainer start':'Current setup'),stat('Best clean',bestClean?`${bestClean} BPM`:'—','Recorded clean / effortless attempts'),stat('Subdivision',rudimentSubdivisionLabel(subdivision)),stat('Positions',String(rows.length),'Primary sticking positions; grace notes shown separately'));
   };
@@ -106,6 +125,7 @@ export function rudimentLabPage():Page{
   orchestrationSelect.addEventListener('change',()=>{orchestration=orchestrationSelect.querySelector('select')!.value as OrchestrationMode;render();});
   subdivisionSelect.addEventListener('change',()=>{subdivision=Number(subdivisionSelect.querySelector('select')!.value) as Subdivision;if(previewing){stopPreview();previewStatus.textContent='Subdivision changed · restart preview when ready.';}render();});
   bpm.addEventListener('change',()=>{const control=bpm.querySelector<HTMLInputElement>('input')!;if(!control.reportValidity())return;if(previewing)void audio.update(previewConfig());render();});
+  minutes.addEventListener('change',()=>{const control=minutes.querySelector<HTMLInputElement>('input')!;if(control.reportValidity())persistDraft();});
 
   const configureTrainer=()=>trainerDialog(trainer,async config=>{trainer=config;bpm.querySelector<HTMLInputElement>('input')!.value=String(trainerBpm(config,0,0));if(previewing)stopPreview();render();notify('Tempo trainer attached to this rudiment variant.');},Number(bpm.querySelector<HTMLInputElement>('input')!.value));
   const clearTrainer=()=>{trainer=undefined;bpm.querySelector<HTMLInputElement>('input')!.disabled=false;minutes.querySelector<HTMLInputElement>('input')!.disabled=false;if(previewing)stopPreview();render();previewStatus.textContent='Tempo trainer removed.';};
@@ -116,8 +136,8 @@ export function rudimentLabPage():Page{
     return {...base,targetSeconds:durationSeconds,bpm:bpmValue,tempoTrainer:trainer?structuredClone(trainer):undefined,notes:[rudimentAccentCue(accent),orchestrationCue()].join('\n'),protocol:{...structuredClone(source),pulse:{...source.pulse,bpm:bpmValue,subdivision},sticking:currentSticking(),orchestration:orchestrationCue(),technique:[exercise.instructions,rudimentAccentCue(accent)].filter(Boolean).join(' ')}};
   };
   const validateSetup=()=>{const bpmControl=bpm.querySelector<HTMLInputElement>('input')!,minutesControl=minutes.querySelector<HTMLInputElement>('input')!;return (bpmControl.disabled||bpmControl.reportValidity())&&(minutesControl.disabled||minutesControl.reportValidity());};
-  const start=async()=>{if(!validateSetup())return;stopPreview();await launchPractice([practiceBlock()]);};
-  const add=async()=>{if(!validateSetup())return;await addToday(practiceBlock());notify('Rudiment variant added to Today.');};
+  const start=async()=>{if(!validateSetup())return;persistDraft();stopPreview();await launchPractice([practiceBlock()]);};
+  const add=async()=>{if(!validateSetup())return;persistDraft();await addToday(practiceBlock());notify('Rudiment variant added to Today.');};
 
   const setup=el('section',{class:'panel rudiment-setup'},sectionHeader('Rudiment setup','The source exercise stays unchanged; this practice variant is snapshotted when launched.'),
     el('div',{class:'form-grid rudiment-controls'},rudimentSelect,leadSelect,accentSelect,subdivisionSelect,orchestrationSelect,bpm,minutes),
