@@ -35,7 +35,7 @@ export function drumDynamicsPage():Page{
 
   const activeLane=(surface:DrumDynamicSurface)=>protocol.lanes.find(lane=>lane.surface===surface);
   const render=()=>{
-    const labels=drumGridStepLabels(protocol.pulse.beats,protocol.pulse.subdivision);
+    const labels=drumGridStepLabels(protocol.pulse.beats,protocol.pulse.subdivision);gridHost.style.setProperty('--dyn-steps',String(labels.length));
     variationText.textContent='Variation '+(variation+1);focus.textContent=protocol.focus;notation.textContent=drumDynamicsText(protocol);
     gridHost.replaceChildren(el('div',{class:'dynamics-grid-row dynamics-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))));
     for(const surface of DRUM_DYNAMIC_SURFACES){
