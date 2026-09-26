@@ -92,17 +92,25 @@ export function rhythmLabPage():Page{
     });
     if(disposed){rhythmAudio.stop();return;}running=true;startButton.querySelector('span')!.textContent='Pause Rhythm Lab';startButton.setAttribute('aria-pressed','true');status.textContent='Count-in…';
   };
-  startButton=button('Start Rhythm Lab',start,'primary rhythm-start','play');startButton.setAttribute('aria-pressed','false');
-  primaryButton=button('Primary on',()=>toggleLayer('primary'),'secondary','volume');secondaryButton=button('Secondary on',()=>toggleLayer('secondary'),'secondary','volume');
+  startButton=button('Start Rhythm Lab',start,'primary rhythm-start','play');startButton.setAttribute('aria-pressed','false');startButton.setAttribute('aria-keyshortcuts','Space');
+  primaryButton=button('Primary on',()=>toggleLayer('primary'),'secondary','volume');secondaryButton=button('Secondary on',()=>toggleLayer('secondary'),'secondary','volume');primaryButton.setAttribute('aria-keyshortcuts','1');secondaryButton.setAttribute('aria-keyshortcuts','2');
   const tap=button('Tap tempo',()=>{const result=tapTempo(taps,performance.now());taps=result.taps;if(result.bpm){bpm.value=String(result.bpm);setupChanged();status.textContent=`${result.bpm} BPM from ${taps.length} taps.`;}else status.textContent=`${taps.length} tap${taps.length===1?'':'s'} · keep going.`;},'ghost','pulse');
   const tempoSteps=el('div',{class:'actions wrap rhythm-tempo-steps'},...[-5,-1,1,5].map(step=>button(step>0?`+${step}`:`−${Math.abs(step)}`,()=>{bpm.value=String(Math.max(20,Math.min(300,Number(bpm.value)+step)));setupChanged();},'ghost compact')));
-  const transport=el('section',{class:'panel rhythm-transport'},sectionHeader('Pulse','Changes stop playback so the next start always follows one deterministic score.'),el('div',{class:'form-grid rhythm-common-grid'},field('BPM',bpm),countIn,field('Volume',volume)),tempoSteps,el('div',{class:'actions wrap'},tap,startButton,primaryButton,secondaryButton),status);
+  const transport=el('section',{class:'panel rhythm-transport'},sectionHeader('Pulse','Changes stop playback so the next start always follows one deterministic score.'),el('div',{class:'form-grid rhythm-common-grid'},field('BPM',bpm),countIn,el('div',{class:'rhythm-volume-field'},field('Volume',volume),volumeText)),tempoSteps,el('div',{class:'actions wrap'},tap,startButton,primaryButton,secondaryButton),status);
   const training=el('section',{class:'panel rhythm-training'},sectionHeader('Training pattern','Start with both layers, then mute support without changing the underlying pulse.'),modeSelect,settingsHost,summary,cue);
   const visualPanel=el('section',{class:'panel rhythm-visual-panel'},sectionHeader('Cycle','Visuals mirror the audio clock; they never determine click timing.'),visual);
   const method=el('section',{class:'panel'},sectionHeader('Practice method','Stability first, complexity second.'),el('ol',{class:'rhythm-method'},el('li',{},'Establish the quarter-note pulse before adding the second layer or moving the offbeat.'),el('li',{},'Change one variable at a time: tempo, swing ratio, subdivision stage, or polyrhythm ratio.'),el('li',{},'Use the layer buttons to remove support while keeping the same internal pulse.'),el('li',{},'If the pulse bends when density changes, lower BPM before adding complexity.'),el('li',{},'Rhythm Lab describes timing relationships; it does not claim one swing ratio or polyrhythm feel is universally better.')));
   modeSelect.addEventListener('change',()=>{mode=modeSelect.querySelector('select')!.value as RhythmMode;primaryOn=true;secondaryOn=true;setupChanged();renderSettings();});
   bpm.addEventListener('change',()=>{if(bpm.reportValidity())setupChanged();});countIn.addEventListener('change',setupChanged);volume.addEventListener('input',()=>{volumeText.textContent=`${Math.round(Number(volume.value)*100)}%`;rhythmAudio.setVolume(Number(volume.value));});
   swingBeats.addEventListener('change',setupChanged);swingRatio.addEventListener('input',setupChanged);switchBeats.addEventListener('change',setupChanged);sequence.addEventListener('change',setupChanged);barsPerStage.addEventListener('change',setupChanged);polyRatio.addEventListener('change',setupChanged);
-  page.append(el('div',{class:'two-column wide-left'},training,transport),visualPanel,method);renderSettings();
-  return {node:page,beforeLeave:async()=>!running||await confirmAction('Leave Rhythm Lab?','Playback will stop.','Leave Rhythm Lab'),isDirty:()=>running,cleanup:()=>{disposed=true;stop();}};
+  const key=(event:KeyboardEvent)=>{
+    if(event.ctrlKey||event.metaKey||event.altKey||event.repeat)return;
+    const target=event.target as HTMLElement;if(document.querySelector('dialog[open]')||target.closest('input,textarea,select,[contenteditable=true]'))return;
+    if(event.code==='Space'&&!target.closest('button,a')){event.preventDefault();void start().catch(error=>notify(error instanceof Error?error.message:'Rhythm Lab could not start.','error'));return;}
+    if(event.key==='ArrowUp'||event.key==='ArrowDown'){event.preventDefault();bpm.value=String(Math.max(20,Math.min(300,Number(bpm.value)+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?5:1))));setupChanged();return;}
+    if(event.key==='1'){event.preventDefault();toggleLayer('primary');}
+    else if(event.key==='2'){event.preventDefault();toggleLayer('secondary');}
+  };
+  page.append(el('div',{class:'two-column wide-left'},training,transport),visualPanel,method);renderSettings();render();window.addEventListener('keydown',key);
+  return {node:page,beforeLeave:async()=>!running||await confirmAction('Leave Rhythm Lab?','Playback will stop.','Leave Rhythm Lab'),isDirty:()=>running,cleanup:()=>{disposed=true;stop();window.removeEventListener('keydown',key);}};
 }
