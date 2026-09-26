@@ -2,6 +2,7 @@ import type { Data, Exercise, Routine, RoutineBlock } from '../domain/models.js'
 import type { Experience, PracticeProfile, PracticeProtocol } from '../domain/practice-types.js';
 import { definition } from '../domain/profiles.js';
 import { defaultProtocol, exerciseProtocol, protocolPulse, pulse } from '../domain/protocols.js';
+import { buildDrumDynamics } from '../domain/drum-dynamics.js';
 import { skillIdForExercise } from '../domain/skill-graph.js';
 import { seedData } from './seed.js';
 
@@ -167,6 +168,12 @@ export function starterContent(profile:PracticeProfile):{exercises:Exercise[];ro
   if(profile.instrumentType==='drums'){
     const legacy=seedData(timestamp);const canonical=profile.id==='profile-drums';
     exercises=legacy.exercises.map(e=>({...e,...base,category:e.category,tags:[...new Set([...e.tags,'starter'])],id:canonical?e.id:`${profile.id}.${e.id}`,skillArea:e.category==='rudiment'?'rudiments':e.category,protocol:exerciseProtocol(e),level:'beginner'}));
+    const dynamicsRows=[
+      ['dynamics-1','Accent / Tap Control','Move strong strokes through a soft stream without letting the taps rise or the accents pull the pulse.',buildDrumDynamics('accent-tap',72,4,0),'beginner'],
+      ['dynamics-2','Ghost Notes + Backbeat','Keep ghost notes clearly below the backbeat while the timekeeping and kick voices stay stable.',buildDrumDynamics('ghost-backbeat',76,4,0),'intermediate'],
+      ['dynamics-3','Voice Balance','Hold a repeatable hierarchy between timekeeping, backbeat and kick instead of letting one voice dominate the groove.',buildDrumDynamics('voice-balance',80,4,0),'intermediate'],
+    ] as const;
+    exercises.push(...dynamicsRows.map(([rawId,name,instructions,protocol,level])=>({...base,id:canonical?rawId:`${profile.id}.${rawId}`,name,category:'technique' as const,skillArea:'dynamics',description:instructions,instructions,protocol:structuredClone(protocol),level,tags:['starter','dynamics','touch'],primarySkillId:'drums.dynamics',secondarySkillIds:['drums.technique','drums.timing','drums.groove']})));
     oldRoutines=legacy.routines.map(r=>({...r,profileId:profile.id,id:canonical?r.id:`${profile.id}.${r.id}`,blocks:r.blocks.map(b=>({...b,profileId:profile.id,exerciseId:b.exerciseId?(canonical?b.exerciseId:`${profile.id}.${b.exerciseId}`):undefined}))}));
   }else{
     const fallback:ContentRow[]=[['Prepare and warm up','warmup','Choose a familiar, low-effort task appropriate to your instrument. Stop if it causes pain or strain.',free('Familiar gentle preparation')],['Clean passage repetitions','technique','Choose a short task from your own material. Count clean attempts after each round.',rep('A short familiar passage')],['First-read practice','reading','Use new material from your own score and distinguish first reading from rehearsal.',reading('Your own new short score')],['Repertoire phrase','repertoire','Select a short phrase, define one musical goal and reflect after playing.',repertoire('A phrase from your own repertoire')],['Contextual repair window','technique','Practice one difficult event with a short entrance and exit so the real movement and recovery are included.',repertoire('Contextual repair window')],['Complete take and repair','repertoire','Complete one bounded take, choose one observable repair, then retake the same material without changing the criterion.',repertoire('Take → repair → retake')],['Later-day repertoire check','repertoire','Attempt a previously repaired passage before extended repetition and record what remains dependable.',repertoire('Later-day repertoire check')]];

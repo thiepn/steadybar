@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {seedData} from '../dist/app/db/seed.js';
-import {starterContent} from '../dist/app/db/profile-content.js';
+import {starterContent,reconcileStarterContent} from '../dist/app/db/profile-content.js';
 import {migratePracticeData} from '../dist/app/db/profile-migration.js';
 import {PROFILE_DEFINITIONS,FAMILIES,activeProfile,definition,practiceProfiles,supportedProtocols,profileView} from '../dist/app/domain/profiles.js';
 import {defaultProtocol,exerciseProtocol,protocolPulse,frequency,noteName,parseNote,fretPrompt,patternFits,scaleOffsets} from '../dist/app/domain/protocols.js';
@@ -19,7 +19,7 @@ const dataset=type=>{const p=profile(type),c=starterContent(p),data=migratePract
 const block=e=>({id:'b',profileId:e.profileId,type:'exercise',exerciseId:e.id,title:e.name,targetSeconds:60,bpm:protocolPulse(exerciseProtocol(e))?.bpm,notes:'',order:0});
 const result=extra=>({id:'r',timestamp:at,note:'',source:'self-report',...extra});
 const complete=(data,e,r)=>{const s=createSession([block(e)],data);s.blocks[0].outcomes=r?[r]:[];s.blocks[0].actualActiveSeconds=60;return finishBlock(s);};
-const baseCounts={drums:36,guitar:36,bass:31,piano:36,voice:31};
+const baseCounts={drums:39,guitar:36,bass:31,piano:36,voice:31};
 for(const type of Object.keys(baseCounts)){
  test(`${type}: original starter library validates with distinct skills and protocols`,()=>{
   const d=dataset(type);assert.equal(d.exercises.length,baseCounts[type]);assert.ok(new Set(d.exercises.map(e=>e.skillArea)).size>=5);
@@ -40,6 +40,18 @@ for(const type of Object.keys(baseCounts)){
   const p=profile(type),a=starterContent(p),b=starterContent({...p,id:p.id+'-second'});assert.equal(a.exercises.filter(e=>b.exercises.some(o=>o.id===e.id)).length,0);
  });
 }
+test('drum starter content ships dedicated dynamics scores and reconciliation never overwrites user edits',()=>{
+ const d=dataset('drums'),dynamic=d.exercises.filter(e=>e.skillArea==='dynamics');
+ assert.equal(dynamic.length,3);assert.deepEqual(dynamic.map(e=>e.id.split('.').at(-1)).sort(),['dynamics-1','dynamics-2','dynamics-3']);
+ for(const e of dynamic){assert.equal(e.primarySkillId,'drums.dynamics');assert.equal(e.protocol.kind,'drum-dynamics');assertProtocolCompatible(e.protocol,d.profiles[0]);}
+ const existing=d.exercises.find(e=>e.id.endsWith('rudiment-1'));assert.ok(existing);existing.name='User-edited single strokes';
+ const existingId=existing.id;d.exercises=d.exercises.filter(e=>!/dynamics-\d+$/.test(e.id));
+ const reconciled=reconcileStarterContent(d);
+ assert.equal(reconciled.exercises.find(e=>e.id===existingId).name,'User-edited single strokes');
+ assert.equal(reconciled.exercises.filter(e=>/dynamics-\d+$/.test(e.id)).length,3);
+ assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
+});
+
 test('drum grid generator is deterministic, bounded and valid across subdivisions',()=>{
  for(const subdivision of [1,2,3,4])for(const preset of ['accent-grid','kick-displacement','linear-flow','four-limb-cycle','independence']){
   const a=buildDrumGrid(preset,96,subdivision,3,5),b=buildDrumGrid(preset,96,subdivision,3,5);
