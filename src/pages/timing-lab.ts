@@ -140,7 +140,8 @@ export function timingLabPage(mode:'timing'|'pocket'='timing'):Page{
             const elapsed=Math.min(durationSeconds,(performance.now()-started)/1000),clock=live.querySelector('.timing-live-clock');
             if(clock)clock.textContent=elapsed.toFixed(1);
           },100);
-          finishTimer=setTimeout(()=>{void finish(true).catch(error=>notify(error instanceof Error?error.message:`${pocketMode?'Pocket':'Timing'} result could not be saved.`,'error'));},durationSeconds*1000+80);
+          const tailMs=pocketMode?Math.max(80,Math.max(0,runningTargetOffset)+timingMatchWindowMs(testConfig)+20):80;
+          finishTimer=setTimeout(()=>{void finish(true).catch(error=>notify(error instanceof Error?error.message:`${pocketMode?'Pocket':'Timing'} result could not be saved.`,'error'));},durationSeconds*1000+tailMs);
         },
         onInterrupted:()=>{
           if(!active)return;
