@@ -4,6 +4,7 @@
 
 - Centralize Focus Player keyboard / pedal input in a deterministic practice-remote command mapper rather than scattering shortcut behavior through the page.
 - Add **Page Down** as a pedal-friendly Start / Pause alias and **Page Up** as a pedal-friendly metronome toggle.
+- Fix metronome toggling during count-in: switching the click now preserves active practice and restarts the count-in instead of leaving the session paused.
 - Keep **Space** for transport, **Arrow Up / Down** for ±1 BPM and **Shift + Arrow** for ±5 BPM.
 - Add direct block-evaluation shortcuts: **1 = Not yet, 2 = Usable, 3 = Solid**. These call the normal block-completion path and retain selected limitation tags.
 - Add **R** for attempt recording, **Shift + R** for normal block restart, **N** for quick note and **F** for fullscreen.
