@@ -1239,15 +1239,14 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('heading',name='Pocket Lab',exact=True)).to_be_visible()
         self.read("""(async()=>{
           const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId);
-          const timing=load('domain/timing-analysis.js'),pocket=load('domain/pocket-analysis.js'),config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:1},expected=timing.buildExpectedTimingGrid(config,5,4);
-          const offsets=[-22,-18,-20,-5,-22,-18,-20,-5],detected=expected.map((hit,index)=>({time:hit.time+offsets[index]/1000,strength:.5}));
-          const analysis=timing.analyzeTiming(expected,detected,0,80),target=pocket.analyzePocket(analysis.hits,-20,5),now=new Date().toISOString(),earlier=new Date(Date.now()-1000).toISOString();
-          const base={profileId:profile.id,bpm:120,meter:{beats:4,beatUnit:4},subdivision:1,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:4,threshold:.08,inputOffsetMs:0,matchWindowMs:analysis.matchWindowMs,expectedCount:analysis.expectedCount,detectedCount:analysis.detectedCount,matchedCount:analysis.matchedCount,misses:analysis.misses,extras:analysis.extras,meanOffsetMs:analysis.meanOffsetMs,medianOffsetMs:analysis.medianOffsetMs,meanAbsoluteErrorMs:analysis.meanAbsoluteErrorMs,spreadMs:analysis.spreadMs,driftMsPerMinute:analysis.driftMsPerMinute,confidence:analysis.confidence,hits:analysis.hits};
+          const offsets=[-22,-18,-20,-5,-22,-18,-20,-5],hits=offsets.map((offsetMs,index)=>({index,elapsedMs:index*500,offsetMs,strength:.5,bar:Math.floor(index/4),beat:index%4,part:0}));
+          const now=new Date().toISOString(),earlier=new Date(Date.now()-1000).toISOString();
+          const base={profileId:profile.id,bpm:120,meter:{beats:4,beatUnit:4},subdivision:1,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:4,threshold:.08,inputOffsetMs:0,matchWindowMs:180,expectedCount:8,detectedCount:8,matchedCount:8,misses:0,extras:0,meanOffsetMs:-16.3,medianOffsetMs:-19,meanAbsoluteErrorMs:16.3,spreadMs:6.6,driftMsPerMinute:0,confidence:'medium',hits};
           d.timingResults=[
             {id:'qa-timing-v1',createdAt:earlier,updatedAt:earlier,timingLabVersion:1,...base},
-            {id:'qa-pocket-v2',createdAt:now,updatedAt:now,timingLabVersion:2,...base,...target},
+            {id:'qa-pocket-v2',createdAt:now,updatedAt:now,timingLabVersion:2,...base,targetOffsetMs:-20,targetBandMs:5,meanTargetErrorMs:3.8,medianTargetErrorMs:1,meanAbsoluteTargetErrorMs:4.8,targetBandHits:6},
           ];
-          await load('db/database.js').replaceData(d);await store.refresh();return target;
+          await load('db/database.js').replaceData(d);await store.refresh();return true;
         })()""")
         self.route('/pocket')
         expect(self.page.get_by_role('heading',name='Pocket Lab',exact=True)).to_be_visible()
