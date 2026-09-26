@@ -110,7 +110,8 @@ export function timingLabPage(mode:'timing'|'pocket'='timing'):Page{
     const testConfig=runningConfig;if(!testConfig)throw new Error(`The active ${pocketMode?'pocket':'timing'} test configuration was lost.`);
     const durationSeconds=runningDuration,threshold=runningThreshold,inputOffsetMs=runningOffset,targetOffsetMs=runningTargetOffset,targetBandMs=runningTargetBand;
     const start=startAudioTime,end=endAudioTime||start+durationSeconds,windowMs=timingMatchWindowMs(testConfig),wasMeasured=measurementStarted;
-    const relevant=detected.filter(hit=>hit.time>=start-windowMs/1000&&hit.time<=end+windowMs/1000);
+    const earliest=start+Math.min(0,targetOffsetMs)/1000-windowMs/1000,latest=end+Math.max(0,targetOffsetMs)/1000+windowMs/1000;
+    const relevant=detected.filter(hit=>hit.time>=earliest&&hit.time<=latest);
     resetTransport();
     if(!save||!wasMeasured||!start){status.textContent='Test canceled. No result was saved.';return;}
     const expected=buildExpectedTimingGrid(testConfig,start,durationSeconds),resolved=pocketMode?analyzePocketTiming(expected,relevant,inputOffsetMs,targetOffsetMs,targetBandMs,windowMs):{timing:analyzeTiming(expected,relevant,inputOffsetMs,windowMs),pocket:undefined};
