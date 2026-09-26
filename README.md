@@ -168,6 +168,13 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Rhythm Lab — 2.30.0
+
+Drum profiles now include a dedicated **Rhythm Lab** for timing relationships the normal metronome intentionally does not model: uneven swing placement, bar-by-bar subdivision switching, and two-layer polyrhythms.
+
+Swing mode keeps the quarter-note pulse fixed while the offbeat moves from straight 50/50 through deeper swing values. Subdivision Switching keeps BPM fixed while note density changes between quarter notes, eighths, triplets and sixteenths. Polyrhythm mode defines A:B explicitly as A evenly spaced overlay hits across B quarter-note beats, with separate anchor and overlay click timbres.
+
+Rhythm Lab uses its own deterministic audio-time scheduler under the same cross-tab audio lock as the metronome. Players can mute either layer, tap tempo, adjust BPM, use count-in, and practice from 320px phones through desktop/music-stand layouts without making UI animation responsible for musical timing.
 ## Time Feel & Pocket Lab — 2.29.0
 
 Steadybar now has a dedicated **Pocket Lab** for practicing intentional placement rather than assuming the grid center is always the goal. Choose a target such as −20 ms ahead, centered, +20 ms behind, or a custom offset, then choose your own ±ms target band before playing.
