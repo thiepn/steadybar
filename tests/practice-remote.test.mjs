@@ -19,6 +19,7 @@ test('practice shortcuts map transport, tempo, results and utility controls dete
   assert.deepEqual(key('KeyN','n'),{kind:'note'});
   assert.deepEqual(key('KeyF','f'),{kind:'fullscreen'});
   assert.deepEqual(key('Slash','?'),{kind:'help'});
+  assert.deepEqual(key('Slash','/',{shiftKey:true}),{kind:'help'});
 });
 
 test('practice shortcuts ignore modified and repeating commands',()=>{
