@@ -58,15 +58,18 @@ function resultCard(result:TimingLabResult,allowDelete=false):HTMLElement{
   }
   return card;
 }
-export function timingLabPage():Page{
-  const snapshot=store.snapshot(),profile=activeProfile(snapshot);
+export function timingLabPage(mode:'timing'|'pocket'='timing'):Page{
+  const pocketMode=mode==='pocket',snapshot=store.snapshot(),profile=activeProfile(snapshot);
   let config:MetronomeConfig={...structuredClone(snapshot.settings.metronome),countIn:1,timing:resolvedTiming(snapshot.settings.metronome)};
   let active=false,measurementStarted=false,startAudioTime=0,endAudioTime=0,finishTimer:ReturnType<typeof setTimeout>|undefined,tickTimer:ReturnType<typeof setInterval>|undefined;
   let detected:TimingInputHit[]=[];
-  let runningConfig:MetronomeConfig|undefined,runningDuration=0,runningThreshold=0,runningOffset=0;
+  let runningConfig:MetronomeConfig|undefined,runningDuration=0,runningThreshold=0,runningOffset=0,runningTargetOffset=0,runningTargetBand=0;
   let disposed=false;
 
-  const page=el('div',{class:'page timing-lab-page'},pageHeader('Microphone diagnostics','Timing Lab',`${profile.name} · Compare detected attacks with the Web Audio timing grid.`,[
+  const page=el('div',{class:`page timing-lab-page ${pocketMode?'pocket-lab-page':''}`},pageHeader('Microphone diagnostics',pocketMode?'Pocket Lab':'Timing Lab',pocketMode
+    ?`${profile.name} · Practice deliberate ahead / centered / behind placement against a chosen timing target.`
+    :`${profile.name} · Compare detected attacks with the Web Audio timing grid.`,[
+    pocketMode?link('Timing Lab','/timing-lab','button secondary','pulse'):link('Pocket Lab','/pocket','button secondary','pulse'),
     link('Metronome','/metronome','button secondary','pulse'),link('MIDI Lab','/midi-lab','button secondary','pulse'),link('Progress','/progress','button secondary','progress'),
   ]));
   const bpm=input('timingBpm','BPM',config.bpm,'number',{min:20,max:300,step:1,required:true});
@@ -75,6 +78,12 @@ export function timingLabPage():Page{
   const durationInput=input('timingDuration','Test seconds',30,'number',{min:5,max:180,step:5,required:true});
   const thresholdInput=input('timingThreshold','Onset threshold',0.08,'number',{min:.005,max:.95,step:.005,required:true});
   const offsetInput=input('timingOffset','Input compensation (ms)',0,'number',{min:-250,max:250,step:1,required:true});
+  const targetPreset=select('pocketTargetPreset','Placement target',[['0','Centered · 0 ms'],['-10','Ahead · −10 ms'],['-20','Ahead · −20 ms'],['-30','Ahead · −30 ms'],['10','Behind · +10 ms'],['20','Behind · +20 ms'],['30','Behind · +30 ms'],['custom','Custom offset']],'0');
+  const targetOffset=input('pocketTargetOffset','Target offset (ms)',0,'number',{min:-120,max:120,step:1,required:true});
+  const targetBand=input('pocketTargetBand','Target band ± (ms)',12,'number',{min:1,max:100,step:1,required:true});
+  const targetPresetSelect=targetPreset.querySelector<HTMLSelectElement>('select')!,targetOffsetInput=targetOffset.querySelector<HTMLInputElement>('input')!;
+  targetPresetSelect.addEventListener('change',()=>{if(targetPresetSelect.value!=='custom')targetOffsetInput.value=targetPresetSelect.value;});
+  targetOffsetInput.addEventListener('input',()=>{const value=targetOffsetInput.value,target=[...targetPresetSelect.options].find(option=>option.value===value&&option.value!=='custom');targetPresetSelect.value=target?.value??'custom';});
   const status=el('p',{class:'timing-lab-status',role:'status'},MicrophoneTimingInput.supported()?'Ready · headphones strongly recommended to prevent click bleed.':'Precision microphone timing is unavailable in this browser.');
   const live=el('div',{class:'timing-live',hidden:true},el('strong',{class:'timing-live-clock'},'00.0'),el('span',{class:'muted'},'seconds'),el('span',{class:'timing-live-hits'},'0 detected attacks'));
   const resultHost=el('div',{class:'timing-result-host'});
