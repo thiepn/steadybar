@@ -54,7 +54,7 @@ export function rhythmLabPage():Page{
       current.sequence.forEach((stage,index)=>stages.append(el('div',{class:'rhythm-stage-card','data-stage':subdivisionName(stage)},el('strong',{},`${index+1}. ${subdivisionName(stage)}`),el('span',{class:'muted small'},`${current.barsPerStage} bar${current.barsPerStage===1?'':'s'} · ${stage} pulse${stage===1?'':'s'} per beat`),el('div',{class:'rhythm-stage-dots'},...Array.from({length:stage},(_,part)=>el('span',{class:part===0?'primary':''},String(part+1)))))));
       visual.append(stages);
     }else{
-      const positions=rhythmCyclePositions(current);visual.append(timeline(labels[0], 'primary',positions.primary),timeline(labels[1], 'secondary',positions.secondary));
+      const positions=rhythmCyclePositions(current);visual.append(timeline(labels[0]!, 'primary',positions.primary),timeline(labels[1]!, 'secondary',positions.secondary));
     }
     summary.textContent=cycle.summary;cue.textContent=practiceCue();
   };
