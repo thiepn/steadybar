@@ -1280,6 +1280,51 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_text('Ahead 20 ms',exact=True)).to_have_count(0)
 
 
+    def test_77_rhythm_lab_swing_switching_polyrhythm_and_audio_transport(self):
+        self.onboard()
+        self.route('/rhythm')
+        expect(self.page.get_by_role('heading',name='Rhythm Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_label('Training mode',exact=True)).to_have_value('swing')
+        expect(self.page.get_by_text('66.5 / 33.5 · Triplet swing',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),4)
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-secondary').count(),4)
+
+        self.page.get_by_role('button',name='Straight',exact=True).click()
+        expect(self.page.get_by_text('50.0 / 50.0 · Straight',exact=True)).to_be_visible()
+        self.page.get_by_label('Training mode',exact=True).select_option('subdivision-switch')
+        expect(self.page.locator('.rhythm-stage-card')).to_have_count(4)
+        self.page.get_by_label('Subdivision sequence',exact=True).select_option('3,4')
+        self.page.get_by_label('Bars per stage',exact=True).select_option('2')
+        expect(self.page.locator('.rhythm-stage-card')).to_have_count(2)
+        expect(self.page.get_by_text('Triplets → Sixteenth notes · 2 bars each',exact=True)).to_be_visible()
+
+        self.page.get_by_label('Training mode',exact=True).select_option('polyrhythm')
+        expect(self.page.get_by_label('Polyrhythm ratio',exact=True)).to_have_value('3:2')
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),2)
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-secondary').count(),3)
+        expect(self.page.get_by_text('3:2 · 3 overlay hits across 2 quarter-note beats',exact=True)).to_be_visible()
+        overlay=self.page.get_by_role('button',name='Overlay on',exact=True)
+        overlay.click()
+        expect(overlay).to_have_attribute('aria-pressed','false')
+        expect(overlay).to_contain_text('Overlay off')
+        overlay.click()
+        expect(overlay).to_have_attribute('aria-pressed','true')
+
+        start=self.page.get_by_role('button',name='Start Rhythm Lab',exact=True)
+        start.click()
+        expect(start).to_have_attribute('aria-pressed','true')
+        expect(self.page.get_by_text('Count-in…',exact=True)).to_be_visible()
+        start.click()
+        expect(start).to_have_attribute('aria-pressed','false')
+        expect(self.page.get_by_text('Paused.',exact=True)).to_be_visible()
+
+        self.page.set_viewport_size({'width':390,'height':844})
+        config_columns=self.page.locator('.rhythm-common-grid').evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(config_columns,2)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
