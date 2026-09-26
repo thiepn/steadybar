@@ -14,19 +14,23 @@ import { addToday, freeBlock, launchPractice } from '../practice/launch.js';
 import { el } from '../ui/dom.js';
 import { button, empty, formDialog, formText, input, link, notify, pageHeader, sectionHeader, select, textarea } from '../ui/components.js';
 
+interface DrumGridLabDraft { protocol:ReturnType<typeof buildDrumGrid>; preset:DrumGridPresetId; variation:number; complexity:number; subdivision:1|2|3|4; minutes:number }
+const drumGridDrafts=new Map<string,DrumGridLabDraft>();
+
 export function drumGridPage():Page{
   const snapshot=store.snapshot(),profile=activeProfile(snapshot);
   if(profile.instrumentType!=='drums')return {node:el('div',{class:'page drum-grid-page'},
     pageHeader('Drum practice tool','Drum Grid Lab','Build explicit hand/foot coordination patterns and practice them against Steadybar’s audio-time click.'),
     empty('Switch to a drum profile','Drum Grid Lab is intentionally limited to drum profiles so limb labels and progression evidence stay honest.',link('Manage practice profiles','/profiles','button primary','settings')))};
 
-  let preset:DrumGridPresetId='kick-displacement',variation=0,complexity=2,subdivision:1|2|3|4=4;
-  let protocol=buildDrumGrid(preset,snapshot.settings.metronome.bpm,subdivision,variation,complexity),previewing=false,disposed=false;
+  const savedDraft=drumGridDrafts.get(profile.id);
+  let preset:DrumGridPresetId=savedDraft?.preset??'kick-displacement',variation=savedDraft?.variation??0,complexity=savedDraft?.complexity??2,subdivision:1|2|3|4=savedDraft?.subdivision??4;
+  let protocol=savedDraft?.protocol?structuredClone(savedDraft.protocol):buildDrumGrid(preset,snapshot.settings.metronome.bpm,subdivision,variation,complexity),previewing=false,disposed=false;
   const page=el('div',{class:'page drum-grid-page'},pageHeader('Drum coordination workstation','Drum Grid Lab',profile.name+' · Generate, edit, displace, mirror, preview, save, and practice coordination grids.',[
     link('Rudiment Lab','/rudiments','button secondary','routine'),link('MIDI Drum Lab','/midi-lab','button secondary','pulse'),link('Timing Lab','/timing-lab','button secondary','pulse'),
   ]));
   const bpm=input('gridBpm','BPM',protocol.pulse.bpm,'number',{min:20,max:300,step:1,required:true});
-  const minutes=input('gridMinutes','Practice minutes',10,'number',{min:1,max:180,step:1,required:true});
+  const minutes=input('gridMinutes','Practice minutes',savedDraft?.minutes??10,'number',{min:1,max:180,step:1,required:true});
   const presetSelect=select('gridPreset','Pattern family',DRUM_GRID_PRESETS.map(row=>[row.id,row.label]),preset);
   const subdivisionSelect=select('gridSubdivision','Subdivision',[['2','Eighth notes'],['3','Triplets'],['4','Sixteenth notes']],String(subdivision));
   const complexitySelect=select('gridComplexity','Complexity',[['1','1 · Foundation'],['2','2 · Simple'],['3','3 · Developing'],['4','4 · Dense'],['5','5 · Advanced']],String(complexity));
@@ -54,6 +58,7 @@ export function drumGridPage():Page{
   };
   previewButton=button('Preview click',togglePreview,'secondary','pulse');previewButton.setAttribute('aria-pressed','false');
 
+  const persistDraft=()=>drumGridDrafts.set(profile.id,{protocol:structuredClone(protocol),preset,variation,complexity,subdivision,minutes:Number((minutes.querySelector('input') as HTMLInputElement).value)});
   const renderGrid=()=>{
     const labels=drumGridStepLabels(protocol.pulse.beats,protocol.pulse.subdivision),style='--grid-steps:'+labels.length;
     focusText.textContent=protocol.focus;variationText.textContent='Variation '+(variation+1);textGrid.textContent=drumGridText(protocol);
@@ -68,7 +73,7 @@ export function drumGridPage():Page{
         b.dataset.step=String(index);b.setAttribute('aria-label',voice.label+' step '+(index+1)+': '+(cell==='X'?'accent':cell==='x'?'hit':'rest')+'. Activate to change.');return b;
       })));
     }
-    gridHost.replaceChildren(grid);
+    gridHost.replaceChildren(grid);persistDraft();
   };
   const regenerate=(resetVariation=false)=>{
     if(resetVariation)variation=0;
@@ -81,13 +86,14 @@ export function drumGridPage():Page{
   };
   presetSelect.addEventListener('change',()=>regenerate(true));subdivisionSelect.addEventListener('change',()=>regenerate(true));complexitySelect.addEventListener('change',()=>regenerate(false));
   bpm.addEventListener('change',()=>{const control=bpm.querySelector('input') as HTMLInputElement;if(!control.reportValidity())return;protocol={...protocol,pulse:{...protocol.pulse,bpm:Number(control.value)}};if(previewing)audio.update(previewConfig());renderGrid();});
+  minutes.addEventListener('change',()=>{const control=minutes.querySelector('input') as HTMLInputElement;if(control.reportValidity())persistDraft();});
 
   const practiceBlock=()=>{
     const bpmValue=protocol.pulse.bpm,minutesValue=Number((minutes.querySelector('input') as HTMLInputElement).value);
     return {...freeBlock(minutesValue*60,bpmValue,'Grid · '+protocol.name),profileId:profile.id,protocol:structuredClone(protocol),notes:protocol.focus};
   };
-  const start=async()=>{const control=minutes.querySelector('input') as HTMLInputElement;if(!control.reportValidity())return;stopPreview();await launchPractice([practiceBlock()]);};
-  const add=async()=>{const control=minutes.querySelector('input') as HTMLInputElement;if(!control.reportValidity())return;await addToday(practiceBlock());};
+  const start=async()=>{const control=minutes.querySelector('input') as HTMLInputElement;if(!control.reportValidity())return;persistDraft();stopPreview();await launchPractice([practiceBlock()]);};
+  const add=async()=>{const control=minutes.querySelector('input') as HTMLInputElement;if(!control.reportValidity())return;persistDraft();await addToday(practiceBlock());};
   const saveExercise=()=>formDialog('Save grid as exercise',[
     input('name','Exercise name',protocol.name,'text',{required:true,maxlength:200}),
     textarea('instructions','Practice cue',protocol.focus,3),
@@ -98,7 +104,7 @@ export function drumGridPage():Page{
       primarySkillId:'drums.coordination',secondarySkillIds:['drums.timing'],protocol:{...structuredClone(protocol),name,focus:instructions},level:profile.level,
       defaultSeconds:Number((minutes.querySelector('input') as HTMLInputElement).value)*60,tags:['drum-grid','coordination'],notes:'',builtin:false,archived:false,
     };
-    await store.save('exercises',exercise);notify('Grid saved to your exercise library.');
+    persistDraft();await store.save('exercises',exercise);notify('Grid saved to your exercise library.');
   },'Save exercise');
 
   const variationActions=el('div',{class:'actions wrap drum-grid-variations'},
