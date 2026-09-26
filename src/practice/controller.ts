@@ -128,9 +128,9 @@ export class PracticeController {
     if(audio.running)audio.update(this.config());
   }
   async toggleAudio():Promise<void>{
-    const wasRunning=this.session?.runtime.phase==='running';
+    const wasActive=!!this.session&&['running','countin'].includes(this.session.runtime.phase);
     await this.pause();await this.mutate(s=>{s.runtime.metronomeOn=!s.runtime.metronomeOn;return s;});
-    if(wasRunning)await this.start();
+    if(wasActive)await this.start();
   }
   async setTimingClick(timing:TimingClickConfig):Promise<void>{
     await this.mutate(s=>{
