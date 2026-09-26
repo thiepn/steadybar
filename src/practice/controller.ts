@@ -10,6 +10,7 @@ import { finalizeSession, get, insertActiveSession, updateSession } from '../db/
 import { store } from '../app/store.js';
 import { audio } from '../audio/engine.js';
 import { defaultAccents, type BeatEvent } from '../audio/scheduler.js';
+import { drumMeterAccents } from '../domain/drum-meter.js';
 import { blockElapsed, checkpointSession, createSession, finishBlock, pauseSession, preserveReadingIdentity, recoverSession, restartBlock } from './logic.js';
 import { clampBpm, nowISO, uuid } from '../domain/utils.js';
 import { trainerBpm, trainerTargetSeconds } from '../domain/trainer.js';
@@ -74,7 +75,7 @@ export class PracticeController {
   elapsed():number{return this.session ? blockElapsed(this.session) : 0;}
   private config():MetronomeConfig{
     const s=this.session!,block=s.blocks[s.activeBlockIndex]!,settings=store.snapshot().settings.metronome;
-    return {...structuredClone(settings),bpm:s.runtime.bpm,meter:block.meterSnapshot,subdivision:block.subdivisionSnapshot,accents:settings.meter.beats===block.meterSnapshot.beats && settings.meter.beatUnit===block.meterSnapshot.beatUnit ? [...settings.accents] : defaultAccents(block.meterSnapshot.beats,block.meterSnapshot.beatUnit),timing:structuredClone(block.timingClickSnapshot??settings.timing??DEFAULT_TIMING_CLICK)};
+    const authoredAccents=block.protocolSnapshot?.kind==='drum-meter'?drumMeterAccents(block.protocolSnapshot.grouping):undefined;return {...structuredClone(settings),bpm:s.runtime.bpm,meter:block.meterSnapshot,subdivision:block.subdivisionSnapshot,accents:authoredAccents??(settings.meter.beats===block.meterSnapshot.beats && settings.meter.beatUnit===block.meterSnapshot.beatUnit ? [...settings.accents] : defaultAccents(block.meterSnapshot.beats,block.meterSnapshot.beatUnit)),timing:structuredClone(block.timingClickSnapshot??settings.timing??DEFAULT_TIMING_CLICK)};
   }
   private async requestWake():Promise<void>{
     if(!store.snapshot().settings.wakeLock || !('wakeLock' in navigator) || document.hidden)return;
