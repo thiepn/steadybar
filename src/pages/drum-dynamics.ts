@@ -12,6 +12,8 @@ import { el } from '../ui/dom.js';
 import { badge, button, empty, input, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 
 type DynamicsProtocol=Extract<PracticeProtocol,{kind:'drum-dynamics'}>;
+interface DynamicsLabDraft {protocol:DynamicsProtocol;preset:DrumDynamicsPresetId;variation:number;subdivision:Subdivision;minutes:number}
+const dynamicsDrafts=new Map<string,DynamicsLabDraft>();
 
 export function drumDynamicsPage():Page{
   const snapshot=store.snapshot(),profile=activeProfile(snapshot);
@@ -19,7 +21,8 @@ export function drumDynamicsPage():Page{
     pageHeader('Drum practice tool','Dynamics & Touch Lab','Author relative soft / medium / strong targets without pretending they are acoustic dB values.'),
     empty('Switch to a drum profile','Dynamics Lab is limited to drum profiles so kit-surface targets stay meaningful.',link('Manage practice profiles','/profiles','button primary','settings')))};
 
-  let preset:DrumDynamicsPresetId='ghost-backbeat',variation=0,subdivision:Subdivision=4,protocol:DynamicsProtocol=buildDrumDynamics(preset,snapshot.settings.metronome.bpm,subdivision,variation),previewing=false,disposed=false;
+  const savedDraft=dynamicsDrafts.get(profile.id);
+  let preset:DrumDynamicsPresetId=savedDraft?.preset??'ghost-backbeat',variation=savedDraft?.variation??0,subdivision:Subdivision=savedDraft?.subdivision??4,protocol:DynamicsProtocol=savedDraft?.protocol?structuredClone(savedDraft.protocol):buildDrumDynamics(preset,snapshot.settings.metronome.bpm,subdivision,variation),previewing=false,disposed=false;
   const page=el('div',{class:'page drum-dynamics-page'},pageHeader('Drum touch workstation','Dynamics & Touch Lab',profile.name+' · Train relative touch, contrast, quiet control, and balance without changing the pulse.',[
     link('Pocket Lab','/pocket','button secondary','pulse'),link('Grid Lab','/drum-grid','button secondary','routine'),link('Rudiment Lab','/rudiments','button secondary','routine'),
   ]));
@@ -27,7 +30,7 @@ export function drumDynamicsPage():Page{
   const presetSelect=select('dynPreset','Dynamic study',DRUM_DYNAMICS_PRESETS.map(row=>[row.id,row.label] as [string,string]),preset);
   const bpm=input('dynBpm','BPM',protocol.pulse.bpm,'number',{min:20,max:300,step:1,required:true});
   const subdivisionSelect=select('dynSubdivision','Subdivision',[['2','Eighth notes'],['3','Triplets'],['4','Sixteenth notes']],String(subdivision));
-  const minutes=input('dynMinutes','Practice minutes',8,'number',{min:1,max:180,step:1,required:true});
+  const minutes=input('dynMinutes','Practice minutes',savedDraft?.minutes??8,'number',{min:1,max:180,step:1,required:true});
   const variationText=el('span',{class:'muted small'},'Variation 1');
   const gridHost=el('div',{class:'dynamics-grid-editor'});
   const focus=el('p',{class:'pre-line dynamics-focus'}),notation=el('pre',{class:'dynamics-text'}),status=el('p',{class:'dynamics-status',role:'status'},'Tap cells to cycle rest → soft → medium → strong.');
@@ -37,6 +40,7 @@ export function drumDynamicsPage():Page{
   const render=()=>{
     const labels=drumGridStepLabels(protocol.pulse.beats,protocol.pulse.subdivision);gridHost.style.setProperty('--dyn-steps',String(labels.length));
     variationText.textContent='Variation '+(variation+1);focus.textContent=protocol.focus;notation.textContent=drumDynamicsText(protocol);
+    dynamicsDrafts.set(profile.id,{protocol:structuredClone(protocol),preset,variation,subdivision,minutes:Number(minutes.querySelector<HTMLInputElement>('input')!.value)||8});
     gridHost.replaceChildren(el('div',{class:'dynamics-grid-row dynamics-grid-header'},el('strong',{},''),...labels.map(label=>el('span',{},label))));
     for(const surface of DRUM_DYNAMIC_SURFACES){
       const lane=activeLane(surface.id),steps=lane?.steps??'.'.repeat(labels.length),row=el('div',{class:'dynamics-grid-row'},el('strong',{title:surface.label},surface.short));
@@ -57,7 +61,7 @@ export function drumDynamicsPage():Page{
     protocol=buildDrumDynamics(preset,Number(bpm.querySelector<HTMLInputElement>('input')!.value),subdivision,variation);
     if(previewing)stopPreview();render();
   };
-  presetSelect.addEventListener('change',()=>regenerate(true));subdivisionSelect.addEventListener('change',()=>regenerate(false));
+  presetSelect.addEventListener('change',()=>regenerate(true));subdivisionSelect.addEventListener('change',()=>regenerate(false));minutes.addEventListener('change',()=>render());
   bpm.addEventListener('change',()=>{const control=bpm.querySelector<HTMLInputElement>('input')!;if(!control.reportValidity())return;protocol={...protocol,pulse:{...protocol.pulse,bpm:Number(control.value)}};if(previewing)void audio.update({...structuredClone(store.snapshot().settings.metronome),bpm:protocol.pulse.bpm,meter:{beats:protocol.pulse.beats,beatUnit:protocol.pulse.beatUnit},subdivision:protocol.pulse.subdivision,countIn:1});render();});
 
   const stopPreview=()=>{audio.stop();previewing=false;if(previewButton){previewButton.querySelector('span')!.textContent='Preview click';previewButton.setAttribute('aria-pressed','false');}};
