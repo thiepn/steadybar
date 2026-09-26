@@ -268,6 +268,8 @@ const drumGridVoice=one('right-hand','left-hand','kick','hihat-foot');
 const midiGridLane=obj({voice:drumGridVoice,steps:text(64,1)});
 const midiGridAssignment=obj({gridVoice:drumGridVoice,midiVoice});
 const midiGridLaneSummary=obj({gridVoice:drumGridVoice,midiVoice,expectedCount:num(1,100000,true),matchedCount:num(0,100000,true),misses:num(0,100000,true)});
+const midiPhraseBar=obj({role:one('groove','fill','return'),label:text(120,1),lanes:arr(midiGridLane,4)});
+const midiPhraseBarSummary=obj({barIndex:num(0,16,true),role:one('groove','fill','return'),label:text(120,1),expectedCount:num(0,100000,true),matchedCount:num(0,100000,true),misses:num(0,100000,true),meanAbsoluteErrorMs:num(0,1000)});
 const midiMapping=obj({note:num(0,127,true),voice:midiVoice,label:text(80,1),enabled:bool});
 const rawMidiDeviceProfile=obj({
   ...entity,profileId:id,deviceKey:text(300,1),inputId:optional(text(300,1)),manufacturer:text(200),name:text(200,1),
@@ -281,24 +283,27 @@ export const validateMidiDeviceProfile:Validator<MidiDeviceProfile>=(v,p='MIDI d
 const midiHit=obj({
   index:num(0,100000,true),elapsedMs:num(0,3600000),offsetMs:num(-1000,1000),
   note:num(0,127,true),velocity:num(1,127,true),channel:num(1,16,true),voice:midiVoice,label:text(80,1),
-  bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),expectedGridVoice:optional(drumGridVoice),expectedAccent:optional(bool),
+  bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),expectedGridVoice:optional(drumGridVoice),expectedAccent:optional(bool),expectedPhraseBarIndex:optional(num(0,16,true)),expectedPhraseBarRole:optional(one('groove','fill','return')),
 });
 const midiVoiceSummary=obj({
   voice:midiVoice,label:text(80,1),count:num(1,10000,true),medianVelocity:num(1,127),velocitySpread:num(0,127),
   meanAbsoluteErrorMs:num(0,1000),timingSpreadMs:num(0,1000),
 });
 const rawMidiPerformanceResult=obj({
-  ...entity,midiAnalysisVersion:one(1,2),profileId:id,
+  ...entity,midiAnalysisVersion:one(1,2,3),profileId:id,
   sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),deviceProfileId:optional(id),
   deviceKey:text(300,1),deviceNameSnapshot:text(200,1),manufacturerSnapshot:text(200),
-  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),expectedPattern:one('subdivision','beat','two-four','drum-grid'),analyzedVoice:optional(midiVoice),
-  gridNameSnapshot:optional(text(120,1)),gridLanesSnapshot:optional(arr(midiGridLane,4)),gridAssignments:optional(arr(midiGridAssignment,4)),wrongVoiceCount:optional(num(0,100000,true)),gridLaneSummaries:optional(arr(midiGridLaneSummary,4)),accentVelocityMean:optional(num(0,127)),normalVelocityMean:optional(num(0,127)),accentVelocityDifference:optional(num(-127,127)),matchWindowMs:num(10,500),
-  expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
-  misses:num(0,10000,true),extras:num(0,10000,true),unmappedCount:num(0,10000,true),
+  bpm,meter,subdivision,timingClick,durationSeconds:num(1,300),expectedPattern:one('subdivision','beat','two-four','drum-grid','drum-phrase'),analyzedVoice:optional(midiVoice),
+  gridNameSnapshot:optional(text(120,1)),gridLanesSnapshot:optional(arr(midiGridLane,4)),gridAssignments:optional(arr(midiGridAssignment,4)),
+  phraseNameSnapshot:optional(text(160,1)),phraseFocusSnapshot:optional(text(2000,1)),phraseBarsSnapshot:optional(arr(midiPhraseBar,17)),phraseAssignments:optional(arr(midiGridAssignment,4)),
+  wrongVoiceCount:optional(num(0,100000,true)),gridLaneSummaries:optional(arr(midiGridLaneSummary,4)),phraseLaneSummaries:optional(arr(midiGridLaneSummary,4)),phraseBarSummaries:optional(arr(midiPhraseBarSummary,17)),
+  landingExpectedCount:optional(num(0,100000,true)),landingMatchedCount:optional(num(0,100000,true)),landingMisses:optional(num(0,100000,true)),landingMeanOffsetMs:optional(num(-1000,1000)),landingMeanAbsoluteErrorMs:optional(num(0,1000)),accentVelocityMean:optional(num(0,127)),normalVelocityMean:optional(num(0,127)),accentVelocityDifference:optional(num(-127,127)),matchWindowMs:num(10,500),
+  expectedCount:num(1,100000,true),detectedCount:num(0,20000,true),matchedCount:num(0,20000,true),
+  misses:num(0,100000,true),extras:num(0,20000,true),unmappedCount:num(0,20000,true),
   meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),driftMsPerMinute:num(-100000,100000),
   confidence:one('low','medium','high'),
   velocityMean:num(0,127),velocityMedian:num(0,127),velocitySpread:num(0,127),velocityMin:num(0,127),velocityMax:num(0,127),velocityRange:num(0,127),
-  hits:arr(midiHit,10000),voices:arr(midiVoiceSummary,128),
+  hits:arr(midiHit,20000),voices:arr(midiVoiceSummary,128),
 });
 export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p='MIDI performance result')=>{
   const result=rawMidiPerformanceResult(v,p);
@@ -307,10 +312,23 @@ export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p
   if(result.misses!==result.expectedCount-result.matchedCount)fail(p,'MIDI miss count must equal expected minus matched hits');
   if(result.extras!==result.detectedCount-result.matchedCount)fail(p,'MIDI extra count must equal detected minus matched hits');
   if(result.velocityMax<result.velocityMin||result.velocityRange!==result.velocityMax-result.velocityMin)fail(p,'MIDI velocity range is inconsistent');
-  const gridFields=[result.gridNameSnapshot,result.gridLanesSnapshot,result.gridAssignments,result.wrongVoiceCount,result.gridLaneSummaries];
+  const gridOnly=[result.gridNameSnapshot,result.gridLanesSnapshot,result.gridAssignments,result.gridLaneSummaries];
+  const phraseOnly=[result.phraseNameSnapshot,result.phraseFocusSnapshot,result.phraseBarsSnapshot,result.phraseAssignments,result.phraseLaneSummaries,result.phraseBarSummaries,result.landingExpectedCount,result.landingMatchedCount,result.landingMisses,result.landingMeanOffsetMs,result.landingMeanAbsoluteErrorMs];
+  const accentFields=[result.accentVelocityMean,result.normalVelocityMean,result.accentVelocityDifference];
+  const validateAccent=()=>{
+    if(!accentFields.some(value=>value!==undefined))return;
+    if(accentFields.some(value=>value===undefined))fail(p,'authored MIDI accent comparison requires both means and their difference');
+    const accentHits=result.hits.filter(hit=>hit.expectedAccent===true),accentVoices=[...new Set(accentHits.map(hit=>hit.voice))];
+    if(accentVoices.length!==1)fail(p,'authored MIDI accent comparison must use one mapped MIDI sound');
+    const voice=accentVoices[0]!,normalHits=result.hits.filter(hit=>hit.expectedAccent===false&&hit.voice===voice);
+    if(!accentHits.length||!normalHits.length)fail(p,'authored MIDI accent comparison needs accent and normal hits on the same mapped sound');
+    const avg=(values:number[])=>values.reduce((sum,value)=>sum+value,0)/values.length,accentMean=avg(accentHits.map(hit=>hit.velocity)),normalMean=avg(normalHits.map(hit=>hit.velocity));
+    if(Math.abs(result.accentVelocityMean!-accentMean)>.11||Math.abs(result.normalVelocityMean!-normalMean)>.11||Math.abs(result.accentVelocityDifference!-(accentMean-normalMean))>.11)fail(p,'authored MIDI accent comparison does not match saved MIDI hits');
+  };
   if(result.expectedPattern==='drum-grid'){
     if(result.midiAnalysisVersion!==2)fail(p,'Drum Grid MIDI results require analysis version 2');
-    if(gridFields.some(value=>value===undefined))fail(p,'Drum Grid MIDI results require grid snapshots, assignments and lane summaries');
+    if(gridOnly.some(value=>value===undefined)||result.wrongVoiceCount===undefined)fail(p,'Drum Grid MIDI results require grid snapshots, assignments and lane summaries');
+    if(phraseOnly.some(value=>value!==undefined))fail(p,'Drum Grid MIDI results cannot carry Drum Phrase evidence');
     const lanes=result.gridLanesSnapshot!,assignments=result.gridAssignments!,summaries=result.gridLaneSummaries!,steps=result.meter.beats*result.subdivision;
     if(!lanes.length||new Set(lanes.map(lane=>lane.voice)).size!==lanes.length||lanes.some(lane=>lane.steps.length!==steps||!/^[.xX]+$/.test(lane.steps)))fail(p,'Drum Grid MIDI snapshot is malformed');
     const laneVoices=new Set(lanes.map(lane=>lane.voice));
@@ -324,21 +342,54 @@ export const validateMidiPerformanceResult:Validator<MidiPerformanceResult>=(v,p
     if(summaries.reduce((sum,row)=>sum+row.expectedCount,0)!==result.expectedCount||summaries.reduce((sum,row)=>sum+row.matchedCount,0)!==result.matchedCount)fail(p,'Drum Grid MIDI lane summaries must reconcile with result totals');
     if(summaries.some(row=>row.misses!==row.expectedCount-row.matchedCount))fail(p,'Drum Grid MIDI lane miss counts are inconsistent');
     if(result.wrongVoiceCount!>result.extras)fail(p,'wrong-voice count cannot exceed MIDI extras');
-    if(result.hits.some(hit=>hit.expectedGridVoice===undefined||hit.expectedAccent===undefined||!activeVoices.has(hit.expectedGridVoice)||assignmentByLane.get(hit.expectedGridVoice)!==hit.voice))fail(p,'Drum Grid MIDI matched hits must match expected lanes and assigned sounds');
-    const accentMetricFields=[result.accentVelocityMean,result.normalVelocityMean,result.accentVelocityDifference];
-    if(accentMetricFields.some(value=>value!==undefined)){
-      if(accentMetricFields.some(value=>value===undefined))fail(p,'Drum Grid accent velocity comparison requires both means and their difference');
-      const accentHits=result.hits.filter(hit=>hit.expectedAccent===true),accentVoices=[...new Set(accentHits.map(hit=>hit.voice))];
-      if(accentVoices.length!==1)fail(p,'Drum Grid accent velocity comparison must use one mapped MIDI sound');
-      const voice=accentVoices[0]!,normalHits=result.hits.filter(hit=>hit.expectedAccent===false&&hit.voice===voice);
-      if(!accentHits.length||!normalHits.length)fail(p,'Drum Grid accent velocity comparison needs accent and normal hits on the same mapped sound');
-      const mean=(values:number[])=>values.reduce((sum,value)=>sum+value,0)/values.length;
-      const accentMean=mean(accentHits.map(hit=>hit.velocity)),normalMean=mean(normalHits.map(hit=>hit.velocity));
-      if(Math.abs(result.accentVelocityMean!-accentMean)>.11||Math.abs(result.normalVelocityMean!-normalMean)>.11||Math.abs(result.accentVelocityDifference!-(accentMean-normalMean))>.11)fail(p,'Drum Grid accent velocity comparison does not match saved MIDI hits');
+    if(result.hits.some(hit=>hit.expectedGridVoice===undefined||hit.expectedAccent===undefined||hit.expectedPhraseBarIndex!==undefined||hit.expectedPhraseBarRole!==undefined||!activeVoices.has(hit.expectedGridVoice)||assignmentByLane.get(hit.expectedGridVoice)!==hit.voice))fail(p,'Drum Grid MIDI matched hits must match expected lanes and assigned sounds');
+    validateAccent();
+  }else if(result.expectedPattern==='drum-phrase'){
+    if(result.midiAnalysisVersion!==3)fail(p,'Drum Phrase MIDI results require analysis version 3');
+    if(phraseOnly.some(value=>value===undefined)||result.wrongVoiceCount===undefined)fail(p,'Drum Phrase MIDI results require phrase snapshots, assignments, bar summaries and landing evidence');
+    if(gridOnly.some(value=>value!==undefined))fail(p,'Drum Phrase MIDI results cannot carry single-grid evidence');
+    const bars=result.phraseBarsSnapshot!,assignments=result.phraseAssignments!,laneSummaries=result.phraseLaneSummaries!,barSummaries=result.phraseBarSummaries!,cycleSeconds=bars.length*result.meter.beats*60/result.bpm;
+    if(result.durationSeconds+1e-6<cycleSeconds)fail(p,'Drum Phrase MIDI results must cover at least one complete phrase cycle');
+    validateProtocol({kind:'drum-phrase',pulse:{bpm:result.bpm,beats:result.meter.beats,beatUnit:result.meter.beatUnit,subdivision:result.subdivision},name:result.phraseNameSnapshot!,focus:result.phraseFocusSnapshot!,bars},`${p}.phrase`);
+    const laneVoices=new Set(bars.flatMap(bar=>bar.lanes.map(lane=>lane.voice))),activeVoices=new Set(bars.flatMap(bar=>bar.lanes.filter(lane=>/[xX]/.test(lane.steps)).map(lane=>lane.voice)));
+    if(new Set(assignments.map(row=>row.gridVoice)).size!==assignments.length||assignments.some(row=>!laneVoices.has(row.gridVoice)))fail(p,'Drum Phrase MIDI lane assignments must be unique and belong to saved lanes');
+    if([...activeVoices].some(voice=>!assignments.some(row=>row.gridVoice===voice)))fail(p,'Drum Phrase MIDI assignments must cover every active lane');
+    const activeAssignments=assignments.filter(row=>activeVoices.has(row.gridVoice)),assignmentByLane=new Map(activeAssignments.map(row=>[row.gridVoice,row.midiVoice]));
+    if(new Set(activeAssignments.map(row=>row.midiVoice)).size!==activeAssignments.length)fail(p,'active Drum Phrase MIDI lanes need unique assigned sounds');
+    const interval=60/result.bpm/result.subdivision,positions=Math.max(1,Math.floor(result.durationSeconds/interval+1e-9)),perBar=result.meter.beats*result.subdivision;
+    const expectedByBar=Array.from({length:bars.length},()=>0),expectedByLane=new Map<string,number>();let landingExpectedFromScore=0;
+    for(let position=0;position<positions;position++){
+      const phraseBarIndex=Math.floor(position/perBar)%bars.length,step=position%perBar,bar=bars[phraseBarIndex]!;
+      for(const lane of bar.lanes){
+        const cell=lane.steps[step];if(cell!=='x'&&cell!=='X')continue;
+        expectedByBar[phraseBarIndex]=(expectedByBar[phraseBarIndex]??0)+1;expectedByLane.set(lane.voice,(expectedByLane.get(lane.voice)??0)+1);
+        if(bar.role==='return'&&step===0)landingExpectedFromScore++;
+      }
     }
+    if(new Set(laneSummaries.map(row=>row.gridVoice)).size!==laneSummaries.length||laneSummaries.length!==activeVoices.size)fail(p,'Drum Phrase MIDI lane summaries must cover each active lane once');
+    if(laneSummaries.some(row=>!activeVoices.has(row.gridVoice)||assignmentByLane.get(row.gridVoice)!==row.midiVoice||row.expectedCount!==expectedByLane.get(row.gridVoice)||row.matchedCount!==result.hits.filter(hit=>hit.expectedGridVoice===row.gridVoice).length||row.misses!==row.expectedCount-row.matchedCount))fail(p,'Drum Phrase MIDI lane summaries must match the saved score, hits and assignments');
+    if(laneSummaries.reduce((sum,row)=>sum+row.expectedCount,0)!==result.expectedCount||laneSummaries.reduce((sum,row)=>sum+row.matchedCount,0)!==result.matchedCount)fail(p,'Drum Phrase MIDI lane summaries must reconcile with result totals');
+    if(barSummaries.length!==bars.length||new Set(barSummaries.map(row=>row.barIndex)).size!==bars.length)fail(p,'Drum Phrase MIDI bar summaries must cover each phrase bar once');
+    for(const row of barSummaries){
+      const bar=bars[row.barIndex],barHits=result.hits.filter(hit=>hit.expectedPhraseBarIndex===row.barIndex),barError=barHits.length?barHits.reduce((sum,hit)=>sum+Math.abs(hit.offsetMs),0)/barHits.length:0;
+      if(!bar||row.role!==bar.role||row.label!==bar.label||row.expectedCount!==expectedByBar[row.barIndex]||row.matchedCount!==barHits.length||row.misses!==row.expectedCount-row.matchedCount||Math.abs(row.meanAbsoluteErrorMs-barError)>.11)fail(p,'Drum Phrase MIDI bar summaries must match the saved phrase score and hits');
+    }
+    if(barSummaries.reduce((sum,row)=>sum+row.expectedCount,0)!==result.expectedCount||barSummaries.reduce((sum,row)=>sum+row.matchedCount,0)!==result.matchedCount)fail(p,'Drum Phrase MIDI bar summaries must reconcile with result totals');
+    if(result.wrongVoiceCount!>result.extras)fail(p,'wrong-voice count cannot exceed MIDI extras');
+    if(result.hits.some(hit=>{
+      if(hit.expectedGridVoice===undefined||hit.expectedAccent===undefined||hit.expectedPhraseBarIndex===undefined||hit.expectedPhraseBarRole===undefined||!activeVoices.has(hit.expectedGridVoice)||assignmentByLane.get(hit.expectedGridVoice)!==hit.voice)return true;
+      const phraseBarIndex=hit.bar%bars.length,bar=bars[phraseBarIndex];if(!bar||phraseBarIndex!==hit.expectedPhraseBarIndex||bar.role!==hit.expectedPhraseBarRole)return true;
+      const lane=bar.lanes.find(row=>row.voice===hit.expectedGridVoice),cell=lane?.steps[hit.beat*result.subdivision+hit.part];return (cell!=='x'&&cell!=='X')||hit.expectedAccent!==(cell==='X');
+    }))fail(p,'Drum Phrase MIDI matched hits must match saved bars, cells, lanes and assigned sounds');
+    if(result.landingExpectedCount!==landingExpectedFromScore||result.landingExpectedCount!<=0||result.landingMatchedCount!>result.landingExpectedCount!||result.landingMisses!==result.landingExpectedCount!-result.landingMatchedCount!)fail(p,'Drum Phrase landing counts are inconsistent with the saved return downbeat');
+    const landingHits=result.hits.filter(hit=>hit.expectedPhraseBarRole==='return'&&hit.beat===0&&hit.part===0);
+    if(landingHits.length!==result.landingMatchedCount)fail(p,'Drum Phrase landing matches must equal saved return-bar downbeat hits');
+    const landingBias=landingHits.length?landingHits.reduce((sum,hit)=>sum+hit.offsetMs,0)/landingHits.length:0,landingError=landingHits.length?landingHits.reduce((sum,hit)=>sum+Math.abs(hit.offsetMs),0)/landingHits.length:0;
+    if(Math.abs(result.landingMeanOffsetMs!-landingBias)>.11||Math.abs(result.landingMeanAbsoluteErrorMs!-landingError)>.11)fail(p,'Drum Phrase landing timing evidence does not match saved hits');
+    validateAccent();
   }else{
     if(result.midiAnalysisVersion!==1)fail(p,'generic MIDI results require analysis version 1');
-    if(gridFields.some(value=>value!==undefined)||result.accentVelocityMean!==undefined||result.normalVelocityMean!==undefined||result.accentVelocityDifference!==undefined)fail(p,'non-grid MIDI results cannot carry Drum Grid scoring metadata');
+    if(gridOnly.some(value=>value!==undefined)||phraseOnly.some(value=>value!==undefined)||result.wrongVoiceCount!==undefined||accentFields.some(value=>value!==undefined))fail(p,'generic MIDI results cannot carry authored score metadata');
   }
   for(const hit of result.hits){
     if(hit.beat>=result.meter.beats)fail(p,'MIDI hit beat exceeds the stored meter');

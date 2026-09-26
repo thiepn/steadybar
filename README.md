@@ -168,6 +168,18 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Phrase-aware MIDI landing analysis — 2.28.0
+
+MIDI Drum Lab can now score a complete authored **Groove → Fill → Return** phrase. Choose the current phrase or a saved Phrase Lab exercise, map each active authored lane to the MIDI sound you will play, and run at least one complete phrase cycle at the actual test BPM.
+
+The result keeps Steadybar’s mapped-sound/timing evidence but gives the musical boundary its own diagnostic: **part 1 of beat 1 in the return bar**. Steadybar reports authored landing hits, matches, misses, signed early/late bias and mean absolute timing distance, alongside per-bar groove/fill/return summaries and per-lane mapped-sound evidence.
+
+Phrase results use MIDI analysis version 3 and freeze the exact phrase score and assignments used for the test. Restore validation recomputes expected evidence from that frozen phrase and rejects contradictory bars, cells, assignments, hit metadata, summaries or landing numbers. Existing generic MIDI v1 and Drum Grid v2 history remains valid.
+
+If a saved Grid/Phrase exercise was explicitly selected, that exercise owns the evidence source reference; an unrelated active practice session is not attached. Active-session links are retained only when the active block itself supplied the authored score.
+
+These diagnostics remain MIDI evidence, not automatic musicianship grading. Steadybar does not infer physical hand identity, acoustic loudness, fill taste, body mechanics or mastery state from phrase MIDI measurements alone.
+
 ## Groove, Fill & Return Phrase Lab — 2.27.0
 
 Drum profiles now have a dedicated **Phrase Lab** for the musical problem that one-bar grid practice cannot solve: keeping a groove stable, placing one bounded fill inside the phrase, and proving the landing on the following beat 1.

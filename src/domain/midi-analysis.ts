@@ -1,5 +1,5 @@
 import type {
-  MetronomeConfig,MidiDeviceProfile,MidiDrumMapping,MidiDrumVoice,MidiExpectedPattern,MidiGridLaneAssignment,MidiGridLaneSummary,
+  MetronomeConfig,MidiDeviceProfile,MidiDrumMapping,MidiDrumVoice,MidiExpectedPattern,MidiGridLaneAssignment,MidiGridLaneSummary,MidiPhraseBarSummary,
   MidiPerformanceMatchedHit,MidiPerformanceResult,MidiVoiceSummary,TimingLabConfidence,
 } from './models.js';
 import type { DrumGridVoice, PracticeProtocol } from './practice-types.js';
@@ -38,15 +38,28 @@ export interface MidiPerformanceAnalysis {
   voices:MidiVoiceSummary[];
   wrongVoiceCount?:number;
   gridLaneSummaries?:MidiGridLaneSummary[];
+  phraseLaneSummaries?:MidiGridLaneSummary[];
+  phraseBarSummaries?:MidiPhraseBarSummary[];
+  landingExpectedCount?:number;
+  landingMatchedCount?:number;
+  landingMisses?:number;
+  landingMeanOffsetMs?:number;
+  landingMeanAbsoluteErrorMs?:number;
   accentVelocityMean?:number;
   normalVelocityMean?:number;
   accentVelocityDifference?:number;
 }
 type DrumGridProtocol=Extract<PracticeProtocol,{kind:'drum-grid'}>;
+type DrumPhraseProtocol=Extract<PracticeProtocol,{kind:'drum-phrase'}>;
 interface MidiGridExpectedHit extends TimingExpectedHit {
   gridVoice:DrumGridVoice;
   midiVoice:MidiDrumVoice;
   accent:boolean;
+}
+interface MidiPhraseExpectedHit extends MidiGridExpectedHit {
+  phraseBarIndex:number;
+  phraseBarRole:'groove'|'fill'|'return';
+  phraseBarLabel:string;
 }
 
 const mean=(values:number[])=>values.length?values.reduce((sum,value)=>sum+value,0)/values.length:0;
@@ -129,6 +142,7 @@ export function expectedMidiGrid(
   if(pattern==='subdivision')return grid;
   if(pattern==='beat')return grid.filter(hit=>hit.part===0);
   if(pattern==='drum-grid')throw new Error('Drum Grid scoring requires an authored grid and lane-to-MIDI assignments.');
+  if(pattern==='drum-phrase')throw new Error('Drum Phrase scoring requires an authored phrase and lane-to-MIDI assignments.');
   if(config.meter.beats<4)throw new Error('2 & 4 backbeat analysis requires a meter with at least four beats.');
   return grid.filter(hit=>hit.part===0&&(hit.beat===1||hit.beat===3));
 }
@@ -168,6 +182,54 @@ export function analyzeMidiPerformance(
     velocityMean:round1(mean(velocities)),velocityMedian:round1(median(velocities)),velocitySpread:round1(spread(velocities)),
     velocityMin,velocityMax,velocityRange:velocityMax-velocityMin,hits,voices:voiceSummaries(hits),
   };
+}
+
+type IndexedMappedEvent={source:MidiMappedEvent&{originalIndex:number};detectedIndex:number};
+interface AuthoredMidiMatch<T extends MidiGridExpectedHit>{target:T;source:MidiMappedEvent&{originalIndex:number};distanceMs:number}
+
+function lowerBoundTime<T>(rows:readonly T[],time:number,getTime:(row:T)=>number):number{
+  let low=0,high=rows.length;
+  while(low<high){const mid=(low+high)>>1;if(getTime(rows[mid]!)<time)low=mid+1;else high=mid;}
+  return low;
+}
+
+function matchAuthoredMidi<T extends MidiGridExpectedHit>(
+  expected:readonly T[],
+  detected:readonly (MidiMappedEvent&{originalIndex:number})[],
+  matchWindowMs:number,
+):{matches:AuthoredMidiMatch<T>[];used:Set<number>;wrongVoiceCount:number}{
+  const windowSeconds=matchWindowMs/1000,byVoice=new Map<MidiDrumVoice,IndexedMappedEvent[]>();
+  detected.forEach((source,detectedIndex)=>{
+    const rows=byVoice.get(source.mapping.voice)??[];rows.push({source,detectedIndex});byVoice.set(source.mapping.voice,rows);
+  });
+  const used=new Set<number>(),matches:AuthoredMidiMatch<T>[]=[];
+  for(const target of expected){
+    const rows=byVoice.get(target.midiVoice);if(!rows?.length)continue;
+    const minimum=target.time-windowSeconds,maximum=target.time+windowSeconds;
+    let index=lowerBoundTime(rows,minimum,row=>row.source.time),best:IndexedMappedEvent|undefined,bestDistance=Infinity;
+    for(;index<rows.length&&rows[index]!.source.time<=maximum;index++){
+      const candidate=rows[index]!;if(used.has(candidate.detectedIndex))continue;
+      const distanceMs=(candidate.source.time-target.time)*1000,absolute=Math.abs(distanceMs);
+      if(absolute<bestDistance||(absolute===bestDistance&&candidate.detectedIndex<(best?.detectedIndex??Infinity))){best=candidate;bestDistance=absolute;}
+    }
+    if(!best)continue;
+    used.add(best.detectedIndex);matches.push({target,source:best.source,distanceMs:(best.source.time-target.time)*1000});
+  }
+  const slots:{time:number;voices:Set<MidiDrumVoice>}[]=[];
+  for(const target of expected){
+    const last=slots.at(-1);
+    if(last&&last.time===target.time)last.voices.add(target.midiVoice);
+    else slots.push({time:target.time,voices:new Set([target.midiVoice])});
+  }
+  let wrongVoiceCount=0;
+  detected.forEach((source,detectedIndex)=>{
+    if(used.has(detectedIndex)||!slots.length)return;
+    const insertion=lowerBoundTime(slots,source.time,row=>row.time),candidates=[insertion-1,insertion].filter(index=>index>=0&&index<slots.length);
+    let nearestIndex=-1,distance=Infinity;
+    for(const index of candidates){const candidate=Math.abs((source.time-slots[index]!.time)*1000);if(candidate<distance){distance=candidate;nearestIndex=index;}}
+    if(nearestIndex>=0&&distance<=matchWindowMs&&!slots[nearestIndex]!.voices.has(source.mapping.voice))wrongVoiceCount++;
+  });
+  return {matches,used,wrongVoiceCount};
 }
 
 export function expectedMidiDrumGrid(
@@ -211,34 +273,12 @@ export function analyzeMidiGridPerformance(
   const windowedEvents=events.filter(event=>event.time>=startTime-windowSeconds&&event.time<=endTime+windowSeconds);
   const {mapped,unmappedCount}=mapMidiEvents(windowedEvents,profile);
   const detected=mapped.map((event,index)=>({...event,originalIndex:index})).sort((a,b)=>a.time-b.time||a.originalIndex-b.originalIndex);
-  const used=new Set<number>(),hits:MidiPerformanceMatchedHit[]=[];
-  for(const target of expected){
-    let best=-1,bestDistance=Infinity;
-    for(let index=0;index<detected.length;index++){
-      if(used.has(index))continue;
-      const source=detected[index]!;
-      if(source.mapping.voice!==target.midiVoice)continue;
-      const distance=(source.time-target.time)*1000,absolute=Math.abs(distance);
-      if(absolute<=matchWindowMs&&(absolute<bestDistance||(absolute===bestDistance&&index<best))){best=index;bestDistance=absolute;}
-    }
-    if(best<0)continue;
-    used.add(best);const source=detected[best]!;
-    hits.push({
-      index:target.index,elapsedMs:round1(target.elapsedMs),offsetMs:round1((source.time-target.time)*1000),
-      note:source.note,velocity:source.velocity,channel:source.channel,voice:source.mapping.voice,label:source.mapping.label,
-      bar:target.bar,beat:target.beat,part:target.part,expectedGridVoice:target.gridVoice,expectedAccent:target.accent,
-    });
-  }
-  let wrongVoiceCount=0;
-  for(let index=0;index<detected.length;index++){
-    if(used.has(index))continue;
-    const source=detected[index]!;
-    let nearest:MidiGridExpectedHit|undefined,distance=Infinity;
-    for(const target of expected){const candidate=Math.abs((source.time-target.time)*1000);if(candidate<distance){distance=candidate;nearest=target;}}
-    if(!nearest||distance>matchWindowMs)continue;
-    const expectedVoices=new Set(expected.filter(target=>Math.abs(target.time-nearest!.time)<1e-7).map(target=>target.midiVoice));
-    if(!expectedVoices.has(source.mapping.voice))wrongVoiceCount++;
-  }
+  const matched=matchAuthoredMidi(expected,detected,matchWindowMs),wrongVoiceCount=matched.wrongVoiceCount;
+  const hits:MidiPerformanceMatchedHit[]=matched.matches.map(({target,source,distanceMs})=>({
+    index:target.index,elapsedMs:round1(target.elapsedMs),offsetMs:round1(distanceMs),
+    note:source.note,velocity:source.velocity,channel:source.channel,voice:source.mapping.voice,label:source.mapping.label,
+    bar:target.bar,beat:target.beat,part:target.part,expectedGridVoice:target.gridVoice,expectedAccent:target.accent,
+  }));
   const offsets=hits.map(hit=>hit.offsetMs),velocities=hits.map(hit=>hit.velocity),average=mean(offsets);
   const expectedCount=expected.length,detectedCount=detected.length,matchedCount=hits.length,misses=expectedCount-matchedCount,extras=Math.max(0,detectedCount-matchedCount);
   const velocityMin=velocities.length?Math.min(...velocities):0,velocityMax=velocities.length?Math.max(...velocities):0;
@@ -264,6 +304,88 @@ export function analyzeMidiGridPerformance(
     ...(accentVelocityMean!==undefined?{accentVelocityMean}:{}),
     ...(normalVelocityMean!==undefined?{normalVelocityMean}:{}),
     ...(accentVelocityDifference!==undefined?{accentVelocityDifference}:{}),
+  };
+}
+
+export function drumPhraseCycleSeconds(phrase:DrumPhraseProtocol,bpm=phrase.pulse.bpm):number {
+  return phrase.bars.length*phrase.pulse.beats*60/bpm;
+}
+
+export function expectedMidiDrumPhrase(
+  config:Pick<MetronomeConfig,'bpm'|'meter'|'subdivision'>,
+  startTime:number,
+  durationSeconds:number,
+  phrase:DrumPhraseProtocol,
+  assignments:readonly MidiGridLaneAssignment[],
+):MidiPhraseExpectedHit[]{
+  if(phrase.pulse.beats!==config.meter.beats||phrase.pulse.beatUnit!==config.meter.beatUnit||phrase.pulse.subdivision!==config.subdivision)
+    throw new Error('Drum Phrase score pulse must match the MIDI test meter and subdivision.');
+  const cycleSeconds=drumPhraseCycleSeconds(phrase,config.bpm);
+  if(durationSeconds+1e-6<cycleSeconds)throw new Error(`Drum Phrase scoring needs at least one complete phrase cycle (${Math.ceil(cycleSeconds)} seconds at this tempo).`);
+  const assignmentMap=new Map(assignments.map(row=>[row.gridVoice,row.midiVoice]));
+  const activeVoices=[...new Set(phrase.bars.flatMap(bar=>bar.lanes.filter(lane=>/[xX]/.test(lane.steps)).map(lane=>lane.voice)))];
+  for(const voice of activeVoices)if(!assignmentMap.has(voice))throw new Error('Assign a MIDI drum sound to every active Drum Phrase lane.');
+  const assignedActive=activeVoices.map(voice=>assignmentMap.get(voice)!);
+  if(new Set(assignedActive).size!==assignedActive.length)throw new Error('Active Drum Phrase lanes need different MIDI sounds so lane accuracy remains identifiable.');
+  const base=buildExpectedTimingGrid(config,startTime,durationSeconds),expected:MidiPhraseExpectedHit[]=[];
+  for(const hit of base){
+    const phraseBarIndex=hit.bar%phrase.bars.length,bar=phrase.bars[phraseBarIndex]!,step=hit.beat*config.subdivision+hit.part;
+    for(const lane of bar.lanes){
+      const cell=lane.steps[step];
+      if((cell==='x'||cell==='X')&&assignmentMap.has(lane.voice))expected.push({...hit,index:expected.length,gridVoice:lane.voice,midiVoice:assignmentMap.get(lane.voice)!,accent:cell==='X',phraseBarIndex,phraseBarRole:bar.role,phraseBarLabel:bar.label});
+    }
+  }
+  if(!expected.length)throw new Error('The selected Drum Phrase has no expected hits.');
+  return expected;
+}
+
+export function analyzeMidiPhrasePerformance(
+  config:Pick<MetronomeConfig,'bpm'|'meter'|'subdivision'>,
+  startTime:number,
+  durationSeconds:number,
+  events:readonly MidiTimedEvent[],
+  profile:Pick<MidiDeviceProfile,'channel'|'mappings'>,
+  phrase:DrumPhraseProtocol,
+  assignments:readonly MidiGridLaneAssignment[],
+  matchWindowMs=timingMatchWindowMs(config),
+):MidiPerformanceAnalysis{
+  const expected=expectedMidiDrumPhrase(config,startTime,durationSeconds,phrase,assignments);
+  const endTime=startTime+durationSeconds,windowSeconds=matchWindowMs/1000;
+  const windowedEvents=events.filter(event=>event.time>=startTime-windowSeconds&&event.time<=endTime+windowSeconds);
+  const {mapped,unmappedCount}=mapMidiEvents(windowedEvents,profile);
+  const detected=mapped.map((event,index)=>({...event,originalIndex:index})).sort((a,b)=>a.time-b.time||a.originalIndex-b.originalIndex);
+  const matched=matchAuthoredMidi(expected,detected,matchWindowMs),wrongVoiceCount=matched.wrongVoiceCount;
+  const hits:MidiPerformanceMatchedHit[]=matched.matches.map(({target,source,distanceMs})=>({
+    index:target.index,elapsedMs:round1(target.elapsedMs),offsetMs:round1(distanceMs),
+    note:source.note,velocity:source.velocity,channel:source.channel,voice:source.mapping.voice,label:source.mapping.label,
+    bar:target.bar,beat:target.beat,part:target.part,expectedGridVoice:target.gridVoice,expectedAccent:target.accent,
+    expectedPhraseBarIndex:target.phraseBarIndex,expectedPhraseBarRole:target.phraseBarRole,
+  }));
+  const offsets=hits.map(hit=>hit.offsetMs),velocities=hits.map(hit=>hit.velocity),average=mean(offsets);
+  const expectedCount=expected.length,detectedCount=detected.length,matchedCount=hits.length,misses=expectedCount-matchedCount,extras=Math.max(0,detectedCount-matchedCount);
+  const velocityMin=velocities.length?Math.min(...velocities):0,velocityMax=velocities.length?Math.max(...velocities):0;
+  const phraseLaneSummaries:MidiGridLaneSummary[]=assignments.flatMap(assignment=>{
+    const laneExpected=expected.filter(hit=>hit.gridVoice===assignment.gridVoice);if(!laneExpected.length)return [];
+    const matched=hits.filter(hit=>hit.expectedGridVoice===assignment.gridVoice).length;
+    return [{gridVoice:assignment.gridVoice,midiVoice:assignment.midiVoice,expectedCount:laneExpected.length,matchedCount:matched,misses:laneExpected.length-matched}];
+  });
+  const phraseBarSummaries:MidiPhraseBarSummary[]=phrase.bars.map((bar,barIndex)=>{
+    const barExpected=expected.filter(hit=>hit.phraseBarIndex===barIndex),barHits=hits.filter(hit=>hit.expectedPhraseBarIndex===barIndex);
+    return {barIndex,role:bar.role,label:bar.label,expectedCount:barExpected.length,matchedCount:barHits.length,misses:barExpected.length-barHits.length,meanAbsoluteErrorMs:round1(mean(barHits.map(hit=>Math.abs(hit.offsetMs))))};
+  });
+  const landingExpected=expected.filter(hit=>hit.phraseBarRole==='return'&&hit.beat===0&&hit.part===0),landingHits=hits.filter(hit=>hit.expectedPhraseBarRole==='return'&&hit.beat===0&&hit.part===0);
+  const landingExpectedCount=landingExpected.length,landingMatchedCount=landingHits.length,landingMisses=landingExpectedCount-landingMatchedCount,landingMeanOffsetMs=round1(mean(landingHits.map(hit=>hit.offsetMs))),landingMeanAbsoluteErrorMs=round1(mean(landingHits.map(hit=>Math.abs(hit.offsetMs))));
+  const accentHits=hits.filter(hit=>hit.expectedAccent),accentVoices=[...new Set(accentHits.map(hit=>hit.voice))],comparableVoice=accentVoices.length===1?accentVoices[0]:undefined;
+  const accentVelocities=comparableVoice?accentHits.filter(hit=>hit.voice===comparableVoice).map(hit=>hit.velocity):[],normalVelocities=comparableVoice?hits.filter(hit=>hit.expectedAccent===false&&hit.voice===comparableVoice).map(hit=>hit.velocity):[];
+  const accentVelocityMean=accentVelocities.length&&normalVelocities.length?round1(mean(accentVelocities)):undefined,normalVelocityMean=accentVelocities.length&&normalVelocities.length?round1(mean(normalVelocities)):undefined;
+  const accentVelocityDifference=accentVelocityMean!==undefined&&normalVelocityMean!==undefined?round1(accentVelocityMean-normalVelocityMean):undefined;
+  return {
+    expectedCount,detectedCount,matchedCount,misses,extras,unmappedCount,wrongVoiceCount,phraseLaneSummaries,phraseBarSummaries,
+    landingExpectedCount,landingMatchedCount,landingMisses,landingMeanOffsetMs,landingMeanAbsoluteErrorMs,
+    meanOffsetMs:round1(average),medianOffsetMs:round1(median(offsets)),meanAbsoluteErrorMs:round1(mean(offsets.map(Math.abs))),
+    spreadMs:round1(spread(offsets)),driftMsPerMinute:round1(driftPerMinute(hits)),confidence:confidenceFor(expectedCount,matchedCount,extras),matchWindowMs,
+    velocityMean:round1(mean(velocities)),velocityMedian:round1(median(velocities)),velocitySpread:round1(spread(velocities)),velocityMin,velocityMax,velocityRange:velocityMax-velocityMin,hits,voices:voiceSummaries(hits),
+    ...(accentVelocityMean!==undefined?{accentVelocityMean}:{}),...(normalVelocityMean!==undefined?{normalVelocityMean}:{}),...(accentVelocityDifference!==undefined?{accentVelocityDifference}:{}),
   };
 }
 

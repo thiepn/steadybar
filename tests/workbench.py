@@ -1152,6 +1152,87 @@ class Workbench(e2e.MusicPracticeTests):
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
+
+    def test_74_phrase_midi_v3_history_and_setup_are_readable_without_live_web_midi(self):
+        self.onboard()
+        self.read("""(async()=>{
+          const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId),now=new Date().toISOString();
+          const phrase=load('domain/drum-phrase.js').buildDrumPhrase('backbeat','alternating',80,2,2,'beat',0);
+          const midi=load('domain/midi-analysis.js'),config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:2},duration=midi.drumPhraseCycleSeconds(phrase,120);
+          const assignments=[
+            {gridVoice:'right-hand',midiVoice:'hihat-closed'},
+            {gridVoice:'left-hand',midiVoice:'snare'},
+            {gridVoice:'kick',midiVoice:'kick'},
+            {gridVoice:'hihat-foot',midiVoice:'hihat-pedal'},
+          ],device={channel:10,mappings:[
+            {note:42,voice:'hihat-closed',label:'Closed hi-hat',enabled:true},
+            {note:38,voice:'snare',label:'Snare',enabled:true},
+            {note:36,voice:'kick',label:'Kick',enabled:true},
+            {note:44,voice:'hihat-pedal',label:'Hi-hat pedal',enabled:true},
+          ]},noteFor={'hihat-closed':42,snare:38,kick:36,'hihat-pedal':44};
+          const expected=midi.expectedMidiDrumPhrase(config,5,duration,phrase,assignments),events=expected.map(hit=>({time:hit.time,note:noteFor[hit.midiVoice],velocity:hit.accent?108:82,channel:10}));
+          const analysis=midi.analyzeMidiPhrasePerformance(config,5,duration,events,device,phrase,assignments,80);
+          const source=structuredClone(d.exercises.find(e=>e.profileId===profile.id&&!e.archived));
+          source.id='qa-phrase-midi-ex';source.createdAt=now;source.updatedAt=now;source.name='QA Phrase Exercise';source.category='coordination';source.description=phrase.focus;source.instructions=phrase.focus;source.skillArea='fills';source.primarySkillId='drums.fills';source.secondarySkillIds=['drums.groove','drums.timing'];source.protocol=phrase;source.builtin=false;source.tags=['qa','drum-phrase'];source.notes='';
+          d.exercises.push(source);
+          d.midiResults=[{id:'qa-phrase-midi',createdAt:now,updatedAt:now,midiAnalysisVersion:3,profileId:profile.id,sourceExerciseId:source.id,deviceKey:'qa::phrase-kit',deviceNameSnapshot:'QA Phrase Kit',manufacturerSnapshot:'QA',bpm:120,meter:{beats:4,beatUnit:4},subdivision:2,timingClick:{mode:'standard',sparseEvery:2,gapClickBars:3,gapSilentBars:1},durationSeconds:duration,expectedPattern:'drum-phrase',phraseNameSnapshot:'QA Phrase Landing',phraseFocusSnapshot:phrase.focus,phraseBarsSnapshot:phrase.bars,phraseAssignments:assignments,...analysis}];
+          await load('db/database.js').replaceData(d);await store.refresh();return {duration,landing:analysis.landingExpectedCount};
+        })()""")
+        self.route('/midi-lab')
+        expect(self.page.get_by_role('heading',name='MIDI Drum Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_text('QA Phrase Landing',exact=False).first).to_be_visible()
+        expect(self.page.get_by_text('Return-bar beat 1',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('2 / 2 landed',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('Landing bias',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('Landing distance',exact=True).first).to_be_visible()
+        expect(self.page.locator('.midi-phrase-bar-row')).to_have_count(3)
+        expect(self.page.locator('.midi-phrase-bar-row.role-fill')).to_have_count(1)
+        expect(self.page.locator('.midi-phrase-bar-row.role-return')).to_have_count(1)
+        expect(self.page.get_by_text('landing 2/2',exact=True).first).to_be_visible()
+        expect(self.page.get_by_role('link',name='Open source exercise',exact=True)).to_be_visible()
+
+        self.page.get_by_label('Expected hits',exact=True).select_option('drum-phrase')
+        expect(self.page.locator('.midi-phrase-score')).to_be_visible()
+        expect(self.page.get_by_label('Drum Phrase score',exact=True)).to_have_value('qa-phrase-midi-ex')
+        expect(self.page.locator('.midi-phrase-preview')).to_contain_text('RETURN')
+        duration_field=self.page.locator('input[name="midiDuration"]')
+        expect(duration_field).to_have_attribute('min','9')
+        expect(duration_field).to_have_attribute('step','1')
+        self.page.get_by_label('BPM',exact=True).fill('120')
+        self.page.get_by_label('BPM',exact=True).press('Tab')
+        expect(duration_field).to_have_attribute('min','6')
+        expect(self.page.locator('select[name="midiPhrase-right-hand"]')).to_be_visible()
+        expect(self.page.locator('select[name="midiPhrase-left-hand"]')).to_be_visible()
+        expect(self.page.locator('select[name="midiPhrase-kick"]')).to_be_visible()
+        expect(self.page.locator('select[name="midiPhrase-hihat-foot"]')).to_be_hidden()
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+    def test_75_current_practice_phrase_midi_uses_live_session_bpm(self):
+        self.onboard()
+        self.route('/phrases')
+        expect(self.page.get_by_role('heading',name='Phrase Lab',exact=True)).to_be_visible()
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        bpm=self.page.get_by_label('BPM',exact=True)
+        bpm.fill('112');bpm.press('Tab')
+        live_bpm=None
+        for _ in range(70):
+            live_bpm=self.read("load('practice/controller.js').practice.session.runtime.bpm")
+            if live_bpm==112:break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(live_bpm,112)
+        self.route('/midi-lab')
+        expect(self.page.get_by_role('heading',name='MIDI Drum Lab',exact=True)).to_be_visible()
+        self.page.get_by_label('Expected hits',exact=True).select_option('drum-phrase')
+        expect(self.page.get_by_label('Drum Phrase score',exact=True)).to_have_value('active')
+        expect(self.page.get_by_label('BPM',exact=True)).to_have_value('112')
+        expect(self.page.locator('input[name="midiDuration"]')).to_have_attribute('min','11')
+        expect(self.page.locator('.midi-phrase-preview')).to_contain_text('RETURN')
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
