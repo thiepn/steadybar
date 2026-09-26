@@ -777,6 +777,7 @@ class Workbench(e2e.MusicPracticeTests):
           return cells.map(row=>[...row.querySelectorAll('.drum-grid-edit-cell')].map(cell=>cell.textContent==='·'?'.':cell.textContent).join(''));
         })()""")
         self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        expect(self.page.get_by_role('button',name='Tom, step 1: Soft / ghost',exact=True)).to_be_visible()
         plan=None
         for _ in range(70):
             plan=self.read("""(()=>{
