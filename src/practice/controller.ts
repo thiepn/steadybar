@@ -128,9 +128,29 @@ export class PracticeController {
     if(audio.running)audio.update(this.config());
   }
   async toggleAudio():Promise<void>{
-    const wasActive=!!this.session&&['running','countin'].includes(this.session.runtime.phase);
-    await this.pause();await this.mutate(s=>{s.runtime.metronomeOn=!s.runtime.metronomeOn;return s;});
-    if(wasActive)await this.start();
+    const session=this.session;if(!session||session.status!=='active')return;
+    const active=['running','countin'].includes(session.runtime.phase),turningOn=!session.runtime.metronomeOn;
+    if(!active){await this.mutate(s=>{s.runtime.metronomeOn=turningOn;return s;});return;}
+    const generation=++this.generation;reference.stop();
+    if(!turningOn)audio.stop();
+    await this.mutate(s=>{
+      s=checkpointSession(s);s.runtime.metronomeOn=turningOn;
+      if(s.runtime.phase==='countin'){const iso=nowISO();s.runtime.phase='running';s.runtime.runStartedAt=iso;s.runtime.checkpointAt=iso;}
+      return s;
+    });
+    if(generation!==this.generation)return;
+    this.beat=undefined;this.startTimers();
+    if(!turningOn){this.emit();return;}
+    try{
+      await audio.start({...this.config(),countIn:0},{
+        onBeat:event=>{if(generation!==this.generation)return;this.beat=event;this.emit();},
+        onInterrupted:()=>{if(generation!==this.generation)return;void this.pause().then(()=>{this.error='Audio was suspended by the browser. The session is paused; tap Resume when ready.';this.emit();}).catch(error=>this.report(error));},
+      });
+    }catch(error){
+      if(generation!==this.generation)return;
+      await this.mutate(s=>{s.runtime.metronomeOn=false;return s;}).catch(()=>{});
+      throw error;
+    }
   }
   async setTimingClick(timing:TimingClickConfig):Promise<void>{
     await this.mutate(s=>{
