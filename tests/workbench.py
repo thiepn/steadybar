@@ -786,6 +786,9 @@ class Workbench(e2e.MusicPracticeTests):
             if plan:break
             self.page.wait_for_timeout(100)
         self.assertIsNotNone(plan);self.assertEqual(plan['kind'],'drum-grid');self.assertEqual(plan['lanes'],expected);self.assertGreaterEqual(plan['bpm'],20)
+        expect(self.page.get_by_text('Variation 2',exact=True)).to_be_visible()
+        retained=self.read("""(()=>[...document.querySelectorAll('.drum-grid-editor .drum-grid-row:not(.drum-grid-header)')].map(row=>[...row.querySelectorAll('.drum-grid-edit-cell')].map(cell=>cell.textContent==='·'?'.':cell.textContent).join('')))()""")
+        self.assertEqual(retained,expected)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
