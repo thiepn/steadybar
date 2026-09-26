@@ -3,6 +3,7 @@ import type { ProtocolOutcome } from '../domain/practice-types.js';
 import { protocolDefinition } from '../domain/profiles.js';
 import { fretPrompt, noteName, NOTE_NAMES, patternFits, protocolSummary, scaleOffsets } from '../domain/protocols.js';
 import { drumGridStepLabels, DRUM_GRID_VOICES } from '../domain/drum-grid.js';
+import { DRUM_DYNAMIC_SURFACES, drumDynamicsLevelLabel } from '../domain/drum-dynamics.js';
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { reference } from '../audio/reference.js';
 import { audio } from '../audio/engine.js';
