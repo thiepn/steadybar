@@ -1235,6 +1235,8 @@ class Workbench(e2e.MusicPracticeTests):
 
     def test_76_pocket_lab_v2_history_targets_and_timing_history_stay_separate(self):
         self.onboard()
+        self.route('/pocket')
+        expect(self.page.get_by_role('heading',name='Pocket Lab',exact=True)).to_be_visible()
         self.read("""(async()=>{
           const store=load('app/store.js').store,d=structuredClone(store.snapshot()),profile=d.profiles.find(p=>p.id===d.settings.activeProfileId);
           const timing=load('domain/timing-analysis.js'),pocket=load('domain/pocket-analysis.js'),config={bpm:120,meter:{beats:4,beatUnit:4},subdivision:1},expected=timing.buildExpectedTimingGrid(config,5,4);
