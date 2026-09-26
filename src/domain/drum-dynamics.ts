@@ -47,7 +47,7 @@ export function buildDrumDynamics(
   }else if(preset==='dynamic-arc'){
     const levels=['1','1','2','2','3','3','2','2'] as const,reverse=variation%2===1;
     for(let step=0;step<count;step++){
-      const phase=Math.floor(step/Math.max(1,count/levels.length)),index=Math.min(levels.length-1,phase);
+      const index=Math.min(levels.length-1,Math.floor(step*levels.length/count));
       put(snare,step,levels[reverse?levels.length-1-index:index]!);
     }
   }else if(preset==='voice-balance'){
