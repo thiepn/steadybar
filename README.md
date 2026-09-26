@@ -168,6 +168,15 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Time Feel & Pocket Lab — 2.29.0
+
+Steadybar now has a dedicated **Pocket Lab** for practicing intentional placement rather than assuming the grid center is always the goal. Choose a target such as −20 ms ahead, centered, +20 ms behind, or a custom offset, then choose your own ±ms target band before playing.
+
+Pocket Lab uses the same calibrated microphone/audio-time engine as Timing Lab but centers event matching on the chosen feel target. That matters: an intentionally early hit is not discarded just because it is far from the raw click grid. Results still preserve the original grid-relative placement while also reporting average error to the chosen target, target distance, target-band consistency, spread and drift.
+
+Pocket results use Timing Lab result version 2 and are kept separate from ordinary v1 Timing history. Restore validation recomputes the target diagnostics from the saved matched hits, so Pocket evidence cannot drift from its own raw offsets.
+
+The chosen target is an experiment, not a quality score. Ahead, centered and behind placements can all be musically useful depending on tempo, style, ensemble interaction, articulation and intent. Pocket Lab is designed to help reproduce a chosen feel consistently, not to prescribe one correct pocket.
 ## Phrase-aware MIDI landing analysis — 2.28.0
 
 MIDI Drum Lab can now score a complete authored **Groove → Fill → Return** phrase. Choose the current phrase or a saved Phrase Lab exercise, map each active authored lane to the MIDI sound you will play, and run at least one complete phrase cycle at the actual test BPM.

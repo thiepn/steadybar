@@ -3,6 +3,7 @@ import { COURSES } from '../learning/catalog.js';
 import { sessionEvidenceSeconds } from '../learning/evidence.js';
 export { validateCourseProgress } from '../learning/validation.js';
 import { patternFits, exerciseProtocol, protocolPulse } from './protocols.js';
+import { analyzePocket } from './pocket-analysis.js';
 import { validateProfile, validateProtocol, validateOutcome, validateProtocolState, validateSongPart, validateSongTransition, assertProtocolCompatible, assertOutcomeMatches } from './practice-validation.js';
 import { assertPracticeStateReferences, assertPracticeTargetReferences, assertPriorityCycleReferences, validatePlanGeneration, validatePracticeEvaluation, validatePracticePrescription, validatePracticeState, validatePriorityCycle } from './practice-state-validation.js';
 import { isSkillForInstrument } from './skill-graph.js';
@@ -241,14 +242,16 @@ const timingLabHit=obj({
   bar:num(0,100000,true),beat:num(0,15,true),part:num(0,3,true),
 });
 const rawTimingLabResult=obj({
-  ...entity,timingLabVersion:one(1),profileId:id,
+  ...entity,timingLabVersion:one(1,2),profileId:id,
   sessionId:optional(id),blockId:optional(id),sourceExerciseId:optional(id),
   bpm,meter,subdivision,timingClick,
   durationSeconds:num(1,300),threshold:num(.001,.95),inputOffsetMs:num(-250,250),matchWindowMs:num(10,500),
   expectedCount:num(1,10000,true),detectedCount:num(0,10000,true),matchedCount:num(0,10000,true),
   misses:num(0,10000,true),extras:num(0,10000,true),
   meanOffsetMs:num(-1000,1000),medianOffsetMs:num(-1000,1000),meanAbsoluteErrorMs:num(0,1000),spreadMs:num(0,1000),
-  driftMsPerMinute:num(-100000,100000),confidence:one('low','medium','high'),hits:arr(timingLabHit,10000),
+  driftMsPerMinute:num(-100000,100000),confidence:one('low','medium','high'),
+  targetOffsetMs:optional(num(-120,120)),targetBandMs:optional(num(1,100)),meanTargetErrorMs:optional(num(-1000,1000)),medianTargetErrorMs:optional(num(-1000,1000)),meanAbsoluteTargetErrorMs:optional(num(0,1000)),targetBandHits:optional(num(0,10000,true)),
+  hits:arr(timingLabHit,10000),
 });
 export const validateTimingLabResult:Validator<TimingLabResult>=(v,p='Timing Lab result')=>{
   const result=rawTimingLabResult(v,p);
@@ -256,6 +259,14 @@ export const validateTimingLabResult:Validator<TimingLabResult>=(v,p='Timing Lab
   if(result.matchedCount>result.expectedCount||result.matchedCount>result.detectedCount)fail(p,'matched hit count exceeds available events');
   if(result.misses!==result.expectedCount-result.matchedCount)fail(p,'miss count must equal expected minus matched hits');
   if(result.extras!==result.detectedCount-result.matchedCount)fail(p,'extra count must equal detected minus matched hits');
+  const pocketFields=[result.targetOffsetMs,result.targetBandMs,result.meanTargetErrorMs,result.medianTargetErrorMs,result.meanAbsoluteTargetErrorMs,result.targetBandHits];
+  if(result.timingLabVersion===1){
+    if(pocketFields.some(value=>value!==undefined))fail(p,'Timing Lab v1 results cannot carry Pocket Lab target evidence');
+  }else{
+    if(pocketFields.some(value=>value===undefined))fail(p,'Pocket Lab v2 results require complete target evidence');
+    const computed=analyzePocket(result.hits,result.targetOffsetMs!,result.targetBandMs!);
+    if(Math.abs(computed.meanTargetErrorMs-result.meanTargetErrorMs!)>.11||Math.abs(computed.medianTargetErrorMs-result.medianTargetErrorMs!)>.11||Math.abs(computed.meanAbsoluteTargetErrorMs-result.meanAbsoluteTargetErrorMs!)>.11||computed.targetBandHits!==result.targetBandHits)fail(p,'Pocket Lab target diagnostics must match saved hit offsets');
+  }
   for(const hit of result.hits){
     if(hit.beat>=result.meter.beats)fail(p,'matched hit beat exceeds the stored meter');
     if(hit.part>=result.subdivision)fail(p,'matched hit subdivision part exceeds the stored subdivision');
