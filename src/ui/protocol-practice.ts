@@ -113,7 +113,7 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       el('div',{class:'drum-grid-row drum-grid-header'},el('strong',{},'LEVEL'),...labels.map(label=>el('span',{},label))),
       ...DRUM_DYNAMIC_SURFACES.map(surface=>{
         const lane=p.lanes.find(row=>row.surface===surface.id),steps=lane?.steps??'.'.repeat(labels.length);
-        return el('div',{class:'drum-grid-row'},el('strong',{},surface.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell dynamics-cell level-${cell}`,'data-index':index,'aria-label':`${surface.label} step ${index+1}: ${drumDynamicsLevelLabel(cell)}`},cell==='.'?'·':cell)));
+        return el('div',{class:'drum-grid-row'},el('strong',{},surface.short),...[...steps].map((cell,index)=>el('span',{class:`drum-grid-cell dynamics-cell ${cell==='.'?'rest':'level-'+cell}`,'data-index':index,'aria-label':`${surface.label} step ${index+1}: ${drumDynamicsLevelLabel(cell)}`},cell==='.'?'·':cell)));
       }));
     node.insertBefore(dynamicsGrid,actions);
     actions.append(button('Review dynamics',()=>{ensureStarted();const step=state().step;formDialog('Dynamics review',[score('rating','Dynamic control / contrast'),textarea('note','Did the intended levels stay distinct without changing pulse, tone, or relaxation?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save review');},'secondary'));
