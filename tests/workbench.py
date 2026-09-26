@@ -981,7 +981,7 @@ class Workbench(e2e.MusicPracticeTests):
 
         self.page.get_by_role('button',name='Start practice',exact=True).click()
         self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
-        expect(self.page.get_by_role('heading',name='Single Paradiddle',exact=True)).to_be_visible()
+        expect(self.page.locator('.active-title')).to_have_text('Single Paradiddle')
         expect(self.page.locator('.active-sticking')).to_have_text('L R L L  R L R R')
         session=self.read("""(()=>{
           const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
