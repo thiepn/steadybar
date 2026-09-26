@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.29.0 — Time Feel & Pocket Lab — 2026-09-26
+
+- Add a first-class **Pocket Lab** at `/pocket`, built on the proven microphone/audio-time capture engine rather than a duplicate timing stack.
+- Keep ordinary Timing Lab as result version 1 and introduce **Timing Lab result version 2** for intentional Pocket target evidence in the same local store/backups.
+- Add placement targets for centered, −10 / −20 / −30 ms ahead, +10 / +20 / +30 ms behind, plus a bounded custom −120…+120 ms target.
+- Add a user-defined target band (±1…100 ms). This band is diagnostic and user-chosen; it is not a universal groove threshold.
+- Match microphone attacks around the **chosen target phase**, not the raw grid. Deliberate ahead/behind strokes therefore remain matchable even when they fall outside the ordinary grid-centered timing window.
+- Preserve ordinary grid-relative timing evidence alongside Pocket metrics: average placement, target-relative average error, target distance, target-band hit count, spread and drift.
+- Expand result capture boundaries by the chosen target offset so first-beat ahead placements and final behind placements are not discarded at test edges.
+- Add a visible target line to the timing plot. Pocket dots are classified relative to the chosen target while the zero-grid reference remains visible.
+- Add separate Pocket and Timing histories so v2 feel experiments never appear as conventional centered-grid timing tests.
+- Recompute all persisted v2 target diagnostics from stored matched-hit offsets during restore validation; incomplete or contradictory Pocket evidence is rejected.
+- Add Pocket target presets/custom-offset synchronization and music-stand-friendly responsive setup/result layouts.
+- Add Pocket Lab to navigation, command search, and the drum Practice fast-launch strip; the strip now exposes six focused drum tools.
+- Add deterministic unit coverage for target statistics, target-centered matching, v1/v2 validation separation and invalid target bounds.
+- Add cross-browser saved-result coverage for target plots, target presets/custom offsets, history separation, phone layout and 320px–desktop overflow safety.
+- Pocket diagnostics do **not** say that centered, ahead, or behind is inherently better. Feel depends on tempo, style, ensemble context, sound, touch and intent.
+- No IndexedDB schema or backup-format migration is required.
 ## 2.28.0 — Phrase-Aware MIDI Landing Analysis — 2026-09-26
 
 - Extend MIDI Drum Lab with **Authored Drum Phrase** scoring for Groove → Fill → Return exercises.
