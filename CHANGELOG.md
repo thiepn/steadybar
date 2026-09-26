@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.26.0 — Drum Practice Surface UX Polish — 2026-09-25
+
+- Promote **Rudiment Lab, Grid Lab, Timing Lab, and MIDI Lab** into a dedicated fast-launch Drum Tools strip at the top of the Practice surface for drum profiles.
+- Move unfinished-session recovery ahead of learning/supporting content so Resume remains the first action when practice is already in progress.
+- Keep the generic launcher focused on Exercise, Routine, Song, and Metronome instead of mixing specialist drum workstations into the same flat row.
+- Increase Focus Player pulse visibility substantially: beat numbers remain readable instead of being hidden inside thin bars, active beats have stronger contrast, and the pulse strip is centered for music-stand viewing.
+- Widen the desktop Focus Player working surface modestly without increasing visual chrome.
+- Keep mobile pulse indicators large enough to read across a kit while preserving the fixed bottom Not Yet / Usable / Solid result dock.
+- Compact Drum Grid setup on ordinary phones into a two-column control layout with Pattern family full-width; very narrow 320–359px layouts still fall back to one column.
+- Keep MIDI performance-test settings in two columns on ordinary phones, reducing setup scroll before the Start MIDI test action; very narrow layouts remain single-column.
+- Increase editable Drum Grid cell size on wide desktop displays while keeping the existing fluid ≤900px no-overflow behavior.
+- Repair a stray literal newline escape in Focus Player CSS discovered during the visual QA pass.
+- Add browser regression coverage for four drum-tool shortcuts, ≥44px tool targets, two-column phone setup, visible Focus Player beat numbers, and 320px–desktop overflow safety.
+- No persistence schema, backup format, scoring, mastery, or practice-evidence behavior changes.
 ## 2.25.0 — Rudiment Lab — 2026-09-25
 
 - Add a dedicated **Rudiment Lab** over the existing drum exercise library instead of creating a second rudiment database.

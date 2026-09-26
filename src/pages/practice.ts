@@ -23,19 +23,26 @@ import { routineDuration } from '../domain/analytics.js';
 import { sessionPage } from './history.js';
 import { PRACTICE_SHORTCUTS, practiceRemoteCommand } from '../practice/remote.js';
 export function practicePage():Page{
-  const snapshot=store.snapshot(),data=store.view(),plan=data.dailyPlans.find(p=>p.date===localDate()),active=snapshot.sessions.find(s=>s.status==='active');
+  const snapshot=store.snapshot(),data=store.view(),profile=activeProfile(snapshot),plan=data.dailyPlans.find(p=>p.date===localDate()),active=snapshot.sessions.find(s=>s.status==='active');
   const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Choose a plan, an exercise, or a timed free session.'));
-  page.append(learningSummary());
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},`Unfinished ${profileName(snapshot,active.profileId)} session`),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
+  if(profile.instrumentType==='drums')page.append(el('section',{class:'drum-tool-strip','aria-label':'Drum practice tools'},
+    el('div',{class:'drum-tool-strip-head'},el('strong',{},'Drum tools'),el('span',{class:'muted small'},'Jump straight into focused playing')),
+    el('div',{class:'drum-tool-grid'},
+      link('Rudiment Lab','/rudiments','drum-tool-card','routine'),
+      link('Grid Lab','/drum-grid','drum-tool-card','routine'),
+      link('Timing Lab','/timing-lab','drum-tool-card','pulse'),
+      link('MIDI Lab','/midi-lab','drum-tool-card','pulse'))));
+  page.append(learningSummary());
   const planned=el('section',{class:'panel launcher-plan'},sectionHeader('Today’s session',`${plan?.blocks.length||0} blocks · ${duration(routineDuration(plan?.blocks||[]))}`));
   if(plan?.blocks.length)planned.append(el('ol',{class:'launch-sequence'},plan.blocks.map(b=>el('li',{},el('span',{},b.title),el('span',{class:'muted'},`${duration(b.targetSeconds)}${b.bpm===undefined?'':` · ${b.bpm} BPM`}`)))),button('Start today’s plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary','play'));
   else planned.append(empty('No plan for today yet.','Choose a routine or start with a single exercise.',link('Plan today','/','button secondary','today')));
   const minutes=el('input',{type:'number',value:10,min:1,max:1440,step:1,'aria-label':'Free practice duration in minutes'}),bpm=el('input',{type:'number',value:data.settings.metronome.bpm,min:20,max:300,step:1,'aria-label':'Free practice BPM'});
-  const click=checkbox('freeClick','Use metronome',activeProfile(store.snapshot()).instrumentType!=='voice');
+  const click=checkbox('freeClick','Use metronome',profile.instrumentType!=='voice');
   const drawClick=()=>{bpm.disabled=!click.querySelector('input')!.checked;bpm.parentElement?.toggleAttribute('hidden',bpm.disabled);};click.addEventListener('change',drawClick);
   const free=el('section',{class:'panel'},sectionHeader('Free practice'),el('p',{class:'muted'},'A timed session; the metronome is optional.'),el('div',{class:'form-grid'},field('Minutes',minutes),field('BPM',bpm)),click,button('Start free practice',async()=>{if(minutes.reportValidity()&&bpm.reportValidity())await launchPractice([{...freeBlock(Number(minutes.value)*60,Number(bpm.value)),bpm:click.querySelector('input')!.checked?Number(bpm.value):undefined}]);},'primary','play'));
   drawClick();
-  page.append(el('div',{class:'two-column'},planned,free),el('div',{class:'launcher-options'},link('Choose an exercise','/library','launcher-option','library'),button('Use a routine',()=>selectRoutineDialog(r=>launchPractice(r.blocks,{routineId:r.id})),'launcher-option','routine'),link('Practice a song','/songs','launcher-option','song'),link('Just the metronome','/metronome','launcher-option','pulse'),activeProfile(store.snapshot()).instrumentType==='drums'?link('Rudiment Lab','/rudiments','launcher-option','routine'):null,activeProfile(store.snapshot()).instrumentType==='drums'?link('Drum Grid Lab','/drum-grid','launcher-option','routine'):null,activeProfile(store.snapshot()).instrumentType==='drums'?link('MIDI Drum Lab','/midi-lab','launcher-option','pulse'):null));
+  page.append(el('div',{class:'two-column'},planned,free),el('div',{class:'launcher-options'},link('Choose an exercise','/library','launcher-option','library'),button('Use a routine',()=>selectRoutineDialog(r=>launchPractice(r.blocks,{routineId:r.id})),'launcher-option','routine'),link('Practice a song','/songs','launcher-option','song'),link('Just the metronome','/metronome','launcher-option','pulse')));
   const suggestions=suggestedExercises(data);
   page.append(el('section',{class:'panel'},sectionHeader('Suggested exercises',activeProfile(store.snapshot()).name),...suggestions.map(item=>{const e=data.exercises.find(e=>e.id===item.id)!;return el('div',{class:'suggestion-row'},el('div',{},link(e.name,`/library/${e.id}`),el('p',{class:'field-hint'},item.reason)),button('Practice',()=>launchPractice([exerciseBlock(e)]),'secondary'));})));
   return {node:page};
