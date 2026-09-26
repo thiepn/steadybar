@@ -33,10 +33,11 @@ import { midiLabPage } from './pages/midi-lab.js';
 import { drumGridPage } from './pages/drum-grid.js';
 import { drumPhrasePage } from './pages/drum-phrase.js';
 import { rudimentLabPage } from './pages/rudiment-lab.js';
+import { drumDynamicsPage } from './pages/drum-dynamics.js';
 import { repertoireAudioPage } from './pages/repertoire-audio.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/rudiments','Rudiment Lab','routine'],['/phrases','Phrase Lab','routine'],['/drum-grid','Grid Lab','routine'],['/timing-lab','Timing Lab','pulse'],['/pocket','Pocket Lab','pulse'],['/midi-lab','MIDI Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
+const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/rudiments','Rudiment Lab','routine'],['/phrases','Phrase Lab','routine'],['/drum-grid','Grid Lab','routine'],['/timing-lab','Timing Lab','pulse'],['/pocket','Pocket Lab','pulse'],['/dynamics','Dynamics Lab','routine'],['/midi-lab','MIDI Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
@@ -47,6 +48,7 @@ function route(path:string):Page{
   if(path==='/metronome')return metronomePage();
   if(path==='/timing-lab')return timingLabPage('timing');
   if(path==='/pocket')return timingLabPage('pocket');
+  if(path==='/dynamics')return drumDynamicsPage();
   if(path==='/midi-lab')return midiLabPage();
   if(path==='/drum-grid')return drumGridPage();
   if(path==='/phrases')return drumPhrasePage();
