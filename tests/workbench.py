@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/drum-grid','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/rudiments','/drum-grid','/library','/timing-lab','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -786,6 +786,9 @@ class Workbench(e2e.MusicPracticeTests):
             if plan:break
             self.page.wait_for_timeout(100)
         self.assertIsNotNone(plan);self.assertEqual(plan['kind'],'drum-grid');self.assertEqual(plan['lanes'],expected);self.assertGreaterEqual(plan['bpm'],20)
+        expect(self.page.get_by_text('Variation 2',exact=True)).to_be_visible()
+        retained=self.read("""(()=>[...document.querySelectorAll('.drum-grid-editor .drum-grid-row:not(.drum-grid-header)')].map(row=>[...row.querySelectorAll('.drum-grid-edit-cell')].map(cell=>cell.textContent==='·'?'.':cell.textContent).join('')))()""")
+        self.assertEqual(retained,expected)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
@@ -941,6 +944,103 @@ class Workbench(e2e.MusicPracticeTests):
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
+
+    def test_70_rudiment_lab_preserves_source_exercise_and_variant_snapshot(self):
+        self.onboard()
+        self.route('/rudiments')
+        expect(self.page.get_by_role('heading',name='Rudiment Lab',exact=True)).to_be_visible()
+        rudiment=self.page.get_by_label('Rudiment',exact=True)
+        rudiment.select_option('rudiment-3')
+        self.page.get_by_label('Lead / direction',exact=True).select_option('mirror')
+        self.page.get_by_label('Accent focus',exact=True).select_option('group-start')
+        self.page.get_by_label('Stroke subdivision',exact=True).select_option('4')
+        self.page.get_by_label('Orchestration',exact=True).select_option('split-hands')
+        self.page.get_by_label('BPM',exact=True).fill('92')
+        self.page.get_by_label('BPM',exact=True).press('Tab')
+        self.page.get_by_label('Practice minutes',exact=True).fill('6')
+        self.assertEqual(self.page.locator('.rudiment-sticking-text').text_content(),'L R L L  R L R R')
+        self.assertEqual(self.page.locator('.rudiment-stroke').count(),8)
+        self.assertEqual(self.page.locator('.rudiment-stroke.accented').count(),2)
+        expect(self.page.get_by_text('Keep right-hand primary strokes on one surface',exact=False)).to_be_visible()
+
+        self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),p=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=p?.blocks.at(-1);
+              return b?{exerciseId:b.exerciseId,title:b.title,bpm:b.bpm,targetSeconds:b.targetSeconds,kind:b.protocol?.kind,sticking:b.protocol?.sticking,subdivision:b.protocol?.pulse?.subdivision,orchestration:b.protocol?.orchestration,trainer:b.tempoTrainer}:null;
+            })()""")
+            if plan and plan.get('exerciseId')=='rudiment-3':break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan['exerciseId'],'rudiment-3')
+        self.assertEqual(plan['kind'],'tempo')
+        self.assertEqual(plan['sticking'],'L R L L  R L R R')
+        self.assertEqual(plan['bpm'],92)
+        self.assertEqual(plan['subdivision'],4)
+        self.assertEqual(plan['targetSeconds'],360)
+        self.assertIn('right-hand primary strokes',plan['orchestration'])
+        self.assertIsNone(plan['trainer'])
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        expect(self.page.locator('.active-title')).to_have_text('Single Paradiddle')
+        expect(self.page.locator('.active-sticking')).to_have_text('L R L L  R L R R')
+        session=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {sourceExerciseId:b.sourceExerciseId,kind:b.protocolSnapshot?.kind,sticking:b.protocolSnapshot?.sticking,subdivision:b.subdivisionSnapshot,bpm:s.runtime.bpm,targetSeconds:b.targetSeconds,category:b.categorySnapshot};
+        })()""")
+        self.assertEqual(session['sourceExerciseId'],'rudiment-3')
+        self.assertEqual(session['kind'],'tempo')
+        self.assertEqual(session['sticking'],'L R L L  R L R R')
+        self.assertEqual(session['subdivision'],4)
+        self.assertEqual(session['bpm'],92)
+        self.assertEqual(session['targetSeconds'],360)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+    def test_71_rudiment_lab_finite_trainer_owns_start_tempo_and_duration(self):
+        self.onboard()
+        self.route('/rudiments')
+        expect(self.page.get_by_role('heading',name='Rudiment Lab',exact=True)).to_be_visible()
+        self.page.get_by_label('Rudiment',exact=True).select_option('rudiment-2')
+        self.page.get_by_role('button',name='Configure tempo trainer',exact=True).click()
+        dialog=self.page.get_by_role('dialog')
+        expect(dialog).to_be_visible()
+        dialog.get_by_label('Training mode',exact=True).select_option('pyramid')
+        dialog.get_by_label('Start BPM',exact=True).fill('70')
+        dialog.get_by_label('Peak BPM',exact=True).fill('90')
+        dialog.get_by_label('Step (BPM)',exact=True).fill('10')
+        dialog.get_by_label('Seconds per stage',exact=True).fill('15')
+        dialog.get_by_role('button',name='Use trainer',exact=True).click()
+        expect(dialog).to_have_count(0)
+
+        bpm=self.page.get_by_label('BPM',exact=True)
+        minutes=self.page.get_by_label('Practice minutes',exact=True)
+        expect(bpm).to_have_value('70')
+        expect(bpm).to_be_disabled()
+        expect(minutes).to_be_disabled()
+        expect(self.page.get_by_text('pyramid',exact=False).first).to_be_visible()
+        expect(self.page.get_by_text('75 sec total',exact=False).first).to_be_visible()
+
+        self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),p=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=p?.blocks.at(-1);
+              return b?{exerciseId:b.exerciseId,bpm:b.bpm,targetSeconds:b.targetSeconds,trainer:b.tempoTrainer}:null;
+            })()""")
+            if plan and plan.get('exerciseId')=='rudiment-2':break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan['bpm'],70)
+        self.assertEqual(plan['targetSeconds'],75)
+        self.assertEqual(plan['trainer'],{'mode':'pyramid','start':70,'max':90,'step':10,'seconds':15})
+
+        self.page.get_by_role('button',name='Clear trainer',exact=True).click()
+        expect(bpm).to_be_enabled()
+        expect(minutes).to_be_enabled()
+        expect(self.page.get_by_text('No tempo trainer · steady tempo',exact=True)).to_be_visible()
 
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]

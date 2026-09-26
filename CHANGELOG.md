@@ -1,10 +1,26 @@
 # Changelog
 
+## 2.25.0 — Rudiment Lab — 2026-09-25
+
+- Add a dedicated **Rudiment Lab** over the existing drum exercise library instead of creating a second rudiment database.
+- Parse saved sticking into visual groups with separate primary and grace strokes; flams/drags keep their lowercase grace information visible.
+- Add one-click **right ↔ left lead mirroring** while preserving grouping and keeping the original source exercise unchanged.
+- Add bounded accent focuses: even primary strokes, group-start accents, and every-fourth-position accents. These are visual/practice cues, not automatic performance grades.
+- Add selectable stroke subdivision, BPM, practice duration, and kit-orchestration cues.
+- Add four orchestration approaches: pad/snare only, split hands across surfaces, move each sticking group, or a user-defined repeatable kit orchestration.
+- Add Web Audio click preview with one-bar count-in using the source exercise meter.
+- Integrate all six Steadybar tempo trainers directly into Rudiment Lab.
+- Make trainer configuration authoritative: trainer start BPM disables the standalone BPM field, and finite Ladder/Pyramid/Burst/Endurance trainers own the exact block duration.
+- Launch or Add to Today with an immutable protocol override containing the chosen mirrored sticking, subdivision, orchestration and accent/technique cue.
+- Preserve the original `sourceExerciseId`, so best-clean tempo, goals, history, PracticeState, progression, recordings and Practice Intelligence remain attached to one canonical rudiment exercise.
+- Add discoverability from main navigation, command search, Practice launcher, Drum Grid Lab and individual rudiment exercise pages.
+- Add deterministic unit coverage for grouping, grace strokes, mirroring, accent masks and safe unknown-token rendering.
+- Add cross-browser workflow coverage for exact variant snapshots, Focus Player sticking, finite trainer duration and narrow-screen layouts.
+- No persistence schema or backup-format migration is required.
 ## 2.24.0 — Hands-Free Practice Control — 2026-09-25
 
 - Centralize Focus Player keyboard / pedal input in a deterministic practice-remote command mapper rather than scattering shortcut behavior through the page.
 - Add **Page Down** as a pedal-friendly Start / Pause alias and **Page Up** as a pedal-friendly metronome toggle.
-- Fix metronome toggling during count-in: switching the click now preserves active practice and restarts the count-in instead of leaving the session paused.
 - Keep **Space** for transport, **Arrow Up / Down** for ±1 BPM and **Shift + Arrow** for ±5 BPM.
 - Add direct block-evaluation shortcuts: **1 = Not yet, 2 = Usable, 3 = Solid**. These call the normal block-completion path and retain selected limitation tags.
 - Add **R** for attempt recording, **Shift + R** for normal block restart, **N** for quick note and **F** for fullscreen.
