@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/pocket','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/rhythm','/library','/timing-lab','/pocket','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -1046,8 +1046,8 @@ class Workbench(e2e.MusicPracticeTests):
     def test_72_drum_practice_surfaces_prioritize_playing_on_phone_and_desktop(self):
         self.onboard()
         self.route('/practice')
-        expect(self.page.locator('.drum-tool-card')).to_have_count(6)
-        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','Pocket Lab','MIDI Lab'):
+        expect(self.page.locator('.drum-tool-card')).to_have_count(7)
+        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','Pocket Lab','Rhythm Lab','MIDI Lab'):
             expect(self.page.locator('.drum-tool-card').filter(has_text=label)).to_have_count(1)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height})
