@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.31.0 — Rhythm Lab: Swing, Subdivision Switching & Polyrhythms — 2026-09-27
+
+- Add a dedicated **Rhythm Lab** at `/rhythm` for timing relationships the ordinary straight-click metronome intentionally does not model.
+- Add bounded **Swing / Shuffle** practice from straight 50/50 through 75/25, with descriptive Straight / Light / Medium / Triplet / Deep labels and quick feel presets.
+- Keep the quarter-note pulse fixed while moving only the offbeat; swing ratio is a timing relationship, not an automatic groove-quality score.
+- Add deterministic **Subdivision Switching** across quarter notes, eighth notes, triplets and sixteenth notes without changing BPM.
+- Add 1 / 2 / 4 bars per stage and reusable sequences such as quarter → eighth → triplet → sixteenth, triplet ↔ sixteenth, and eighth ↔ sixteenth.
+- Add **Polyrhythm** practice for 3:2, 2:3, 4:3, 3:4, 5:4, 4:5, 5:3 and 3:5, with A:B explicitly defined as A overlay hits across B quarter-note beats.
+- Add independent anchor/overlay layer muting so players can establish one layer, add the second, then remove support without changing the underlying timing score.
+- Add a dedicated Web Audio renderer under Steadybar's existing cross-tab audio lease instead of destabilizing the proven straight-click engine.
+- Schedule from deterministic audio-time cycle scores and use arithmetic stale-cycle catch-up so long browser throttling never bursts old clicks or loops through hours of missed cycles.
+- Give the two layers distinct click timbres, stronger cycle/downbeat accents, and optional 0 / 2 / 4-beat count-in.
+- Add live volume, tap tempo, ±1 / ±5 BPM controls, Space transport, arrow tempo shortcuts and 1 / 2 layer toggles.
+- Add audio-clock-driven visual lanes for swing/polyrhythm and active-stage cards for subdivision switching; visuals mirror sound timing and never determine it.
+- Add Rhythm Lab to navigation, command search, Metronome cross-links, and the drum Practice launcher.
+- Combine Dynamics 2.30 + Rhythm 2.31 into an **eight-tool** drum launcher with balanced 4-column desktop/tablet and 2-column phone layouts.
+- Add deterministic unit coverage for swing phase placement, subdivision duration/event counts, polyrhythm spacing/normalization and invalid configurations.
+- Add cross-browser workbench coverage for all three modes, layer muting, real audio start/stop, responsive controls and 320px–desktop overflow safety.
+- Rhythm Lab does not claim one swing ratio, subdivision density or polyrhythm feel is inherently better; musical context remains decisive.
+- No IndexedDB schema, backup-format, scoring, mastery, or practice-evidence migration is required.
 ## 2.30.0 — Dynamics & Touch Lab — 2026-09-27
 
 - Add a first-class **drum-dynamics** practice protocol for authored relative touch levels instead of vague text-only dynamics cues.
