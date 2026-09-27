@@ -4,6 +4,7 @@ import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import type { Exercise } from '../domain/models.js';
 import { activeProfile } from '../domain/profiles.js';
+import { skillIdForExercise } from '../domain/skill-graph.js';
 import { rhythmCycle, rhythmCyclePositions, rhythmProtocolFromConfig, subdivisionName, swingFeelLabel, type RhythmLabConfig, type RhythmSubdivision } from '../domain/rhythm-lab.js';
 import { metadata } from '../domain/utils.js';
 import { addToday, freeBlock, launchPractice } from '../practice/launch.js';
@@ -112,7 +113,7 @@ export function rhythmLabPage():Page{
     if(!canPersist){notify('Switch to a percussion practice profile before saving a Rhythm Lab exercise.','info');return;}if(!validPractice())return;
     const protocol=practiceProtocol(),seconds=Math.round(Number(minutes.value)*60),exercise:Exercise={
       ...metadata(),name:protocol.name,instrument:profile.instrumentType==='drums'?'Drums':profile.name,category:'timing',description:protocol.focus,instructions:protocol.focus,profileId:profile.id,skillArea:'timing',
-      ...(profile.instrumentType==='drums'?{primarySkillId:'drums.timing',secondarySkillIds:['drums.groove','drums.coordination']}:{secondarySkillIds:[]}),
+      primarySkillId:skillIdForExercise(profile.instrumentType,'timing','timing'),...(profile.instrumentType==='drums'?{secondarySkillIds:['drums.groove','drums.coordination']}:{secondarySkillIds:[]}),
       protocol,level:profile.level,defaultSeconds:seconds,defaultBpm:protocol.pulse.bpm,minBpm:20,maxBpm:300,meter:{beats:protocol.pulse.beats,beatUnit:protocol.pulse.beatUnit},subdivision:protocol.pulse.subdivision,accents:'',tags:['rhythm-lab',protocol.mode],notes:'',builtin:false,archived:false,
     };
     await store.save('exercises',exercise);notify('Rhythm study saved to the exercise library.');
