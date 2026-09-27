@@ -1062,3 +1062,44 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .dynamics-controls{grid-template-columns:1fr}
   .dynamics-controls>.field:first-child{grid-column:auto}
 }
+
+/* Phase 30 — Rhythm Lab: swing, subdivision switching and polyrhythm. */
+.rhythm-lab-page{display:grid;gap:20px}
+.rhythm-training,.rhythm-transport,.rhythm-visual-panel{display:grid;gap:16px}
+.rhythm-common-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rhythm-config-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rhythm-volume-field{display:grid;gap:5px;align-content:start}
+.rhythm-ratio-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rhythm-ratio-value{font-family:var(--mono);font-size:16px;font-weight:650}
+.rhythm-presets,.rhythm-tempo-steps{align-items:center}
+.rhythm-summary{margin:0;font-family:var(--mono);font-size:13px}
+.rhythm-cue{margin:0;color:var(--muted)}
+.rhythm-status{margin:0;padding:10px 12px;border-left:2px solid var(--accent);background:var(--surface-soft);font-size:12px}
+.rhythm-visual{display:grid;gap:14px;min-width:0}
+.rhythm-lane{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;align-items:center}
+.rhythm-lane>strong{font-size:12px;color:var(--muted)}
+.rhythm-lane-track{position:relative;height:56px;margin-inline:14px;border:1px solid var(--border);border-radius:7px;background:linear-gradient(to bottom,transparent calc(50% - .5px),var(--border) calc(50% - .5px),var(--border) calc(50% + .5px),transparent calc(50% + .5px)),var(--surface-soft)}
+.rhythm-marker{position:absolute;top:50%;display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--border-strong);border-radius:50%;transform:translate(-50%,-50%);background:var(--surface);font-family:var(--mono);font-size:10px;color:var(--muted);transition:transform .08s ease,background .08s ease,border-color .08s ease}
+.rhythm-marker.layer-secondary{border-radius:7px}
+.rhythm-marker.on{z-index:2;transform:translate(-50%,-50%) scale(1.16);border-color:var(--accent);background:var(--accent);color:var(--on-accent);font-weight:700}
+.rhythm-stage-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rhythm-stage-card{display:grid;gap:8px;min-width:0;padding:12px;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
+.rhythm-stage-card.on{outline:2px solid var(--focus);outline-offset:1px;background:var(--accent-soft)}
+.rhythm-stage-card>strong{font-size:12px}
+.rhythm-stage-dots{display:flex;gap:5px;align-items:center}
+.rhythm-stage-dots span{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--border);border-radius:50%;font-family:var(--mono);font-size:9px;color:var(--muted)}
+.rhythm-stage-dots span.primary{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-text)}
+.rhythm-method{margin:0;padding-left:22px;display:grid;gap:8px;font-size:13px;color:var(--muted)}
+@media(min-width:1000px){.drum-tool-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:700px){
+  .rhythm-common-grid,.rhythm-config-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+  .rhythm-stage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rhythm-lane{grid-template-columns:70px minmax(0,1fr);gap:6px}
+  .rhythm-lane-track{height:52px;margin-inline:12px}
+  .rhythm-marker{width:28px;height:28px}
+}
+@media(max-width:359px){
+  .rhythm-common-grid,.rhythm-config-grid,.rhythm-stage-grid{grid-template-columns:1fr}
+  .rhythm-lane{grid-template-columns:1fr;gap:5px}
+  .rhythm-lane-track{margin-inline:14px}
+}
