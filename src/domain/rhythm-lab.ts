@@ -41,6 +41,7 @@ export function subdivisionName(value:RhythmSubdivision):string{
 }
 
 export function rhythmBaseBeats(config:RhythmLabConfig):number{return config.mode==='polyrhythm'?config.secondary:config.beats;}
+export function rhythmCountInAccent(config:RhythmLabConfig,index:number):1|2{return index%rhythmBaseBeats(config)===0?2:1;}
 
 export function rhythmLayerLabels(config:RhythmLabConfig):[string,string]{
   return config.mode==='swing'?['Beat','Offbeat']:config.mode==='subdivision-switch'?['Beat','Subdivision']:['Anchor','Overlay'];
