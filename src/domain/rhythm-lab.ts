@@ -58,11 +58,13 @@ export function rhythmPracticeName(config:RhythmLabConfig):string{
   return `Polyrhythm ${config.primary}:${config.secondary}`;
 }
 
-export function rhythmProtocolFromConfig(config:RhythmLabConfig):DrumRhythmProtocol{
+export function rhythmProtocolFromConfig(config:RhythmLabConfig,primaryOn=true,secondaryOn=true):DrumRhythmProtocol{
   const current=validateRhythmLabConfig(config),name=rhythmPracticeName(current),focus=rhythmPracticeCue(current);
-  if(current.mode==='swing')return {kind:'drum-rhythm',mode:'swing',pulse:{bpm:current.bpm,beats:current.beats,beatUnit:4,subdivision:2},name,focus,ratio:current.ratio};
-  if(current.mode==='subdivision-switch')return {kind:'drum-rhythm',mode:'subdivision-switch',pulse:{bpm:current.bpm,beats:current.beats,beatUnit:4,subdivision:1},name,focus,sequence:[...current.sequence],barsPerStage:current.barsPerStage};
-  return {kind:'drum-rhythm',mode:'polyrhythm',pulse:{bpm:current.bpm,beats:current.secondary,beatUnit:4,subdivision:1},name,focus,primary:current.primary,secondary:current.secondary};
+  if(!primaryOn&&!secondaryOn)throw new Error('At least one Rhythm Lab layer must be audible.');
+  const layers={primaryOn,secondaryOn};
+  if(current.mode==='swing')return {kind:'drum-rhythm',mode:'swing',pulse:{bpm:current.bpm,beats:current.beats,beatUnit:4,subdivision:2},name,focus,ratio:current.ratio,...layers};
+  if(current.mode==='subdivision-switch')return {kind:'drum-rhythm',mode:'subdivision-switch',pulse:{bpm:current.bpm,beats:current.beats,beatUnit:4,subdivision:1},name,focus,sequence:[...current.sequence],barsPerStage:current.barsPerStage,...layers};
+  return {kind:'drum-rhythm',mode:'polyrhythm',pulse:{bpm:current.bpm,beats:current.secondary,beatUnit:4,subdivision:1},name,focus,primary:current.primary,secondary:current.secondary,...layers};
 }
 
 export function rhythmConfigFromProtocol(protocol:DrumRhythmProtocol,bpm=protocol.pulse.bpm):RhythmLabConfig{
