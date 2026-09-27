@@ -64,7 +64,7 @@ test('drum starter content ships first-class Rhythm practice across all three La
  d.exercises=d.exercises.filter(e=>!/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
  const reconciled=reconcileStarterContent(d);
  assert.equal(reconciled.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??'')).length,3);
- const session=createSession([block(rhythm[0])],d),snapshot=session.blocks[0];
+ const session=createSession([block(rhythm[0])],reconciled),snapshot=session.blocks[0];
  assert.equal(snapshot.protocolSnapshot.kind,'drum-rhythm');assert.equal(snapshot.timingClickSnapshot,undefined);
  assert.equal(snapshot.initialBpm,rhythm[0].protocol.pulse.bpm);assert.deepEqual(snapshot.meterSnapshot,{beats:rhythm[0].protocol.pulse.beats,beatUnit:4});
  assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
