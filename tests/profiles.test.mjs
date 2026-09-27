@@ -52,6 +52,21 @@ test('drum starter content ships dedicated dynamics scores and reconciliation ne
  assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
 });
 
+test('drum starter content ships first-class Rhythm practice across all three Lab modes',()=>{
+ const d=dataset('drums'),rhythm=d.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
+ assert.equal(rhythm.length,3);assert.deepEqual(rhythm.map(e=>e.protocol.mode).sort(),['polyrhythm','subdivision-switch','swing']);
+ for(const e of rhythm){
+  assert.equal(e.category,'timing');assert.equal(e.skillArea,'timing');assert.equal(e.primarySkillId,'drums.timing');
+  assert.ok(e.secondarySkillIds.includes('drums.groove'));assert.ok(e.secondarySkillIds.includes('drums.coordination'));
+  assert.equal(e.protocol.kind,'drum-rhythm');assert.equal(e.protocol.primaryOn||e.protocol.secondaryOn,true);
+  assertProtocolCompatible(e.protocol,d.profiles[0]);assert.deepEqual(validateProtocol(e.protocol),e.protocol);
+ }
+ d.exercises=d.exercises.filter(e=>!/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
+ const reconciled=reconcileStarterContent(d);
+ assert.equal(reconciled.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??'')).length,3);
+ assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
+});
+
 test('drum grid generator is deterministic, bounded and valid across subdivisions',()=>{
  for(const subdivision of [1,2,3,4])for(const preset of ['accent-grid','kick-displacement','linear-flow','four-limb-cycle','independence']){
   const a=buildDrumGrid(preset,96,subdivision,3,5),b=buildDrumGrid(preset,96,subdivision,3,5);
