@@ -1,9 +1,9 @@
 import { AUDIO_LOCK, ExclusiveLease } from '../platform/locks.js';
-import { rhythmCycle, validateRhythmLabConfig, type RhythmCycleEvent, type RhythmLabConfig, type RhythmLayer } from '../domain/rhythm-lab.js';
+import { rhythmBaseBeats, rhythmCycle, validateRhythmLabConfig, type RhythmCycleEvent, type RhythmLabConfig, type RhythmLayer } from '../domain/rhythm-lab.js';
 
-export interface RhythmPlaybackSettings {volume:number;countInBeats:0|2|4;primaryOn:boolean;secondaryOn:boolean}
+export interface RhythmPlaybackSettings {volume:number;countInBeats:number;primaryOn:boolean;secondaryOn:boolean}
 export interface RhythmPlaybackEvent extends RhythmCycleEvent {time:number;cycle:number;countingIn:boolean}
-interface RhythmEngineOptions {onReady?:(audioTime:number)=>void;onEvent?:(event:RhythmPlaybackEvent)=>void;onInterrupted?:()=>void}
+interface RhythmEngineOptions {onReady?:(wallTime:number,audioTime:number)=>void;onEvent?:(event:RhythmPlaybackEvent)=>void;onInterrupted?:()=>void}
 
 export class RhythmLabAudioEngine {
   private context?:AudioContext;private master?:GainNode;private timer?:ReturnType<typeof setTimeout>;private frame?:number;
@@ -24,6 +24,8 @@ export class RhythmLabAudioEngine {
   async start(config:RhythmLabConfig,settings:RhythmPlaybackSettings,options:RhythmEngineOptions={}):Promise<void>{
     this.stop();validateRhythmLabConfig(config);
     if(!Number.isFinite(settings.volume)||settings.volume<0||settings.volume>1)throw new Error('Rhythm Lab volume must be between 0 and 1.');
+    if(!Number.isInteger(settings.countInBeats)||settings.countInBeats<0||settings.countInBeats>64)throw new Error('Rhythm Lab count-in must be between 0 and 64 beats.');
+    if(!settings.primaryOn&&!settings.secondaryOn)throw new Error('At least one Rhythm Lab layer must be audible.');
     const generation=this.generation,context=this.ensureContext(),lease=new ExclusiveLease(AUDIO_LOCK,'Another tab is using audio. Stop it there before starting Rhythm Lab.');this.lease=lease;
     try{
       await context.resume();if(generation!==this.generation)return;if(context.state!=='running')throw new Error('Audio could not start. Tap Start again to allow browser audio.');
@@ -47,7 +49,7 @@ export class RhythmLabAudioEngine {
     while(this.countInIndex<this.settings.countInBeats){
       const time=this.startTime+this.countInIndex*beatSeconds;if(time>=horizon)break;
       const index=this.countInIndex++;if(time<stale)continue;
-      const event:RhythmPlaybackEvent={offsetSeconds:index*beatSeconds,time,layer:'primary',accent:index===0?2:1,cycle:-1,cyclePosition:index,label:`Count-in ${index+1}`,countingIn:true};
+      const event:RhythmPlaybackEvent={offsetSeconds:index*beatSeconds,time,layer:'primary',accent:index===0?2:1,cycle:-1,cyclePosition:index,beat:index%rhythmBaseBeats(this.config),part:0,label:`Count-in ${index+1}`,countingIn:true};
       this.click(event);this.visuals.push(event);
     }
     if(this.countInIndex>=this.settings.countInBeats&&cycle.durationSeconds>0&&stale>this.practiceStartTime){
@@ -76,10 +78,12 @@ export class RhythmLabAudioEngine {
 
   private draw=():void=>{
     if(!this.running||!this.context)return;
-    if(!this.readySent&&this.practiceStartTime<=this.context.currentTime){this.readySent=true;this.options.onReady?.(this.practiceStartTime);}
+    if(!this.readySent&&this.practiceStartTime<=this.context.currentTime){this.readySent=true;this.options.onReady?.(Date.now()+(this.practiceStartTime-this.context.currentTime)*1000,this.practiceStartTime);}
     while(this.visuals[0]&&this.visuals[0].time<=this.context.currentTime)this.options.onEvent?.(this.visuals.shift()!);
     this.frame=requestAnimationFrame(this.draw);
   };
+
+  get currentTime():number{return this.context?.currentTime??0;}
 
   stop():void{
     this.generation++;this.running=false;clearTimeout(this.timer);if(this.frame!==undefined)cancelAnimationFrame(this.frame);
