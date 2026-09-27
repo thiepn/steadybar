@@ -1608,8 +1608,9 @@ class Workbench(e2e.MusicPracticeTests):
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height})
             self.assert_bounds(width)
-            for label in ('Choose an exercise','Use a routine','Practice a song','Just the metronome'):
-                control=self.page.get_by_text(label,exact=True)
+            quick=self.page.locator('.practice-launcher-options .launcher-option')
+            self.assertEqual(quick.count(),4)
+            for control in quick.all():
                 box=control.bounding_box();self.assertIsNotNone(box)
                 self.assertGreaterEqual(box['height'],44)
 
