@@ -19,7 +19,8 @@ interface DrumRhythmBase { kind: 'drum-rhythm'; pulse: Pulse; name: string; focu
 export type DrumRhythmProtocol =
   | (DrumRhythmBase & { mode: 'swing'; ratio: number })
   | (DrumRhythmBase & { mode: 'subdivision-switch'; sequence: (1 | 2 | 3 | 4)[]; barsPerStage: 1 | 2 | 4 })
-  | (DrumRhythmBase & { mode: 'polyrhythm'; primary: 2 | 3 | 4 | 5; secondary: 2 | 3 | 4 | 5 });
+  | (DrumRhythmBase & { mode: 'polyrhythm'; primary: 2 | 3 | 4 | 5; secondary: 2 | 3 | 4 | 5 })
+  | (DrumRhythmBase & { mode: 'grouped-meter'; groups: (2 | 3)[] });
 export type Hands = 'left' | 'right' | 'together' | 'not-applicable';
 export type ScaleQuality = 'major' | 'natural-minor' | 'minor-pentatonic' | 'major-pentatonic' | 'chromatic';
 export type PracticeProtocol =
