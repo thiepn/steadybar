@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Practice surface simplification — 2.35.0
+
+**Today** and **Practice** now have deliberately different roles. Today remains the planning/dashboard surface: Autopilot, Practice Intelligence, Calendar context, guided learning, goals, routines and editable multi-block planning all stay there. Practice is the execution surface: resume unfinished work, start today’s existing plan, open a focused drum tool, or quickly launch one exercise/routine/song/free session.
+
+This removes duplicated Guided Learning and legacy Suggested Exercises content from Practice without deleting either system. The same learning progress and recommendation evidence remain available on Today, Learn, Library and Progress. Practice therefore has fewer competing calls to action when the user is already ready to play.
+
+No session, plan, exercise, recommendation, history or backup data changes are involved.
+
 ## Drum Tool Hub & navigation simplification — 2.34.0
 
 Steadybar’s drum feature set is now large enough that exposing every specialist lab in the global sidebar creates more friction than it removes. Drum profiles therefore get one **Drum Tools** destination in the main navigation, while the dedicated Practice screen keeps its fast eight-tool launcher for moments when the user is already choosing what to play.
