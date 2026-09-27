@@ -168,6 +168,13 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Rhythm Lab — 2.31.0
+
+Steadybar now has a dedicated **Rhythm Lab** for uneven and layered timing relationships: swing/shuffle placement, subdivision switching, and polyrhythms. It sits alongside Dynamics & Touch Lab rather than replacing or overloading the ordinary metronome.
+
+Swing keeps the quarter-note pulse fixed while moving the offbeat from 50/50 toward deeper swing. Subdivision Switching preserves BPM while the internal grid changes between quarter notes, eighths, triplets and sixteenths. Polyrhythm mode defines A:B explicitly as A evenly spaced overlay hits across B quarter-note beats.
+
+Rhythm Lab uses a dedicated deterministic Web Audio scheduler under the same cross-tab audio lock as the rest of Steadybar. Anchor/overlay layers can be muted independently, and stale-cycle catch-up is arithmetic so long browser throttling cannot generate an expensive backlog of missed clicks.
 ## Dynamics & Touch Lab — 2.30.0
 
 Drum profiles now include a dedicated **Dynamics & Touch Lab** for making relative touch targets explicit instead of relying on prose such as “play softer.” Scores use four states: rest, **1 soft/ghost**, **2 medium**, and **3 strong/accent** across Snare, Hi-hat, Kick, Ride and Tom surfaces.
