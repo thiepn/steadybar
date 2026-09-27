@@ -1575,8 +1575,9 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(self.page.locator('.drum-tool-grid .drum-tool-card').count(),8)
 
         self.page.locator('.sidebar .search-trigger').click()
-        expect(self.page.get_by_role('button',name='Open Drum Tools',exact=True)).to_be_visible()
-        self.page.get_by_role('button',name='Open Drum Tools',exact=True).click()
+        drum_command=self.page.locator('button.command-item').filter(has_text='Open Drum Tools')
+        expect(drum_command).to_have_count(1)
+        drum_command.click()
         self.page.wait_for_url(re.compile(r'.*#/drums$'))
         expect(self.page.get_by_role('heading',name='Drum Tools',exact=True)).to_be_visible()
 
