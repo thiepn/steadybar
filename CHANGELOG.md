@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.35.0 — Practice Surface Simplification — 2026-09-28
+
+- Give **Today** and **Practice** distinct jobs instead of maintaining two partially overlapping dashboards.
+- Keep Today as the planning/context surface for Autopilot, Practice Intelligence, guided learning, Calendar context, goals, routines, weekly context and plan editing.
+- Make Practice an execution-first launcher: unfinished-session recovery → today’s plan → drum tools → one-task Quick Start / Free Practice.
+- Promote the existing Today plan to the first normal Practice panel with an immediate **Start today’s plan** action and a direct **Adjust on Today** link.
+- When no plan exists, explain that planning belongs on Today and link directly to **Build today’s plan** instead of duplicating the builder.
+- Keep exercise, routine, song and standalone-metronome launch paths in one compact **Quick start** surface.
+- Keep Free Practice as a simple timer + optional click without mixing it into Autopilot or planning controls.
+- Preserve the full eight-tool drum fast-launch strip and the first-class Drum Tools hub.
+- Remove duplicated Guided Learning and legacy Suggested Exercises sections from Practice; no recommendation/evidence data is removed.
+- Add responsive Chromium/Firefox/WebKit coverage enforcing the Today-vs-Practice boundary and 44px+ quick-start controls.
+- No persistence, history, protocol, schema or backup-format migration is required.
+
+
 ## 2.34.0 — Drum Tool Hub & Navigation Simplification — 2026-09-28
 
 - Replace eight specialist drum-lab entries in the global navigation with one first-class **Drum Tools** destination for drum profiles.
