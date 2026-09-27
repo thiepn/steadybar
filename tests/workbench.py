@@ -1443,11 +1443,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual((saved['protocol']['primaryOn'],saved['protocol']['secondaryOn']),(True,False))
 
         self.page.get_by_role('button',name='Start practice',exact=True).click()
-        self.page.wait_for_url(re.compile(r'.*#/practice/active
-    names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
-    result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
-    raise SystemExit(0 if result.wasSuccessful() else 1)
-))
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
         expect(self.page.locator('.protocol-task[data-protocol="drum-rhythm"]')).to_be_visible()
         expect(self.page.locator('.focus-rhythm-visual')).to_be_visible()
         expect(self.page.locator('.focus-rhythm-visual .muted-layer')).to_have_count(1)
