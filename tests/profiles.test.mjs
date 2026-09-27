@@ -19,7 +19,7 @@ const dataset=type=>{const p=profile(type),c=starterContent(p),data=migratePract
 const block=e=>({id:'b',profileId:e.profileId,type:'exercise',exerciseId:e.id,title:e.name,targetSeconds:60,bpm:protocolPulse(exerciseProtocol(e))?.bpm,notes:'',order:0});
 const result=extra=>({id:'r',timestamp:at,note:'',source:'self-report',...extra});
 const complete=(data,e,r)=>{const s=createSession([block(e)],data);s.blocks[0].outcomes=r?[r]:[];s.blocks[0].actualActiveSeconds=60;return finishBlock(s);};
-const baseCounts={drums:42,guitar:36,bass:31,piano:36,voice:31};
+const baseCounts={drums:44,guitar:36,bass:31,piano:36,voice:31};
 for(const type of Object.keys(baseCounts)){
  test(`${type}: original starter library validates with distinct skills and protocols`,()=>{
   const d=dataset(type);assert.equal(d.exercises.length,baseCounts[type]);assert.ok(new Set(d.exercises.map(e=>e.skillArea)).size>=5);
@@ -54,7 +54,7 @@ test('drum starter content ships dedicated dynamics scores and reconciliation ne
 
 test('drum starter content ships first-class Rhythm practice across all three Lab modes',()=>{
  const d=dataset('drums'),rhythm=d.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
- assert.equal(rhythm.length,3);assert.deepEqual(rhythm.map(e=>e.protocol.mode).sort(),['polyrhythm','subdivision-switch','swing']);
+ assert.equal(rhythm.length,5);assert.deepEqual(rhythm.map(e=>e.protocol.mode).sort(),['grouped-meter','grouped-meter','polyrhythm','subdivision-switch','swing']);
  for(const e of rhythm){
   assert.equal(e.category,'timing');assert.equal(e.skillArea,'timing');assert.equal(e.primarySkillId,'drums.timing');
   assert.ok(e.secondarySkillIds.includes('drums.groove'));assert.ok(e.secondarySkillIds.includes('drums.coordination'));
@@ -63,7 +63,7 @@ test('drum starter content ships first-class Rhythm practice across all three La
  }
  d.exercises=d.exercises.filter(e=>!/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
  const reconciled=reconcileStarterContent(d);
- assert.equal(reconciled.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??'')).length,3);
+ assert.equal(reconciled.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??'')).length,5);
  const session=createSession([block(rhythm[0])],reconciled),snapshot=session.blocks[0];
  assert.equal(snapshot.protocolSnapshot.kind,'drum-rhythm');assert.equal(snapshot.timingClickSnapshot,undefined);
  assert.equal(snapshot.initialBpm,rhythm[0].protocol.pulse.bpm);assert.deepEqual(snapshot.meterSnapshot,{beats:rhythm[0].protocol.pulse.beats,beatUnit:4});
