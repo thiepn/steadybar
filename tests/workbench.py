@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/pocket','/dynamics','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/pocket','/dynamics','/rhythm','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -1046,8 +1046,8 @@ class Workbench(e2e.MusicPracticeTests):
     def test_72_drum_practice_surfaces_prioritize_playing_on_phone_and_desktop(self):
         self.onboard()
         self.route('/practice')
-        expect(self.page.locator('.drum-tool-card')).to_have_count(7)
-        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','Pocket Lab','Dynamics Lab','MIDI Lab'):
+        expect(self.page.locator('.drum-tool-card')).to_have_count(8)
+        for label in ('Rudiment Lab','Phrase Lab','Grid Lab','Timing Lab','Pocket Lab','Dynamics Lab','Rhythm Lab','MIDI Lab'):
             expect(self.page.locator('.drum-tool-card').filter(has_text=label)).to_have_count(1)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height})
@@ -1345,6 +1345,52 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(snapshot['subdivision'],4)
         self.assertEqual(snapshot['targetSeconds'],360)
         self.assertEqual(next(lane for lane in snapshot['lanes'] if lane['surface']=='tom')['steps'][0],'1')
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_78_rhythm_lab_swing_switching_polyrhythm_and_audio_transport(self):
+        self.onboard()
+        self.route('/rhythm')
+        expect(self.page.get_by_role('heading',name='Rhythm Lab',exact=True)).to_be_visible()
+        expect(self.page.get_by_label('Training mode',exact=True)).to_have_value('swing')
+        expect(self.page.get_by_text('66.5 / 33.5 · Triplet swing',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),4)
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-secondary').count(),4)
+
+        self.page.get_by_role('button',name='Straight',exact=True).click()
+        expect(self.page.get_by_text('50.0 / 50.0 · Straight',exact=True)).to_be_visible()
+        self.page.get_by_label('Training mode',exact=True).select_option('subdivision-switch')
+        expect(self.page.locator('.rhythm-stage-card')).to_have_count(4)
+        self.page.get_by_label('Subdivision sequence',exact=True).select_option('3,4')
+        self.page.get_by_label('Bars per stage',exact=True).select_option('2')
+        expect(self.page.locator('.rhythm-stage-card')).to_have_count(2)
+        expect(self.page.get_by_text('Triplets → Sixteenth notes · 2 bars each',exact=True)).to_be_visible()
+
+        self.page.get_by_label('Training mode',exact=True).select_option('polyrhythm')
+        expect(self.page.get_by_label('Polyrhythm ratio',exact=True)).to_have_value('3:2')
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),2)
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-secondary').count(),3)
+        expect(self.page.get_by_text('3:2 · 3 overlay hits across 2 quarter-note beats',exact=True)).to_be_visible()
+        overlay=self.page.locator('.rhythm-transport button').filter(has_text='Overlay')
+        overlay.click()
+        expect(overlay).to_have_attribute('aria-pressed','false')
+        expect(overlay).to_contain_text('Overlay off')
+        overlay.click()
+        expect(overlay).to_have_attribute('aria-pressed','true')
+
+        start=self.page.locator('button.rhythm-start')
+        expect(start).to_contain_text('Start Rhythm Lab')
+        start.click()
+        expect(start).to_have_attribute('aria-pressed','true')
+        self.assertTrue(self.read("load('audio/rhythm-engine.js').rhythmAudio.running"))
+        start.click()
+        expect(start).to_have_attribute('aria-pressed','false')
+        expect(self.page.get_by_text('Paused.',exact=True)).to_be_visible()
+
+        self.page.set_viewport_size({'width':390,'height':844})
+        config_columns=self.page.locator('.rhythm-common-grid').evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(config_columns,2)
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 

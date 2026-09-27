@@ -35,6 +35,7 @@ export function practicePage():Page{
       link('Timing Lab','/timing-lab','drum-tool-card','pulse'),
       link('Pocket Lab','/pocket','drum-tool-card','pulse'),
       link('Dynamics Lab','/dynamics','drum-tool-card','routine'),
+      link('Rhythm Lab','/rhythm','drum-tool-card','pulse'),
       link('MIDI Lab','/midi-lab','drum-tool-card','pulse'))));
   page.append(learningSummary());
   const planned=el('section',{class:'panel launcher-plan'},sectionHeader('Today’s session',`${plan?.blocks.length||0} blocks · ${duration(routineDuration(plan?.blocks||[]))}`));
