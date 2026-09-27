@@ -1383,7 +1383,7 @@ class Workbench(e2e.MusicPracticeTests):
         expect(start).to_contain_text('Start Rhythm Lab')
         start.click()
         expect(start).to_have_attribute('aria-pressed','true')
-        expect(self.page.get_by_text('Count-in…',exact=True)).to_be_visible()
+        self.assertTrue(self.page.evaluate("load('audio/rhythm-engine.js').rhythmAudio.running"))
         start.click()
         expect(start).to_have_attribute('aria-pressed','false')
         expect(self.page.get_by_text('Paused.',exact=True)).to_be_visible()
