@@ -39,6 +39,7 @@ import { rhythmLabPage } from './pages/rhythm-lab.js';
 import { repertoireAudioPage } from './pages/repertoire-audio.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
+import { activeProfile } from './domain/profiles.js';
 const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/drums','Drum Tools','routine'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
 const drumToolRoutes=new Set(['/rudiments','/phrases','/drum-grid','/timing-lab','/pocket','/dynamics','/rhythm','/midi-lab']);
 const routeTitles:Record<string,string>={'/rudiments':'Rudiment Lab','/phrases':'Phrase Lab','/drum-grid':'Grid Lab','/timing-lab':'Timing Lab','/pocket':'Pocket Lab','/dynamics':'Dynamics Lab','/rhythm':'Rhythm Lab','/midi-lab':'MIDI Lab'};
@@ -127,7 +128,7 @@ function render():void{
   }
   const disconnectCharts=path==='/progress'?()=>{}:observeCharts(main),cleanup=current.cleanup;
   current.cleanup=()=>{disconnectCharts();cleanup?.();};
-  document.title=`${path==='/practice/active'?'Practice':path==='/profiles'?'Profiles':routeTitles[path]??visibleNavigation().find(([p])=>activeLink(p,path))?.[1]||'Steadybar'} · Steadybar`;
+  document.title=`${path==='/practice/active'?'Practice':path==='/profiles'?'Profiles':(routeTitles[path]??visibleNavigation().find(([p])=>activeLink(p,path))?.[1])||'Steadybar'} · Steadybar`;
   renderedPath=path;
   if(changed){window.scrollTo(0,0);main.focus({preventScroll:true});}
   else if(focusLabel&&!document.querySelector('dialog[open]')){
