@@ -1379,7 +1379,8 @@ class Workbench(e2e.MusicPracticeTests):
         overlay.click()
         expect(overlay).to_have_attribute('aria-pressed','true')
 
-        start=self.page.get_by_role('button',name='Start Rhythm Lab',exact=True)
+        start=self.page.locator('button.rhythm-start')
+        expect(start).to_contain_text('Start Rhythm Lab')
         start.click()
         expect(start).to_have_attribute('aria-pressed','true')
         expect(self.page.get_by_text('Count-in…',exact=True)).to_be_visible()
