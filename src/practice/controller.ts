@@ -96,7 +96,7 @@ export class PracticeController {
       onEvent:event=>{
         if(generation!==this.generation)return;
         this.rhythmEvent=event;
-        if(event.layer==='primary')this.beat={time:event.time,beat:event.beat,part:event.part,bar:event.cycle,accent:event.accent,countingIn:event.countingIn,firstPracticeBeat:!event.countingIn&&event.cycle===0&&event.cyclePosition===0};
+        if(event.layer==='primary'||protocol.mode==='grouped-meter')this.beat={time:event.time,beat:event.beat,part:event.part,bar:event.cycle,accent:event.accent,countingIn:event.countingIn,firstPracticeBeat:!event.countingIn&&event.cycle===0&&event.beat===0};
         this.emit();
       },
       onInterrupted:()=>{if(generation!==this.generation)return;void this.pause().then(()=>{this.error='Audio was suspended by the browser. The session is paused; tap Resume when ready.';this.emit();}).catch(error=>this.report(error));},
