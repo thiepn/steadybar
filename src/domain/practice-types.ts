@@ -15,10 +15,11 @@ export interface PracticeProfile {
   attribution?: 'selected' | 'exercise-instrument' | 'unresolved-history';
 }
 export interface Pulse { bpm: number; beats: number; beatUnit: 4 | 8; subdivision: 1 | 2 | 3 | 4 }
+interface DrumRhythmBase { kind: 'drum-rhythm'; pulse: Pulse; name: string; focus: string; primaryOn: boolean; secondaryOn: boolean }
 export type DrumRhythmProtocol =
-  | { kind: 'drum-rhythm'; mode: 'swing'; pulse: Pulse; name: string; focus: string; ratio: number }
-  | { kind: 'drum-rhythm'; mode: 'subdivision-switch'; pulse: Pulse; name: string; focus: string; sequence: (1 | 2 | 3 | 4)[]; barsPerStage: 1 | 2 | 4 }
-  | { kind: 'drum-rhythm'; mode: 'polyrhythm'; pulse: Pulse; name: string; focus: string; primary: 2 | 3 | 4 | 5; secondary: 2 | 3 | 4 | 5 };
+  | (DrumRhythmBase & { mode: 'swing'; ratio: number })
+  | (DrumRhythmBase & { mode: 'subdivision-switch'; sequence: (1 | 2 | 3 | 4)[]; barsPerStage: 1 | 2 | 4 })
+  | (DrumRhythmBase & { mode: 'polyrhythm'; primary: 2 | 3 | 4 | 5; secondary: 2 | 3 | 4 | 5 });
 export type Hands = 'left' | 'right' | 'together' | 'not-applicable';
 export type ScaleQuality = 'major' | 'natural-minor' | 'minor-pentatonic' | 'major-pentatonic' | 'chromatic';
 export type PracticeProtocol =
