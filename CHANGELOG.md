@@ -7,6 +7,7 @@
 - Preserve which Rhythm Lab layers are audible; persisted tasks reject a configuration with both layers muted.
 - Add **Practice minutes**, **Start practice**, **Add to Today**, and **Save as exercise** directly to Rhythm Lab for percussion profiles.
 - Save drum Rhythm studies as ordinary timing exercises with `drums.timing` primary attribution and Groove/Coordination support on drum profiles.
+- Reconcile three stable Rhythm starter exercises into existing drum workspaces without overwriting user-edited built-ins, bringing the current five-instrument starter library to **176 exercises**.
 - Keep standalone Rhythm Lab available outside percussion profiles while clearly separating the durable drum-practice workflow.
 - Reuse the dedicated Rhythm Web Audio scheduler inside Focus Player; saved polyrhythms and swing never degrade into a straight metronome after launch.
 - Map Rhythm audio-clock events back into Focus Player beat/state rendering without letting UI timers determine click timing.
