@@ -1372,7 +1372,31 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),2)
         self.assertEqual(self.page.locator('.rhythm-marker.layer-secondary').count(),3)
         expect(self.page.get_by_text('3:2 · 3 overlay hits across 2 quarter-note beats',exact=True)).to_be_visible()
-        overlay=self.page.get_by_role('button',name='Overlay on',exact=True)
+        overlay=self.page.get_by_role('button',name=re.compile(r'^Overlay (on|off)
+        expect(overlay).to_contain_text('Overlay off')
+        overlay.click()
+        expect(overlay).to_have_attribute('aria-pressed','true')
+
+        start=self.page.get_by_role('button',name='Start Rhythm Lab',exact=True)
+        start.click()
+        expect(start).to_have_attribute('aria-pressed','true')
+        expect(self.page.get_by_text('Count-in…',exact=True)).to_be_visible()
+        start.click()
+        expect(start).to_have_attribute('aria-pressed','false')
+        expect(self.page.get_by_text('Paused.',exact=True)).to_be_visible()
+
+        self.page.set_viewport_size({'width':390,'height':844})
+        config_columns=self.page.locator('.rhythm-common-grid').evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(config_columns,2)
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+if __name__=='__main__':
+    names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
+    raise SystemExit(0 if result.wasSuccessful() else 1)
+))
         overlay.click()
         expect(overlay).to_have_attribute('aria-pressed','false')
         expect(overlay).to_contain_text('Overlay off')
