@@ -168,6 +168,16 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## First-class Rhythm practice — 2.32.0
+
+Rhythm Lab setups can now become normal Steadybar practice material. For percussion profiles, the current swing, subdivision-switching, or polyrhythm setup can be **started immediately, added to Today, or saved as an exercise**. The exact relationship and the current audible-layer state are snapshotted into a validated `drum-rhythm` protocol, so later Lab changes do not rewrite practice history.
+
+Focus Player uses the same dedicated Rhythm Web Audio clock as the Lab. A saved 5:4 polyrhythm therefore remains 5:4 during a session rather than falling back to the ordinary straight metronome. Count-in, pause/resume, BPM changes, metronome toggling, background interruption, session recovery and cross-tab audio locking all remain inside the normal practice transport/history path.
+
+Focus Player renders the authored Rhythm relationship and follows audio-clock events directly. Task Settings can edit the score without bypassing validation, and results use the existing self-reported reflection plus Not Yet / Usable / Solid evaluation model. Generic sparse/gap click and subdivision progression are intentionally disabled for `drum-rhythm` tasks because those transformations would change the authored relationship rather than merely increase difficulty.
+
+No database or backup-format migration is required.
+
 ## Rhythm Lab — 2.31.0
 
 Steadybar now has a dedicated **Rhythm Lab** for uneven and layered timing relationships: swing/shuffle placement, subdivision switching, and polyrhythms. It sits alongside Dynamics & Touch Lab rather than replacing or overloading the ordinary metronome.
