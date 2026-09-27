@@ -1063,7 +1063,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .dynamics-controls>.field:first-child{grid-column:auto}
 }
 
-/* Phase 30 — Rhythm Lab: swing, subdivision switching and polyrhythm. */
+/* Phase 31 — Rhythm Lab: swing, subdivision switching and polyrhythm. */
 .rhythm-lab-page{display:grid;gap:20px}
 .rhythm-training,.rhythm-transport,.rhythm-visual-panel{display:grid;gap:16px}
 .rhythm-common-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
