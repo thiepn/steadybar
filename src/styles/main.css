@@ -885,8 +885,30 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 
 /* Phase 26 — drum practice surface UX polish. */
 .drum-tool-strip{display:grid;gap:10px;margin:-8px 0 24px;padding:12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--surface)}
-.drum-tool-strip-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:0 2px}
+.drum-tool-strip-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px}
+.drum-tool-strip-head>div{display:flex;align-items:baseline;gap:10px;min-width:0}
 .drum-tool-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.drum-tools-page{max-width:980px}
+.drum-hub-section{padding-top:20px}
+.drum-hub-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.drum-hub-card{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:12px;min-height:132px;padding:16px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);text-decoration:none}
+.drum-hub-card:hover{border-color:var(--border-strong);background:var(--surface-hover)}
+.drum-hub-card:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.drum-hub-icon{display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--border-strong);border-radius:7px;background:var(--surface-soft);color:var(--accent-text)}
+.drum-hub-icon>svg{width:19px;height:19px}
+.drum-hub-copy{display:grid;gap:7px;min-width:0}
+.drum-hub-copy strong{font-size:14px}
+.drum-hub-copy p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.drum-hub-open{align-self:center;color:var(--muted);font-size:11px}
+.drum-hub-footnote{margin:-4px 0 28px}
+@media(max-width:900px){.drum-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:559px){
+  .drum-hub-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+  .drum-hub-card{min-height:0;padding:14px;grid-template-columns:34px minmax(0,1fr) auto}
+  .drum-hub-icon{width:34px;height:34px}
+  .drum-hub-open{font-size:10px}
+}
+
 .drum-tool-card{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-height:48px;padding:10px 12px;border:1px solid var(--border);border-radius:5px;background:var(--surface-soft);font-size:12px;font-weight:550}
 .drum-tool-card>svg{width:17px;height:17px;color:var(--accent-text)}
 .drum-tool-card:hover{border-color:var(--border-strong);background:var(--surface-hover);color:var(--text)}
