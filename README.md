@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Drum Tool Hub & navigation simplification — 2.34.0
+
+Steadybar’s drum feature set is now large enough that exposing every specialist lab in the global sidebar creates more friction than it removes. Drum profiles therefore get one **Drum Tools** destination in the main navigation, while the dedicated Practice screen keeps its fast eight-tool launcher for moments when the user is already choosing what to play.
+
+The Drum Tools hub groups work by intent: **Technique & coordination** (Rudiment, Grid, Phrase), **Time & feel** (Timing, Pocket, Rhythm), and **Touch & evidence** (Dynamics, MIDI). Each card explains the practice problem before naming implementation details. Direct lab routes remain unchanged, Search still exposes each lab on drum profiles, and entering a lab keeps Drum Tools highlighted as its navigation context.
+
+Non-drum profiles are no longer asked to scan a global menu full of drum-specific destinations. No data, history, protocol, backup or persistence migration is involved.
+
 ## Odd meter & additive grouping — 2.33.0
 
 Rhythm Lab now includes **Odd meter / grouping** as a fourth training mode. Choose practical additive bars such as **3+2 (5/8)**, **2+2+3 / 2+3+2 / 3+2+2 (7/8)**, **3+3+2**, compound or additive **9/8**, and longer 10/8–11/8 groupings. The displayed BPM is the eighth-note pulse, so every unit remains the same length while only the grouping changes.

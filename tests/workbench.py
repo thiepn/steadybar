@@ -12,7 +12,7 @@ import e2e
 from playwright.sync_api import expect
 
 SIZES=((1280,720),(1366,768),(1440,900),(1920,1080),(768,1024),(820,1180),(1024,768),(1024,1366),(320,568),(360,800),(375,812),(390,844),(412,915),(430,932))
-ROUTES=('/', '/practice','/metronome','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/pocket','/dynamics','/rhythm','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
+ROUTES=('/', '/practice','/metronome','/drums','/rudiments','/phrases','/drum-grid','/library','/timing-lab','/pocket','/dynamics','/rhythm','/midi-lab','/routines','/songs','/setlists','/goals','/cycles','/calendar','/review','/progress','/recordings','/history','/profiles','/settings')
 
 class Workbench(e2e.MusicPracticeTests):
     def populate(self):
@@ -1545,6 +1545,41 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertFalse(audio_state['standard'])
         pause.click()
         expect(self.page.get_by_text('Paused',exact=True)).to_be_visible()
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_81_drum_tool_hub_simplifies_navigation_without_losing_direct_access(self):
+        self.onboard()
+        self.route('/drums')
+        expect(self.page.get_by_role('heading',name='Drum Tools',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.drum-hub-section').count(),3)
+        self.assertEqual(self.page.locator('.drum-hub-card').count(),8)
+        for heading in ('Technique & coordination','Time & feel','Touch & evidence'):
+            expect(self.page.get_by_role('heading',name=heading,exact=True)).to_be_visible()
+        for name in ('Rudiment Lab','Grid Lab','Phrase Lab','Timing Lab','Pocket Lab','Rhythm Lab','Dynamics Lab','MIDI Lab'):
+            expect(self.page.get_by_role('link',name=name,exact=True)).to_be_visible()
+
+        sidebar=self.page.locator('.sidebar-nav')
+        expect(sidebar.locator('a[href="#/drums"]')).to_have_count(1)
+        for href in ('#/rudiments','#/phrases','#/drum-grid','#/timing-lab','#/pocket','#/dynamics','#/rhythm','#/midi-lab'):
+            expect(sidebar.locator(f'a[href="{href}"]')).to_have_count(0)
+
+        self.route('/rhythm')
+        expect(self.page.locator('.sidebar-nav a[href="#/drums"]')).to_have_attribute('aria-current','page')
+        self.assertEqual(self.page.title(),'Rhythm Lab · Steadybar')
+
+        self.route('/practice')
+        expect(self.page.get_by_role('link',name='All drum tools',exact=True)).to_be_visible()
+        self.assertEqual(self.page.locator('.drum-tool-grid .drum-tool-card').count(),8)
+
+        self.page.locator('.sidebar .search-trigger').click()
+        drum_command=self.page.locator('button.command-item').filter(has_text='Open Drum Tools')
+        expect(drum_command).to_have_count(1)
+        drum_command.click()
+        self.page.wait_for_url(re.compile(r'.*#/drums$'))
+        expect(self.page.get_by_role('heading',name='Drum Tools',exact=True)).to_be_visible()
 
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)

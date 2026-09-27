@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.34.0 — Drum Tool Hub & Navigation Simplification — 2026-09-28
+
+- Replace eight specialist drum-lab entries in the global navigation with one first-class **Drum Tools** destination for drum profiles.
+- Keep every existing direct lab URL intact, so bookmarks, history links and deep links remain valid.
+- Add an organized Drum Tools hub grouped by **Technique & coordination**, **Time & feel**, and **Touch & evidence**.
+- Explain each tool by the practice problem it solves rather than presenting eight unexplained feature names.
+- Keep the contextual Practice-page fast-launch strip with all eight tools and add a direct **All drum tools** path.
+- Mark Drum Tools as the active navigation context while inside any specialist drum lab, while retaining the exact lab name in the browser title.
+- Keep direct drum-lab commands in Search for drum profiles and add **Open Drum Tools**; do not clutter non-drum profile search with drum-only commands.
+- Preserve all specialist workflows, persistence, history, evidence, routes and browser behavior; this is navigation/UX consolidation, not a data migration.
+- Add responsive Chromium/Firefox/WebKit coverage for the hub, direct-route access, active navigation state, Search access and 320px–desktop overflow safety.
+
+
 ## 2.33.0 — Odd Meter & Additive Grouping — 2026-09-28
 
 - Extend Rhythm Lab with first-class **Odd meter / grouping** practice instead of adding a disconnected ninth drum tool.

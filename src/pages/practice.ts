@@ -27,7 +27,7 @@ export function practicePage():Page{
   const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Choose a plan, an exercise, or a timed free session.'));
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},`Unfinished ${profileName(snapshot,active.profileId)} session`),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
   if(profile.instrumentType==='drums')page.append(el('section',{class:'drum-tool-strip','aria-label':'Drum practice tools'},
-    el('div',{class:'drum-tool-strip-head'},el('strong',{},'Drum tools'),el('span',{class:'muted small'},'Jump straight into focused playing')),
+    el('div',{class:'drum-tool-strip-head'},el('div',{},el('strong',{},'Drum tools'),el('span',{class:'muted small'},'Jump straight into focused playing')),link('All drum tools','/drums','button ghost compact','routine')),
     el('div',{class:'drum-tool-grid'},
       link('Rudiment Lab','/rudiments','drum-tool-card','routine'),
       link('Phrase Lab','/phrases','drum-tool-card','routine'),
