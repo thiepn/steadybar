@@ -1,5 +1,5 @@
 import { AUDIO_LOCK, ExclusiveLease } from '../platform/locks.js';
-import { rhythmBaseBeats, rhythmCycle, validateRhythmLabConfig, type RhythmCycleEvent, type RhythmLabConfig, type RhythmLayer } from '../domain/rhythm-lab.js';
+import { rhythmBaseBeats, rhythmCountInAccent, rhythmCycle, validateRhythmLabConfig, type RhythmCycleEvent, type RhythmLabConfig, type RhythmLayer } from '../domain/rhythm-lab.js';
 
 export interface RhythmPlaybackSettings {volume:number;countInBeats:number;primaryOn:boolean;secondaryOn:boolean}
 export interface RhythmPlaybackEvent extends RhythmCycleEvent {time:number;cycle:number;countingIn:boolean}
@@ -49,7 +49,7 @@ export class RhythmLabAudioEngine {
     while(this.countInIndex<this.settings.countInBeats){
       const time=this.startTime+this.countInIndex*beatSeconds;if(time>=horizon)break;
       const index=this.countInIndex++;if(time<stale)continue;
-      const event:RhythmPlaybackEvent={offsetSeconds:index*beatSeconds,time,layer:'primary',accent:index===0?2:1,cycle:-1,cyclePosition:index,beat:index%rhythmBaseBeats(this.config),part:0,label:`Count-in ${index+1}`,countingIn:true};
+      const event:RhythmPlaybackEvent={offsetSeconds:index*beatSeconds,time,layer:'primary',accent:rhythmCountInAccent(this.config,index),cycle:-1,cyclePosition:index,beat:index%rhythmBaseBeats(this.config),part:0,label:`Count-in ${index+1}`,countingIn:true};
       this.click(event);this.visuals.push(event);
     }
     if(this.countInIndex>=this.settings.countInBeats&&cycle.durationSeconds>0&&stale>this.practiceStartTime){
