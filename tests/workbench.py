@@ -1585,6 +1585,36 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_82_practice_surface_is_execution_first_without_today_duplication(self):
+        self.onboard()
+        self.route('/practice')
+        expect(self.page.get_by_role('heading',name='Practice',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Today’s plan',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('link',name='Build today’s plan',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Quick start',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Free practice',exact=True)).to_be_visible()
+        expect(self.page.locator('.practice-launcher-options .launcher-option')).to_have_count(4)
+        expect(self.page.locator('.drum-tool-grid .drum-tool-card')).to_have_count(8)
+        expect(self.page.locator('.learning-summary')).to_have_count(0)
+        expect(self.page.get_by_role('heading',name='Suggested exercises',exact=True)).to_have_count(0)
+        expect(self.page.get_by_role('button',name='Start Autopilot',exact=True)).to_have_count(0)
+        expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_have_count(0)
+
+        self.route('/')
+        expect(self.page.get_by_role('button',name='Start Autopilot',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_be_visible()
+
+        self.route('/practice')
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height})
+            self.assert_bounds(width)
+            for label in ('Choose an exercise','Use a routine','Practice a song','Just the metronome'):
+                control=self.page.get_by_text(label,exact=True)
+                box=control.bounding_box();self.assertIsNotNone(box)
+                self.assertGreaterEqual(box['height'],44)
+
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
