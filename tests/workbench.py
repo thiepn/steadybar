@@ -1455,7 +1455,7 @@ class Workbench(e2e.MusicPracticeTests):
 
         focus_start=self.page.get_by_role('button',name='Start practice',exact=True)
         focus_start.click()
-        expect(focus_start).to_have_attribute('aria-label','Pause practice')
+        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
         self.assertTrue(self.read("load('audio/rhythm-engine.js').rhythmAudio.running"))
         self.assertFalse(self.read("load('audio/engine.js').audio.running"))
         focus_start.click()
