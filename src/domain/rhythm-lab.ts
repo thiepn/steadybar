@@ -48,7 +48,7 @@ export function rhythmLayerLabels(config:RhythmLabConfig):[string,string]{
 
 export function rhythmPracticeCue(config:RhythmLabConfig):string{
   if(config.mode==='swing')return `${swingFeelLabel(config.ratio)}: keep the quarter-note pulse unchanged while the offbeat moves. The ratio is a timing reference, not a “correct groove” score.`;
-  if(config.mode==='subdivision-switch')return `Keep one quarter-note pulse while your internal grid changes: ${config.sequence.map(subdivisionName).join(' → ')} . Do not let the BPM move when the note density changes.`.replace(' →  .',' →.');
+  if(config.mode==='subdivision-switch')return `Keep one quarter-note pulse while your internal grid changes: ${config.sequence.map(subdivisionName).join(' → ')}. Do not let the BPM move when the note density changes.`;
   return `${config.primary}:${config.secondary}: hear the anchor first, then the overlay, then both together. The overlay contains ${config.primary} evenly spaced hits across ${config.secondary} quarter-note beats.`;
 }
 
