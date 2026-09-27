@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.33.0 — Odd Meter & Additive Grouping — 2026-09-28
+
+- Extend Rhythm Lab with first-class **Odd meter / grouping** practice instead of adding a disconnected ninth drum tool.
+- Add practical additive groupings built from 2s and 3s, including 5/8, multiple 7/8 groupings, 3+3+2, 9/8 variants, 10/8 and 11/8 studies.
+- Define grouped-meter BPM explicitly as the **eighth-note pulse**, avoiding ambiguous quarter-note tempo semantics in additive meters.
+- Schedule every eighth-note pulse on the deterministic Rhythm audio clock while separating **Group anchors** from **Inner pulses** into independently audible layers.
+- Preserve exact additive group order in durable `drum-rhythm` practice snapshots; a saved 2+2+3 study cannot silently become 3+2+2.
+- Use beat-unit 8 and exact pulse count in session meter snapshots so Focus Player, history and exports retain the authored bar length.
+- Keep normal Rhythm count-in, BPM adjustment, audio lock, pause/resume, recovery and cross-tab behavior.
+- Add Task Settings support for editable additive groupings with strict 2/3-only, 5–16-pulse validation.
+- Reconcile two stable starter studies: **5/8 Grouping · 3+2** and **7/8 Grouping · 2+2+3**, bringing the five-instrument starter library to **178 exercises**.
+- Add deterministic domain tests plus Chromium/Firefox/WebKit Lab → Today → Library → Focus Player certification.
+- No IndexedDB schema or backup-envelope migration is required.
+
+
 ## 2.32.0 — First-Class Rhythm Practice Integration — 2026-09-27
 
 - Promote Rhythm Lab setups into a durable **`drum-rhythm` practice protocol** instead of leaving swing, subdivision switching, and polyrhythms as standalone utilities.
