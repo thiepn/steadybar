@@ -74,11 +74,29 @@ test('Rhythm count-ins preserve a downbeat accent on every translated bar',()=>{
   assert.deepEqual(Array.from({length:6},(_,i)=>rhythmCountInAccent(poly,i)),[2,1,1,2,1,1]);
 });
 
+test('grouped meter schedules even eighth pulses with explicit group-start anchors',()=>{
+  const cycle=rhythmCycle({mode:'grouped-meter',bpm:120,groups:[2,2,3]});
+  assert.equal(cycle.durationSeconds,3.5);
+  assert.equal(cycle.events.length,7);
+  assert.deepEqual(cycle.events.filter(event=>event.layer==='primary').map(event=>event.offsetSeconds),[0,1,2]);
+  assert.deepEqual(cycle.events.filter(event=>event.layer==='secondary').map(event=>event.offsetSeconds),[.5,1.5,2.5,3]);
+  assert.deepEqual(cycle.events.map(event=>event.beat),[0,1,2,3,4,5,6]);
+  assert.equal(cycle.summary,'2+2+3 · 7/8 · eighth-note pulse');
+});
+
+test('grouped meter validation keeps additive groupings bounded and unambiguous',()=>{
+  assert.deepEqual(validateRhythmLabConfig({mode:'grouped-meter',bpm:120,groups:[3,2]}),{mode:'grouped-meter',bpm:120,groups:[3,2]});
+  assert.throws(()=>validateRhythmLabConfig({mode:'grouped-meter',bpm:120,groups:[4,3]}),/2s and 3s/i);
+  assert.throws(()=>validateRhythmLabConfig({mode:'grouped-meter',bpm:120,groups:[2]}),/2–8 groups/i);
+  assert.throws(()=>validateRhythmLabConfig({mode:'grouped-meter',bpm:120,groups:[3,3,3,3,3,3]}),/5–16/i);
+});
+
 test('Rhythm Lab configurations round-trip into durable drum practice protocols',()=>{
   const configs=[
     {mode:'swing',bpm:92,beats:4,ratio:62},
     {mode:'subdivision-switch',bpm:84,beats:5,sequence:[2,3,4],barsPerStage:2},
     {mode:'polyrhythm',bpm:78,primary:5,secondary:4},
+    {mode:'grouped-meter',bpm:116,groups:[2,2,3]},
   ];
   for(const config of configs){
     const protocol=rhythmProtocolFromConfig(config,false,true);
@@ -96,6 +114,9 @@ test('durable rhythm protocols preserve structural pulse semantics for Focus Pla
   assert.deepEqual(switching.pulse,{bpm:100,beats:3,beatUnit:4,subdivision:1});
   const poly=rhythmProtocolFromConfig({mode:'polyrhythm',bpm:100,primary:3,secondary:2});
   assert.deepEqual(poly.pulse,{bpm:100,beats:2,beatUnit:4,subdivision:1});
+  const grouped=rhythmProtocolFromConfig({mode:'grouped-meter',bpm:120,groups:[2,2,3]});
+  assert.deepEqual(grouped.pulse,{bpm:120,beats:7,beatUnit:8,subdivision:1});
+  assert.deepEqual(rhythmConfigFromProtocol(grouped),{mode:'grouped-meter',bpm:120,groups:[2,2,3]});
   assert.throws(()=>rhythmProtocolFromConfig({mode:'swing',bpm:100,beats:4,ratio:66.5},false,false),/layer.*audible/i);
 });
 

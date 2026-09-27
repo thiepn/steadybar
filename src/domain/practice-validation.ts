@@ -63,6 +63,13 @@ export const validateProtocol:Validator<PracticeProtocol>=(v,p='Protocol')=>{
         if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
         return r;
       }
+      if(rhythmMode(v)==='grouped-meter'){
+        const r=obj({kind:one('drum-rhythm'),mode:one('grouped-meter'),pulse,name:text(160,1),focus:text(2000,1),groups:arr(one(2,3),8),primaryOn:bool,secondaryOn:bool})(v,p),total=r.groups.reduce((sum,value)=>sum+value,0);
+        if(r.groups.length<2||total<5||total>16)fail(p,'grouped meter needs 2–8 groups totaling 5–16 eighth-note pulses');
+        if(r.pulse.beatUnit!==8||r.pulse.subdivision!==1||r.pulse.beats!==total)fail(p,'grouped meter pulse must match the authored eighth-note grouping');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
+        return r;
+      }
       return fail(p,'unknown drum rhythm mode');
     }
     case 'repetitions':return obj({kind:one('repetitions'),task:text(),target:num(1,10000,true),pulse:optional(pulse)})(v,p);

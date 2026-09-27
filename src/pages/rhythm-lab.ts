@@ -14,7 +14,7 @@ import { button, confirmAction, field, link, notify, pageHeader, sectionHeader, 
 type RhythmMode=RhythmLabConfig['mode'];
 interface RhythmLabDraft {
   mode:RhythmMode;bpm:number;minutes:number;countIn:'0'|'2'|'4';volume:number;primaryOn:boolean;secondaryOn:boolean;
-  swingBeats:string;swingRatio:number;switchBeats:string;sequence:string;barsPerStage:string;polyRatio:string;
+  swingBeats:string;swingRatio:number;switchBeats:string;sequence:string;barsPerStage:string;polyRatio:string;grouping:string;
 }
 const rhythmLabDrafts=new Map<string,RhythmLabDraft>();
 const sequenceOptions:[string,string][]=[
@@ -25,18 +25,19 @@ const sequenceOptions:[string,string][]=[
   ['2,4','Eighth ↔ sixteenth'],
 ];
 const ratioOptions:[string,string][]=[['3:2','3:2 · three over two beats'],['2:3','2:3 · two over three beats'],['4:3','4:3 · four over three beats'],['3:4','3:4 · three over four beats'],['5:4','5:4 · five over four beats'],['4:5','4:5 · four over five beats'],['5:3','5:3 · five over three beats'],['3:5','3:5 · three over five beats']];
+const groupingOptions:[string,string][]=[['2+3','5/8 · 2+3'],['3+2','5/8 · 3+2'],['2+2+3','7/8 · 2+2+3'],['2+3+2','7/8 · 2+3+2'],['3+2+2','7/8 · 3+2+2'],['3+3+2','8/8 · 3+3+2'],['2+2+2+3','9/8 · 2+2+2+3'],['3+3+3','9/8 · 3+3+3'],['3+3+2+2','10/8 · 3+3+2+2'],['3+3+3+2','11/8 · 3+3+3+2'],['2+3+3+3','11/8 · 2+3+3+3']];
 
 export function rhythmLabPage():Page{
   const snapshot=store.snapshot(),metronome=snapshot.settings.metronome,profile=activeProfile(snapshot),canPersist=profile.family==='percussion',savedDraft=rhythmLabDrafts.get(profile.id);
   let mode:RhythmMode=savedDraft?.mode??'swing',running=false,disposed=false,taps:number[]=[],primaryOn=savedDraft?.primaryOn??true,secondaryOn=savedDraft?.secondaryOn??true;
   const page=el('div',{class:'page rhythm-lab-page'},pageHeader('Drum time & coordination','Rhythm Lab','Swing placement, subdivision switching, and layered polyrhythms on a deterministic audio-time clock.',[link('Metronome','/metronome','button secondary','pulse'),link('Pocket Lab','/pocket','button secondary','pulse')]));
-  const modeSelect=select('rhythmMode','Training mode',[['swing','Swing / shuffle'],['subdivision-switch','Subdivision switching'],['polyrhythm','Polyrhythm']],mode);
+  const modeSelect=select('rhythmMode','Training mode',[['swing','Swing / shuffle'],['subdivision-switch','Subdivision switching'],['polyrhythm','Polyrhythm'],['grouped-meter','Odd meter / grouping']],mode);
   const bpm=el('input',{type:'number',min:20,max:300,step:1,value:savedDraft?.bpm??metronome.bpm,inputmode:'numeric','aria-label':'BPM'}),minutes=el('input',{type:'number',min:1,max:180,step:1,value:savedDraft?.minutes??8,inputmode:'numeric','aria-label':'Practice minutes'}),countIn=select('rhythmCountIn','Count-in',[['0','None'],['2','2 beats'],['4','4 beats']],savedDraft?.countIn??'4');
   const volume=el('input',{type:'range',min:0,max:1,step:.05,value:savedDraft?.volume??metronome.volume,'aria-label':'Rhythm Lab volume'}),volumeText=el('span',{class:'muted small'},`${Math.round((savedDraft?.volume??metronome.volume)*100)}%`);
   const swingBeats=select('swingBeats','Beats per bar',[['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']],savedDraft?.swingBeats??'4');
   const swingRatio=el('input',{type:'range',min:50,max:75,step:.5,value:savedDraft?.swingRatio??66.5,'aria-label':'Swing ratio'}),swingRatioText=el('strong',{class:'rhythm-ratio-value'},'66.5 / 33.5');
   const switchBeats=select('switchBeats','Beats per bar',[['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']],savedDraft?.switchBeats??'4'),sequence=select('rhythmSequence','Subdivision sequence',sequenceOptions,savedDraft?.sequence??'1,2,3,4'),barsPerStage=select('barsPerStage','Bars per stage',[['1','1 bar'],['2','2 bars'],['4','4 bars']],savedDraft?.barsPerStage??'1');
-  const polyRatio=select('polyRatio','Polyrhythm ratio',ratioOptions,savedDraft?.polyRatio??'3:2');
+  const polyRatio=select('polyRatio','Polyrhythm ratio',ratioOptions,savedDraft?.polyRatio??'3:2'),grouping=select('grouping','Grouping',groupingOptions,savedDraft?.grouping??'2+2+3');
   const settingsHost=el('div',{class:'rhythm-mode-settings'}),visual=el('div',{class:'rhythm-visual','aria-live':'off'}),summary=el('p',{class:'rhythm-summary'}),cue=el('p',{class:'pre-line rhythm-cue'}),status=el('p',{class:'rhythm-status',role:'status'},'Ready.');
   let startButton!:HTMLButtonElement,primaryButton!:HTMLButtonElement,secondaryButton!:HTMLButtonElement;
 
@@ -44,14 +45,16 @@ export function rhythmLabPage():Page{
     const tempo=Number(bpm.value);
     if(mode==='swing')return {mode,bpm:tempo,beats:Number(swingBeats.querySelector('select')!.value) as 2|3|4|5|6|7,ratio:Number(swingRatio.value)};
     if(mode==='subdivision-switch')return {mode,bpm:tempo,beats:Number(switchBeats.querySelector('select')!.value) as 2|3|4|5|6|7,sequence:sequence.querySelector('select')!.value.split(',').map(Number) as RhythmSubdivision[],barsPerStage:Number(barsPerStage.querySelector('select')!.value) as 1|2|4};
+    if(mode==='grouped-meter')return {mode,bpm:tempo,groups:grouping.querySelector('select')!.value.split('+').map(Number) as (2|3)[]};
     const [primary,secondary]=polyRatio.querySelector('select')!.value.split(':').map(Number);return {mode,bpm:tempo,primary:primary as 2|3|4|5,secondary:secondary as 2|3|4|5};
   };
-  const persistDraft=()=>rhythmLabDrafts.set(profile.id,{mode,bpm:Number(bpm.value),minutes:Number(minutes.value),countIn:countIn.querySelector('select')!.value as '0'|'2'|'4',volume:Number(volume.value),primaryOn,secondaryOn,swingBeats:swingBeats.querySelector('select')!.value,swingRatio:Number(swingRatio.value),switchBeats:switchBeats.querySelector('select')!.value,sequence:sequence.querySelector('select')!.value,barsPerStage:barsPerStage.querySelector('select')!.value,polyRatio:polyRatio.querySelector('select')!.value});
-  const layerLabels=()=>mode==='swing'?['Beat','Offbeat']:mode==='subdivision-switch'?['Beat','Subdivision']:['Anchor','Overlay'];
+  const persistDraft=()=>rhythmLabDrafts.set(profile.id,{mode,bpm:Number(bpm.value),minutes:Number(minutes.value),countIn:countIn.querySelector('select')!.value as '0'|'2'|'4',volume:Number(volume.value),primaryOn,secondaryOn,swingBeats:swingBeats.querySelector('select')!.value,swingRatio:Number(swingRatio.value),switchBeats:switchBeats.querySelector('select')!.value,sequence:sequence.querySelector('select')!.value,barsPerStage:barsPerStage.querySelector('select')!.value,polyRatio:polyRatio.querySelector('select')!.value,grouping:grouping.querySelector('select')!.value});
+  const layerLabels=()=>mode==='swing'?['Beat','Offbeat']:mode==='subdivision-switch'?['Beat','Subdivision']:mode==='grouped-meter'?['Group anchors','Inner pulses']:['Anchor','Overlay'];
   const practiceCue=()=>{
     const current=config();
     if(current.mode==='swing')return `${swingFeelLabel(current.ratio)}: keep the quarter-note pulse unchanged while the offbeat moves. The ratio is a timing reference, not a “correct groove” score.`;
     if(current.mode==='subdivision-switch')return `Keep one quarter-note pulse while your internal grid changes: ${current.sequence.map(subdivisionName).join(' → ')}. Do not let the BPM move when the note density changes.`;
+    if(current.mode==='grouped-meter')return `${current.groups.join('+')} = ${current.groups.reduce((sum,value)=>sum+value,0)}/8. Count the BPM as the eighth-note pulse and hear each group start without stretching or compressing the bar.`;
     return `${current.primary}:${current.secondary}: hear the anchor first, then the overlay, then both together. The overlay contains ${current.primary} evenly spaced hits across ${current.secondary} quarter-note beats.`;
   };
   const stop=()=>{rhythmAudio.stop();running=false;if(startButton){startButton.querySelector('span')!.textContent='Start Rhythm Lab';startButton.setAttribute('aria-pressed','false');}visual.querySelectorAll('.on').forEach(node=>node.classList.remove('on'));};
@@ -75,6 +78,7 @@ export function rhythmLabPage():Page{
       const presets=el('div',{class:'actions wrap rhythm-presets'});for(const value of [50,58,62,66.5,72] as const)presets.append(button(value===50?'Straight':value===66.5?'Triplet swing':`${value}%`,()=>{swingRatio.value=String(value);setupChanged();},'ghost compact'));
       settingsHost.append(el('div',{class:'form-grid rhythm-config-grid'},swingBeats,field('Swing ratio',swingRatio)),el('div',{class:'rhythm-ratio-row'},swingRatioText,presets));
     }else if(mode==='subdivision-switch')settingsHost.append(el('div',{class:'form-grid rhythm-config-grid'},switchBeats,sequence,barsPerStage));
+    else if(mode==='grouped-meter')settingsHost.append(el('div',{class:'form-grid rhythm-config-grid'},grouping),el('p',{class:'field-hint'},'Groupings use 2s and 3s as eighth-note units. The first pulse of each group is the anchor layer; inner pulses can be muted independently.'));
     else settingsHost.append(el('div',{class:'form-grid rhythm-config-grid'},polyRatio),el('p',{class:'field-hint'},'Ratio A:B means A overlay hits spread evenly across B quarter-note beats. The anchor layer is the B-beat pulse.'));
     renderVisual();renderLayerButtons();
   };
@@ -133,7 +137,7 @@ export function rhythmLabPage():Page{
   const method=el('section',{class:'panel'},sectionHeader('Practice method','Stability first, complexity second.'),el('ol',{class:'rhythm-method'},el('li',{},'Establish the quarter-note pulse before adding the second layer or moving the offbeat.'),el('li',{},'Change one variable at a time: tempo, swing ratio, subdivision stage, or polyrhythm ratio.'),el('li',{},'Use the layer buttons to remove support while keeping the same internal pulse.'),el('li',{},'If the pulse bends when density changes, lower BPM before adding complexity.'),el('li',{},'Rhythm Lab describes timing relationships; it does not claim one swing ratio or polyrhythm feel is universally better.')));
   modeSelect.addEventListener('change',()=>{mode=modeSelect.querySelector('select')!.value as RhythmMode;primaryOn=true;secondaryOn=true;setupChanged();renderSettings();});
   bpm.addEventListener('change',()=>{if(bpm.reportValidity())setupChanged();});minutes.addEventListener('input',persistDraft);countIn.addEventListener('change',setupChanged);volume.addEventListener('input',()=>{volumeText.textContent=`${Math.round(Number(volume.value)*100)}%`;rhythmAudio.setVolume(Number(volume.value));persistDraft();});
-  swingBeats.addEventListener('change',setupChanged);swingRatio.addEventListener('input',setupChanged);switchBeats.addEventListener('change',setupChanged);sequence.addEventListener('change',setupChanged);barsPerStage.addEventListener('change',setupChanged);polyRatio.addEventListener('change',setupChanged);
+  swingBeats.addEventListener('change',setupChanged);swingRatio.addEventListener('input',setupChanged);switchBeats.addEventListener('change',setupChanged);sequence.addEventListener('change',setupChanged);barsPerStage.addEventListener('change',setupChanged);polyRatio.addEventListener('change',setupChanged);grouping.addEventListener('change',setupChanged);
   const key=(event:KeyboardEvent)=>{
     if(event.ctrlKey||event.metaKey||event.altKey||event.repeat)return;
     const target=event.target as HTMLElement;if(document.querySelector('dialog[open]')||target.closest('input,textarea,select,[contenteditable=true]'))return;

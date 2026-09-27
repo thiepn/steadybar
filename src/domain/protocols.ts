@@ -41,7 +41,7 @@ export function protocolSummary(p:PracticeProtocol):string {
     case 'drum-grid':return `${p.name} · ${p.focus} · ${p.pulse.bpm} BPM · ${p.pulse.subdivision}× subdivision`;
     case 'drum-phrase':return `${p.name} · ${p.bars.length-1} setup bars + return · ${p.pulse.bpm} BPM`;
     case 'drum-dynamics':return `${p.name} · ${p.focus} · ${p.pulse.bpm} BPM · relative levels 1–3`;
-    case 'drum-rhythm':return p.mode==='swing'?`${p.name} · ${p.ratio.toFixed(1)}/${(100-p.ratio).toFixed(1)} · ${p.pulse.bpm} BPM`:p.mode==='subdivision-switch'?`${p.name} · ${p.barsPerStage} bar${p.barsPerStage===1?'':'s'} each · ${p.pulse.bpm} BPM`:`${p.name} · ${p.primary}:${p.secondary} · ${p.pulse.bpm} BPM`;
+    case 'drum-rhythm':return p.mode==='swing'?`${p.name} · ${p.ratio.toFixed(1)}/${(100-p.ratio).toFixed(1)} · ${p.pulse.bpm} BPM`:p.mode==='subdivision-switch'?`${p.name} · ${p.barsPerStage} bar${p.barsPerStage===1?'':'s'} each · ${p.pulse.bpm} BPM`:p.mode==='grouped-meter'?`${p.name} · ${p.groups.join('+')} · ${p.pulse.beats}/8 · ${p.pulse.bpm} eighth-note BPM`:`${p.name} · ${p.primary}:${p.secondary} · ${p.pulse.bpm} BPM`;
     case 'repetitions':return `${p.target} clean repetitions · ${p.task}`;
     case 'chord-changes':return `${p.chords.join(' → ')} · ${p.target} clean changes`;
     case 'groove':return `${p.style} · ${p.key} · ${p.focus} · ${p.pulse.bpm} BPM`;

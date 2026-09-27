@@ -1367,6 +1367,14 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.locator('.rhythm-stage-card')).to_have_count(2)
         expect(self.page.get_by_text('Triplets → Sixteenth notes · 2 bars each',exact=True)).to_be_visible()
 
+        self.page.get_by_label('Training mode',exact=True).select_option('grouped-meter')
+        expect(self.page.get_by_label('Grouping',exact=True)).to_have_value('2+2+3')
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),3)
+        self.assertEqual(self.page.locator('.rhythm-marker.layer-secondary').count(),4)
+        expect(self.page.get_by_text('2+2+3 · 7/8 · eighth-note pulse',exact=True)).to_be_visible()
+        self.page.get_by_label('Grouping',exact=True).select_option('3+2')
+        expect(self.page.get_by_text('3+2 · 5/8 · eighth-note pulse',exact=True)).to_be_visible()
+
         self.page.get_by_label('Training mode',exact=True).select_option('polyrhythm')
         expect(self.page.get_by_label('Polyrhythm ratio',exact=True)).to_have_value('3:2')
         self.assertEqual(self.page.locator('.rhythm-marker.layer-primary').count(),2)
@@ -1468,6 +1476,74 @@ class Workbench(e2e.MusicPracticeTests):
         self.assertTrue(ready,repr(audio_state))
         self.assertFalse(audio_state['standard'])
         focus_pause.click()
+        expect(self.page.get_by_text('Paused',exact=True)).to_be_visible()
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
+    def test_80_grouped_meter_rhythm_persists_exact_additive_bar(self):
+        self.onboard()
+        self.route('/rhythm')
+        self.page.get_by_label('Training mode',exact=True).select_option('grouped-meter')
+        self.page.get_by_label('Grouping',exact=True).select_option('2+2+3')
+        self.page.get_by_label('BPM',exact=True).fill('126')
+        self.page.get_by_label('BPM',exact=True).press('Tab')
+        self.page.get_by_label('Practice minutes',exact=True).fill('5')
+        inner=self.page.locator('.rhythm-transport button').filter(has_text='Inner pulses')
+        inner.click()
+        expect(inner).to_have_attribute('aria-pressed','false')
+
+        self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        planned=None
+        for _ in range(70):
+            planned=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),plan=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=plan?.blocks.at(-1),p=b?.protocol;
+              return p?{kind:p.kind,mode:p.mode,bpm:b.bpm,targetSeconds:b.targetSeconds,groups:p.groups,primaryOn:p.primaryOn,secondaryOn:p.secondaryOn,pulse:p.pulse}:null;
+            })()""")
+            if planned and planned.get('mode')=='grouped-meter':break
+            self.page.wait_for_timeout(100)
+        self.assertEqual(planned,{'kind':'drum-rhythm','mode':'grouped-meter','bpm':126,'targetSeconds':300,'groups':[2,2,3],'primaryOn':True,'secondaryOn':False,'pulse':{'bpm':126,'beats':7,'beatUnit':8,'subdivision':1}})
+
+        self.page.get_by_role('button',name='Save as exercise',exact=True).click()
+        saved=None
+        for _ in range(70):
+            saved=self.read("""(()=>{
+              const rows=load('app/store.js').store.snapshot().exercises.filter(e=>e.protocol?.mode==='grouped-meter'&&!e.archived&&!e.builtin),e=rows.at(-1);
+              return e?{defaultSeconds:e.defaultSeconds,protocol:e.protocol,meter:e.meter}:null;
+            })()""")
+            if saved:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(saved)
+        self.assertEqual(saved['defaultSeconds'],300)
+        self.assertEqual(saved['protocol']['groups'],[2,2,3])
+        self.assertEqual(saved['protocol']['pulse'],{'bpm':126,'beats':7,'beatUnit':8,'subdivision':1})
+        self.assertEqual(saved['meter'],{'beats':7,'beatUnit':8})
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        expect(self.page.locator('.protocol-task[data-protocol="drum-rhythm"]')).to_be_visible()
+        expect(self.page.locator('.focus-rhythm-visual')).to_be_visible()
+        self.assertEqual(self.page.locator('.focus-rhythm-visual .rhythm-marker.layer-primary').count(),3)
+        self.assertEqual(self.page.locator('.focus-rhythm-visual .rhythm-marker.layer-secondary').count(),4)
+        snapshot=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex],p=b.protocolSnapshot;
+          return {mode:p?.mode,bpm:s.runtime.bpm,targetSeconds:b.targetSeconds,groups:p?.groups,pulse:p?.pulse,secondaryOn:p?.secondaryOn,meter:b.meterSnapshot};
+        })()""")
+        self.assertEqual(snapshot,{'mode':'grouped-meter','bpm':126,'targetSeconds':300,'groups':[2,2,3],'pulse':{'bpm':126,'beats':7,'beatUnit':8,'subdivision':1},'secondaryOn':False,'meter':{'beats':7,'beatUnit':8}})
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        pause=self.page.get_by_role('button',name='Pause practice',exact=True)
+        expect(pause).to_be_visible()
+        ready=False
+        for _ in range(70):
+            audio_state=self.read("({rhythm:load('audio/rhythm-engine.js').rhythmAudio.running,standard:load('audio/engine.js').audio.running})")
+            if audio_state['rhythm']:
+                ready=True;break
+            self.page.wait_for_timeout(100)
+        self.assertTrue(ready,repr(audio_state))
+        self.assertFalse(audio_state['standard'])
+        pause.click()
         expect(self.page.get_by_text('Paused',exact=True)).to_be_visible()
 
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):

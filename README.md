@@ -42,7 +42,7 @@ Steadybar's guided catalog now contains **22 original courses, 118 lessons and 2
 
 The new Repertoire laboratory lessons focus on applying existing skills to real material: section-role/texture maps, transition windows, dynamics or note-length control, complete takes, targeted repairs and comparable retakes. They use the same self-check/evidence/review model as every other guided lesson; elapsed time is still not treated as automatic proficiency.
 
-The built-in exercise library now contains **176 exercises across the five principal instruments**, with additional repertoire drills for section mapping, contextual transitions, arrangement contrast and take → repair → retake work. Existing workspaces receive missing new built-ins automatically at startup, but Steadybar never overwrites an existing exercise/routine row with the same stable ID, preserving user edits and archives.
+The built-in exercise library now contains **178 exercises across the five principal instruments**, with additional repertoire drills for section mapping, contextual transitions, arrangement contrast and take → repair → retake work. Existing workspaces receive missing new built-ins automatically at startup, but Steadybar never overwrites an existing exercise/routine row with the same stable ID, preserving user edits and archives.
 
 Song pages also include **Repertoire training** cards tailored to the active instrument. Starting one creates an ordinary song or song-section practice block; adding one to Today uses the same normal planning/history model. These guides provide structure, not automatic musical scoring.
 
@@ -167,6 +167,14 @@ Depending on the exercise and evidence, the next challenge may adjust tempo, con
 The recommendation remains optional. **Start practice** still launches the ordinary exercise, while **Start next challenge** or **Add next challenge to today** uses the generated progression. Manual edits override the recommendation and remove its generated-evidence label. Autopilot can attach progression to exercise blocks while preserving its exact session duration. Voice exercises are not automatically escalated.
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
+
+## Odd meter & additive grouping — 2.33.0
+
+Rhythm Lab now includes **Odd meter / grouping** as a fourth training mode. Choose practical additive bars such as **3+2 (5/8)**, **2+2+3 / 2+3+2 / 3+2+2 (7/8)**, **3+3+2**, compound or additive **9/8**, and longer 10/8–11/8 groupings. The displayed BPM is the eighth-note pulse, so every unit remains the same length while only the grouping changes.
+
+The dedicated Rhythm audio clock schedules each eighth-note pulse exactly. Group starts form one audible layer and inner pulses form another, so support can be removed without changing the bar. Saved practice blocks preserve the ordered grouping, 8th-note meter, layer state, duration and BPM through Today, the exercise library, Focus Player, history and backups.
+
+Grouped meter remains descriptive practice structure rather than an automatic musicianship score. No database or backup-format migration is required.
 
 ## First-class Rhythm practice — 2.32.0
 
@@ -313,7 +321,7 @@ See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architec
 | Voice | User-bounded pitch/pattern references, interval reproduction, syllables, ease/fatigue self-reviews, and no compulsory BPM. |
 | Custom | Eight instrument families with compatible protocols; not a promise of a specialist curriculum. |
 
-There are **176 starter exercises** across the five principal instruments and profile-specific **15/30/45/60-minute templates**, alongside the preserved older drum routines. Edit any template or create your own task. A routine is a suggestion, not a required schedule.
+There are **178 starter exercises** across the five principal instruments and profile-specific **15/30/45/60-minute templates**, alongside the preserved older drum routines. Edit any template or create your own task. A routine is a suggestion, not a required schedule.
 
 Shared infrastructure includes daily plans, reusable routines, metronome, sessions, pause/resume, recovery, notes, history, goals, command search and safe offline updates. Songs can have separate instrument parts, section lists, arrangement notes and readiness; setlists remain shared. Profile switching never rewrites an active or historical session. Archive profiles rather than deleting their history.
 

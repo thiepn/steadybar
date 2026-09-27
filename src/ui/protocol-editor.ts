@@ -45,11 +45,12 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
       node.append(
         text('rhythmName','Rhythm exercise name',p.name),
         textarea('rhythmFocus','Practice focus',p.focus,3),
-        el('div',{class:'form-grid'},number('rhythmBpm','BPM',p.pulse.bpm,20,300),p.mode==='polyrhythm'?'':select('rhythmBeats','Beats per cycle',[['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']],String(p.pulse.beats))),
-        el('fieldset',{class:'key-options'},el('legend',{},'Audible layers'),checkbox('rhythmPrimaryOn',p.mode==='polyrhythm'?'Anchor':p.mode==='swing'?'Beat':'Beat',p.primaryOn),checkbox('rhythmSecondaryOn',p.mode==='polyrhythm'?'Overlay':p.mode==='swing'?'Offbeat':'Subdivision',p.secondaryOn))
+        el('div',{class:'form-grid'},number('rhythmBpm','BPM',p.pulse.bpm,20,300),p.mode==='polyrhythm'||p.mode==='grouped-meter'?'':select('rhythmBeats','Beats per cycle',[['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']],String(p.pulse.beats))),
+        el('fieldset',{class:'key-options'},el('legend',{},'Audible layers'),checkbox('rhythmPrimaryOn',p.mode==='polyrhythm'?'Anchor':p.mode==='grouped-meter'?'Group anchors':'Beat',p.primaryOn),checkbox('rhythmSecondaryOn',p.mode==='polyrhythm'?'Overlay':p.mode==='grouped-meter'?'Inner pulses':p.mode==='swing'?'Offbeat':'Subdivision',p.secondaryOn))
       );
       if(p.mode==='swing')node.append(number('rhythmRatio','Swing first-half percentage',p.ratio,50,75,.5),el('p',{class:'field-hint'},'50 = straight. 66.5 approximates triplet swing. The quarter-note pulse stays fixed.'));
       else if(p.mode==='subdivision-switch')node.append(text('rhythmSequence','Subdivision sequence',p.sequence.join(', '),'Use 1, 2, 3, 4 for quarter, eighth, triplet, sixteenth stages.'),select('rhythmBarsPerStage','Bars per stage',[['1','1 bar'],['2','2 bars'],['4','4 bars']],String(p.barsPerStage)));
+      else if(p.mode==='grouped-meter')node.append(text('rhythmGroups','Eighth-note grouping',p.groups.join(', '),'Use 2s and 3s, for example 2, 2, 3 for 7/8 or 3, 2 for 5/8.'));
       else node.append(el('div',{class:'form-grid'},select('rhythmPrimary','Overlay count',[['2','2'],['3','3'],['4','4'],['5','5']],String(p.primary)),select('rhythmSecondary','Anchor beats',[['2','2'],['3','3'],['4','4'],['5','5']],String(p.secondary))),el('p',{class:'field-hint'},'A:B means A evenly spaced overlay hits across B quarter-note anchor beats.'));
       break;
     }
@@ -95,6 +96,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
         if(!primaryOn&&!secondaryOn)throw new Error('Keep at least one Rhythm Lab layer audible.');
         if(p.mode==='swing'){const beats=n('rhythmBeats');candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats,beatUnit:4,subdivision:2},name,focus,ratio:n('rhythmRatio'),primaryOn,secondaryOn};}
         else if(p.mode==='subdivision-switch'){const beats=n('rhythmBeats'),sequence=list('rhythmSequence').map(Number);candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats,beatUnit:4,subdivision:1},name,focus,sequence,barsPerStage:n('rhythmBarsPerStage'),primaryOn,secondaryOn};}
+        else if(p.mode==='grouped-meter'){const groups=list('rhythmGroups').map(Number),beats=groups.reduce((sum,value)=>sum+value,0);candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats,beatUnit:8,subdivision:1},name,focus,groups,primaryOn,secondaryOn};}
         else {const primary=n('rhythmPrimary'),secondary=n('rhythmSecondary');candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats:secondary,beatUnit:4,subdivision:1},name,focus,primary,secondary,primaryOn,secondaryOn};}
         break;
       }
