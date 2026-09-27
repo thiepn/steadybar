@@ -1455,10 +1455,19 @@ class Workbench(e2e.MusicPracticeTests):
 
         focus_start=self.page.get_by_role('button',name='Start practice',exact=True)
         focus_start.click()
-        expect(self.page.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
-        self.assertTrue(self.read("load('audio/rhythm-engine.js').rhythmAudio.running"))
-        self.assertFalse(self.read("load('audio/engine.js').audio.running"))
-        focus_start.click()
+        focus_pause=self.page.get_by_role('button',name='Pause practice',exact=True)
+        expect(focus_pause).to_be_visible()
+        # The controller enters count-in before Web Audio resume/lease acquisition
+        # completes. Firefox can expose that transition for several frames.
+        ready=False
+        for _ in range(70):
+            audio_state=self.read("({rhythm:load('audio/rhythm-engine.js').rhythmAudio.running,standard:load('audio/engine.js').audio.running,phase:load('practice/controller.js').practice.session.runtime.phase,error:load('practice/controller.js').practice.error})")
+            if audio_state['rhythm']:
+                ready=True;break
+            self.page.wait_for_timeout(100)
+        self.assertTrue(ready,repr(audio_state))
+        self.assertFalse(audio_state['standard'])
+        focus_pause.click()
         expect(self.page.get_by_text('Paused',exact=True)).to_be_visible()
 
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
