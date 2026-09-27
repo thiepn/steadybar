@@ -43,14 +43,14 @@ function latestProgression(blocks:PracticeBlock[]):ExerciseProgression|undefined
 function latestBlock(blocks:PracticeBlock[]):PracticeBlock|undefined{return blocks.at(-1);}
 
 function effectiveConditions(data:Data,exercise:Exercise,state:PracticeState|undefined,blocks:PracticeBlock[],options:ProgressionOptions):EffectiveConditions {
-  const pulse=protocolPulse(exerciseProtocol(exercise)),last=latestBlock(blocks);
+  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),last=latestBlock(blocks),specialRhythm=protocol.kind==='drum-rhythm';
   const bpm=state?.tempo?.working??state?.tempo?.peak??exerciseBpm(exercise)??last?.finalBpm??last?.initialBpm;
   const manualDurationSource=[...blocks].reverse().find(block=>block.prescriptionSnapshot?.generatedBy!=='autopilot');
   const targetSeconds=options.strictDuration&&options.seconds!==undefined
     ? options.seconds
     : manualDurationSource?.targetSeconds??options.seconds??exercise.defaultSeconds??300;
   const subdivision=pulse ? last?.subdivisionSnapshot??pulse.subdivision : undefined;
-  const timingClick=pulse
+  const timingClick=pulse&&!specialRhythm
     ? structuredClone(last?.timingClickSnapshot??data.settings.metronome.timing??DEFAULT_TIMING_CLICK)
     : undefined;
   return {
@@ -93,17 +93,17 @@ function profileFamily(data:Data,exercise:Exercise):string {
 }
 
 function eligibleDimensions(data:Data,exercise:Exercise,state:PracticeState|undefined,options:ProgressionOptions):ProgressionDimension[] {
-  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),out:ProgressionDimension[]=[],family=profileFamily(data,exercise);
+  const protocol=exerciseProtocol(exercise),pulse=protocolPulse(protocol),out:ProgressionDimension[]=[],family=profileFamily(data,exercise),specialRhythm=protocol.kind==='drum-rhythm';
   if(family==='voice')return out;
-  if(pulse)out.push('tempo','click-density','gap-click');
-  if(pulse?.subdivision&&pulse.subdivision>1&&!['drum-grid','drum-phrase','drum-dynamics'].includes(protocol.kind))out.push('subdivision');
+  if(pulse)out.push('tempo',...(specialRhythm?[]:['click-density','gap-click'] as ProgressionDimension[]));
+  if(pulse?.subdivision&&pulse.subdivision>1&&!['drum-grid','drum-phrase','drum-dynamics','drum-rhythm'].includes(protocol.kind))out.push('subdivision');
   if(!options.strictDuration)out.push('duration');
   const nonListening=!['fretboard','pitch-match','vocal-pattern','sight-reading'].includes(protocol.kind);
-  if(nonListening&&protocol.kind!=='drum-dynamics')out.push('dynamics');
-  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||protocol.kind==='drum-phrase'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
-  if(family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||protocol.kind==='drum-phrase'||!!exercise.sticking))out.push('orchestration');
+  if(nonListening&&!['drum-dynamics','drum-rhythm'].includes(protocol.kind))out.push('dynamics');
+  if(!specialRhythm&&family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||protocol.kind==='drum-phrase'||exercise.category==='timing'||!!exercise.sticking))out.push('accent-pattern');
+  if(!specialRhythm&&family==='percussion'&&(protocol.kind==='tempo'||protocol.kind==='drum-grid'||protocol.kind==='drum-phrase'||!!exercise.sticking))out.push('orchestration');
   if(!['sight-reading','fretboard','pitch-match','vocal-pattern'].includes(protocol.kind))out.push('memory');
-  if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire'||protocol.kind==='drum-phrase')out.push('musical-context');
+  if(['apply','maintain'].includes(state?.mastery??'')||exercise.category==='groove'||exercise.skillArea==='repertoire'||protocol.kind==='drum-phrase'||specialRhythm&&state?.mastery==='apply')out.push('musical-context');
   return [...new Set(out)];
 }
 
