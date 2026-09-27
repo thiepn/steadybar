@@ -3,6 +3,7 @@ import type { Experience, PracticeProfile, PracticeProtocol } from '../domain/pr
 import { definition } from '../domain/profiles.js';
 import { defaultProtocol, exerciseProtocol, protocolPulse, pulse } from '../domain/protocols.js';
 import { buildDrumDynamics } from '../domain/drum-dynamics.js';
+import { rhythmProtocolFromConfig } from '../domain/rhythm-lab.js';
 import { skillIdForExercise } from '../domain/skill-graph.js';
 import { seedData } from './seed.js';
 
@@ -174,6 +175,12 @@ export function starterContent(profile:PracticeProfile):{exercises:Exercise[];ro
       ['dynamics-3','Voice Balance','Hold a repeatable hierarchy between timekeeping, backbeat and kick instead of letting one voice dominate the groove.',buildDrumDynamics('voice-balance',80,4,0),'intermediate'],
     ] as const;
     exercises.push(...dynamicsRows.map(([rawId,name,instructions,protocol,level])=>({...base,id:canonical?rawId:`${profile.id}.${rawId}`,name,category:'technique' as const,skillArea:'dynamics',description:instructions,instructions,protocol:structuredClone(protocol),level,tags:['starter','dynamics','touch'],primarySkillId:'drums.dynamics',secondarySkillIds:['drums.technique','drums.timing','drums.groove']})));
+    const rhythmRows=[
+      ['rhythm-1','Triplet Swing Placement','Keep the quarter-note pulse fixed while placing the offbeat at a triplet-swing relationship. Listen for repeatable spacing rather than a universal “correct” feel.',rhythmProtocolFromConfig({mode:'swing',bpm:76,beats:4,ratio:66.5}),'beginner'],
+      ['rhythm-2','Subdivision Switch: 8ths → Triplets → 16ths','Keep one quarter-note pulse while moving through eighth notes, triplets, and sixteenth notes without bending the BPM.',rhythmProtocolFromConfig({mode:'subdivision-switch',bpm:72,beats:4,sequence:[2,3,4],barsPerStage:1}),'intermediate'],
+      ['rhythm-3','3:2 Polyrhythm Independence','Hear two anchor beats clearly, then maintain three evenly spaced overlay hits across the same cycle without pulling the anchor.',rhythmProtocolFromConfig({mode:'polyrhythm',bpm:72,primary:3,secondary:2}),'intermediate'],
+    ] as const;
+    exercises.push(...rhythmRows.map(([rawId,name,instructions,protocol,level])=>({...base,id:canonical?rawId:`${profile.id}.${rawId}`,name,category:'timing' as const,skillArea:'timing',description:instructions,instructions,protocol:structuredClone(protocol),level,tags:['starter','rhythm-lab','timing'],primarySkillId:'drums.timing',secondarySkillIds:['drums.groove','drums.coordination']})));
     oldRoutines=legacy.routines.map(r=>({...r,profileId:profile.id,id:canonical?r.id:`${profile.id}.${r.id}`,blocks:r.blocks.map(b=>({...b,profileId:profile.id,exerciseId:b.exerciseId?(canonical?b.exerciseId:`${profile.id}.${b.exerciseId}`):undefined}))}));
   }else{
     const fallback:ContentRow[]=[['Prepare and warm up','warmup','Choose a familiar, low-effort task appropriate to your instrument. Stop if it causes pain or strain.',free('Familiar gentle preparation')],['Clean passage repetitions','technique','Choose a short task from your own material. Count clean attempts after each round.',rep('A short familiar passage')],['First-read practice','reading','Use new material from your own score and distinguish first reading from rehearsal.',reading('Your own new short score')],['Repertoire phrase','repertoire','Select a short phrase, define one musical goal and reflect after playing.',repertoire('A phrase from your own repertoire')],['Contextual repair window','technique','Practice one difficult event with a short entrance and exit so the real movement and recovery are included.',repertoire('Contextual repair window')],['Complete take and repair','repertoire','Complete one bounded take, choose one observable repair, then retake the same material without changing the criterion.',repertoire('Take → repair → retake')],['Later-day repertoire check','repertoire','Attempt a previously repaired passage before extended repetition and record what remains dependable.',repertoire('Later-day repertoire check')]];

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.32.0 — First-Class Rhythm Practice Integration — 2026-09-27
+
+- Promote Rhythm Lab setups into a durable **`drum-rhythm` practice protocol** instead of leaving swing, subdivision switching, and polyrhythms as standalone utilities.
+- Preserve the exact authored timing relationship: swing ratio, subdivision sequence and bars-per-stage, or polyrhythm ratio.
+- Preserve which Rhythm Lab layers are audible; persisted tasks reject a configuration with both layers muted.
+- Add **Practice minutes**, **Start practice**, **Add to Today**, and **Save as exercise** directly to Rhythm Lab for percussion profiles.
+- Save drum Rhythm studies as ordinary timing exercises with `drums.timing` primary attribution and Groove/Coordination support on drum profiles.
+- Reconcile three stable Rhythm starter exercises into existing drum workspaces without overwriting user-edited built-ins, bringing the current five-instrument starter library to **176 exercises**.
+- Keep standalone Rhythm Lab available outside percussion profiles while clearly separating the durable drum-practice workflow.
+- Reuse the dedicated Rhythm Web Audio scheduler inside Focus Player; saved polyrhythms and swing never degrade into a straight metronome after launch.
+- Map Rhythm audio-clock events back into Focus Player beat/state rendering without letting UI timers determine click timing.
+- Preserve one-/two-/four-bar Focus Player count-ins by translating the normal bar setting into the authored Rhythm anchor beat count.
+- Restart the dedicated Rhythm clock safely when BPM changes during an active Rhythm task while retaining normal practice time/history.
+- Route pause, metronome toggle, finish, restart, recovery, interruption, and cross-tab transport cleanup through both audio engines safely.
+- Add Rhythm-specific Focus Player visualization, active swing/polyrhythm markers, active subdivision-stage following, Task Settings, and self-reported Rhythm reflection.
+- Hide the ordinary sparse/gap **Timing click** control for Rhythm tasks because it would conflict with the authored relationship scheduler.
+- Keep progression conservative: Rhythm exercises may progress tempo/duration and later memory/context, but generic click-density, gap-click, subdivision, dynamics, accent, and orchestration rewrites cannot corrupt the authored score.
+- Add deterministic protocol round-trip/validation tests plus cross-browser Lab → Today → Library → Focus Player transport certification.
+- No IndexedDB schema or backup-envelope migration is required; the new protocol uses the existing validated exercise/session snapshot path.
+
 ## 2.31.0 — Rhythm Lab: Swing, Subdivision Switching & Polyrhythms — 2026-09-27
 
 - Add a dedicated **Rhythm Lab** at `/rhythm` for timing relationships the ordinary straight-click metronome intentionally does not model.

@@ -1066,7 +1066,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 /* Phase 31 — Rhythm Lab: swing, subdivision switching and polyrhythm. */
 .rhythm-lab-page{display:grid;gap:20px}
 .rhythm-training,.rhythm-transport,.rhythm-visual-panel{display:grid;gap:16px}
-.rhythm-common-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rhythm-common-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .rhythm-config-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .rhythm-volume-field{display:grid;gap:5px;align-content:start}
 .rhythm-ratio-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -1090,6 +1090,11 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .rhythm-stage-dots span{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--border);border-radius:50%;font-family:var(--mono);font-size:9px;color:var(--muted)}
 .rhythm-stage-dots span.primary{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-text)}
 .rhythm-method{margin:0;padding-left:22px;display:grid;gap:8px;font-size:13px;color:var(--muted)}
+.focus-rhythm-visual{padding:10px 0 4px}
+.focus-rhythm-visual .rhythm-lane-track{height:44px}
+.rhythm-lane.muted-layer{opacity:.55}
+.rhythm-practice-actions{padding-top:2px}
+.rhythm-practice-unavailable{display:grid;gap:8px;padding-top:2px}
 @media(min-width:1000px){.drum-tool-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:700px){
   .rhythm-common-grid,.rhythm-config-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}

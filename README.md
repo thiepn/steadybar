@@ -42,7 +42,7 @@ Steadybar's guided catalog now contains **22 original courses, 118 lessons and 2
 
 The new Repertoire laboratory lessons focus on applying existing skills to real material: section-role/texture maps, transition windows, dynamics or note-length control, complete takes, targeted repairs and comparable retakes. They use the same self-check/evidence/review model as every other guided lesson; elapsed time is still not treated as automatic proficiency.
 
-The built-in exercise library now contains **170 exercises across the five principal instruments**, with additional repertoire drills for section mapping, contextual transitions, arrangement contrast and take → repair → retake work. Existing workspaces receive missing new built-ins automatically at startup, but Steadybar never overwrites an existing exercise/routine row with the same stable ID, preserving user edits and archives.
+The built-in exercise library now contains **176 exercises across the five principal instruments**, with additional repertoire drills for section mapping, contextual transitions, arrangement contrast and take → repair → retake work. Existing workspaces receive missing new built-ins automatically at startup, but Steadybar never overwrites an existing exercise/routine row with the same stable ID, preserving user edits and archives.
 
 Song pages also include **Repertoire training** cards tailored to the active instrument. Starting one creates an ordinary song or song-section practice block; adding one to Today uses the same normal planning/history model. These guides provide structure, not automatic musical scoring.
 
@@ -167,6 +167,18 @@ Depending on the exercise and evidence, the next challenge may adjust tempo, con
 The recommendation remains optional. **Start practice** still launches the ordinary exercise, while **Start next challenge** or **Add next challenge to today** uses the generated progression. Manual edits override the recommendation and remove its generated-evidence label. Autopilot can attach progression to exercise blocks while preserving its exact session duration. Voice exercises are not automatically escalated.
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
+
+## First-class Rhythm practice — 2.32.0
+
+Rhythm Lab setups can now become normal Steadybar practice material. For percussion profiles, the current swing, subdivision-switching, or polyrhythm setup can be **started immediately, added to Today, or saved as an exercise**. The exact relationship and the current audible-layer state are snapshotted into a validated `drum-rhythm` protocol, so later Lab changes do not rewrite practice history.
+
+Focus Player uses the same dedicated Rhythm Web Audio clock as the Lab. A saved 5:4 polyrhythm therefore remains 5:4 during a session rather than falling back to the ordinary straight metronome. Count-in, pause/resume, BPM changes, metronome toggling, background interruption, session recovery and cross-tab audio locking all remain inside the normal practice transport/history path.
+
+Focus Player renders the authored Rhythm relationship and follows audio-clock events directly. Task Settings can edit the score without bypassing validation, and results use the existing self-reported reflection plus Not Yet / Usable / Solid evaluation model. Generic sparse/gap click and subdivision progression are intentionally disabled for `drum-rhythm` tasks because those transformations would change the authored relationship rather than merely increase difficulty.
+
+Three stable drum starter exercises are also reconciled into existing workspaces: **Triplet Swing Placement**, **Subdivision Switch: 8ths → Triplets → 16ths**, and **3:2 Polyrhythm Independence**. Existing rows are never overwritten.
+
+No database or backup-format migration is required.
 
 ## Rhythm Lab — 2.31.0
 
@@ -301,7 +313,7 @@ See the [course audit and research](docs/COURSES-2.1-AUDIT.md), [course architec
 | Voice | User-bounded pitch/pattern references, interval reproduction, syllables, ease/fatigue self-reviews, and no compulsory BPM. |
 | Custom | Eight instrument families with compatible protocols; not a promise of a specialist curriculum. |
 
-There are **170 starter exercises** across the five principal instruments and profile-specific **15/30/45/60-minute templates**, alongside the preserved older drum routines. Edit any template or create your own task. A routine is a suggestion, not a required schedule.
+There are **176 starter exercises** across the five principal instruments and profile-specific **15/30/45/60-minute templates**, alongside the preserved older drum routines. Edit any template or create your own task. A routine is a suggestion, not a required schedule.
 
 Shared infrastructure includes daily plans, reusable routines, metronome, sessions, pause/resume, recovery, notes, history, goals, command search and safe offline updates. Songs can have separate instrument parts, section lists, arrangement notes and readiness; setlists remain shared. Profile switching never rewrites an active or historical session. Archive profiles rather than deleting their history.
 
