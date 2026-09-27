@@ -28,7 +28,7 @@ export function drumPhrasePage():Page{
   let groove:DrumGroovePresetId=savedDraft?.groove??'backbeat',fill:DrumFillPresetId=savedDraft?.fill??'alternating',fillLength:DrumFillLength=savedDraft?.fillLength??'bar',variation=savedDraft?.variation??0,barCount:2|4|8|16=savedDraft?.barCount??4,subdivision:Subdivision=savedDraft?.subdivision??4;
   let phrase:PhraseProtocol=savedDraft?.phrase?structuredClone(savedDraft.phrase):buildDrumPhrase(groove,fill,snapshot.settings.metronome.bpm,subdivision,barCount,fillLength,variation),previewing=false,disposed=false,inspectBar=savedDraft?.inspectBar??0;
   const page=el('div',{class:'page drum-phrase-page'},pageHeader('Drum phrasing workstation','Phrase Lab',profile.name+' · Keep the groove stable, place one bounded fill, then prove the landing on the next bar.',[
-    link('Rudiment Lab','/rudiments','button secondary','routine'),link('Grid Lab','/drum-grid','button secondary','routine'),
+    link('Dynamics Lab','/dynamics','button secondary','routine'),link('Rudiment Lab','/rudiments','button secondary','routine'),link('Grid Lab','/drum-grid','button secondary','routine'),
   ]));
 
   const grooveSelect=select('phraseGroove','Groove',DRUM_GROOVE_PRESETS.map(row=>[row.id,row.label] as [string,string]),groove);

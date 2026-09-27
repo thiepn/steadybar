@@ -168,6 +168,15 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Dynamics & Touch Lab — 2.30.0
+
+Drum profiles now include a dedicated **Dynamics & Touch Lab** for making relative touch targets explicit instead of relying on prose such as “play softer.” Scores use four states: rest, **1 soft/ghost**, **2 medium**, and **3 strong/accent** across Snare, Hi-hat, Kick, Ride and Tom surfaces.
+
+The Lab provides deterministic Accent/Tap, Ghost + Backbeat, Crescendo/Decrescendo, Voice Balance and Low-Volume studies. Cells are directly editable, the click can be previewed, and the exact score can be practiced immediately, added to Today, or saved as a normal `drums.dynamics` exercise.
+
+These levels are deliberately relative. Steadybar does not claim that a `3` equals a specific acoustic dB level or that two different kit surfaces have directly comparable loudness. Focus Player preserves the authored score and normal Not Yet / Usable / Solid evidence path; automatic acoustic technique grading is not inferred.
+
+Three built-in Dynamics exercises are also shipped through starter-content reconciliation, so existing drum workspaces receive dedicated Dynamics material without overwriting any user-edited built-in rows.
 ## Time Feel & Pocket Lab — 2.29.0
 
 Steadybar now has a dedicated **Pocket Lab** for practicing intentional placement rather than assuming the grid center is always the goal. Choose a target such as −20 ms ahead, centered, +20 ms behind, or a custom offset, then choose your own ±ms target band before playing.

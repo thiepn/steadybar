@@ -6,6 +6,8 @@ export type Capability = 'tempo' | 'sticking' | 'pitch' | 'chords' | 'fretboard'
 export type DrumGridVoice = 'right-hand' | 'left-hand' | 'kick' | 'hihat-foot';
 export interface DrumGridLane { voice: DrumGridVoice; steps: string }
 export interface DrumPhraseBar { role: 'groove' | 'fill' | 'return'; label: string; lanes: DrumGridLane[] }
+export type DrumDynamicSurface = 'snare' | 'hihat' | 'kick' | 'ride' | 'tom';
+export interface DrumDynamicsLane { surface: DrumDynamicSurface; steps: string }
 export interface PracticeProfile {
   id: string; name: string; instrumentType: InstrumentType; family: InstrumentFamily;
   level: Experience; focusAreas: string[]; defaultSessionMinutes: number;
@@ -20,6 +22,7 @@ export type PracticeProtocol =
   | { kind: 'tempo'; pulse: Pulse; technique: string; sticking?: string; orchestration?: string }
   | { kind: 'drum-grid'; pulse: Pulse; name: string; focus: string; lanes: DrumGridLane[] }
   | { kind: 'drum-phrase'; pulse: Pulse; name: string; focus: string; bars: DrumPhraseBar[] }
+  | { kind: 'drum-dynamics'; pulse: Pulse; name: string; focus: string; lanes: DrumDynamicsLane[] }
   | { kind: 'repetitions'; task: string; target: number; pulse?: Pulse }
   | { kind: 'chord-changes'; chords: string[]; target: number; technique: string; pulse?: Pulse }
   | { kind: 'groove'; pulse: Pulse; key: string; style: string; focus: 'time' | 'muting' | 'articulation' | 'coordination'; progression: string }

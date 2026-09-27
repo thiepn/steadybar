@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.30.0 — Dynamics & Touch Lab — 2026-09-27
+
+- Add a first-class **drum-dynamics** practice protocol for authored relative touch levels instead of vague text-only dynamics cues.
+- Use a deliberately relative four-state score: rest (`·`), soft / ghost (`1`), medium (`2`), and strong / accent (`3`). These are practice intentions, not dB values.
+- Add five deterministic Dynamics Lab families: **Accent / Tap Control, Ghost Notes + Backbeat, Crescendo / Decrescendo, Voice Balance, and Low-Volume Groove**.
+- Add direct kit-surface editing across Snare, Hi-hat, Kick, Ride, and Tom; every cell cycles rest → 1 → 2 → 3 → rest.
+- Support eighth-note, triplet, and sixteenth-note authored scores with protocol-driven responsive column counts.
+- Add deterministic numbered variations while keeping the chosen rhythm/dynamic study reproducible.
+- Add Web Audio click preview, Start Practice, Add to Today, and Save as Exercise without creating a second history model.
+- Saved Dynamics exercises use `skillArea: dynamics`, `primarySkillId: drums.dynamics`, and Technique/Timing/Groove secondary skills.
+- Ship three new stable built-in Dynamics exercises so existing drum workspaces receive dedicated `drums.dynamics` starter material through safe starter-content reconciliation.
+- Preserve existing user-edited built-ins: reconciliation only inserts missing new dynamics IDs and never overwrites existing rows.
+- Add Task Settings editing for score name, focus, pulse, and all five kit-surface level strings.
+- Render the complete Dynamics score in Focus Player with relative-level styling, numeric labels, current-subdivision highlighting, and self-reported dynamic-control review.
+- Keep numeric 1/2/3 labels visible so meaning never depends on color alone.
+- Keep Dynamics protocol percussion-only and validate unique surfaces, exact pulse length, allowed `.123` symbols, and at least one active hit during normal restore/backup validation.
+- Protect explicit Dynamics scores from generic dynamics/subdivision progression rewrites; tempo, click-density, gap-click, duration, memory, and later musical-context work remain available where appropriate.
+- Expand the drum fast-tool strip to include Dynamics Lab and rebalance seven specialist tools across desktop/tablet/mobile layouts.
+- Add deterministic unit coverage for every preset, subdivisions, relative hierarchy, dynamic arcs, low-volume limits, editing cycles, malformed scores, and descriptive/non-dB semantics.
+- Add browser coverage for Lab editing → Today → saved `drums.dynamics` exercise → Focus Player snapshot fidelity and 320px–desktop overflow safety.
+- No IndexedDB schema or backup-format migration is required.
 ## 2.29.0 — Time Feel & Pocket Lab — 2026-09-26
 
 - Add a first-class **Pocket Lab** at `/pocket`, built on the proven microphone/audio-time capture engine rather than a duplicate timing stack.
