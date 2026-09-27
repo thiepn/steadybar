@@ -82,7 +82,7 @@ test('target action does not inherit Repair from a weak sibling in the same skil
     targetState(weak,{challenge:'reduce',latestResult:'not-yet',evidenceCount:3,recent:{solid:0,usable:0,notYet:2}}),
     targetState(fresh,{mastery:'discover',challenge:'hold',evidenceCount:0,recent:{solid:0,usable:0,notYet:0},scheduling:{consecutiveSkips:0,manualPriority:3}}),
   ];
-  const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:12});
+  const intelligence=buildPracticeIntelligence(d,{profileId:fresh.profileId,now:at,today,recommendationLimit:d.exercises.length});
   const weakRow=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===weak.id);
   const freshRow=intelligence.recommendations.find(item=>item.target.kind==='exercise'&&item.target.exerciseId===fresh.id);
   assert.ok(weakRow&&freshRow);
