@@ -47,6 +47,7 @@ export const PROTOCOLS:readonly ProtocolDefinition[]=[
   {id:'drum-grid',label:'Drum grid',needs:['sticking'],description:'Practice an explicit hand/foot coordination grid at a chosen pulse.',metric:'Block evaluation'},
   {id:'drum-phrase',label:'Groove → fill → return',needs:['sticking'],description:'Practice a multi-bar groove phrase, one fill bar, and the landing groove after it.',metric:'Block evaluation'},
   {id:'drum-dynamics',label:'Dynamics & touch',needs:['sticking'],description:'Practice explicit relative touch levels across kit surfaces at a stable pulse.',metric:'Block evaluation'},
+  {id:'drum-rhythm',label:'Rhythm relationship',needs:['sticking'],description:'Practice authored swing placement, subdivision switching, or polyrhythm layers with their deterministic rhythm cue.',metric:'Block evaluation'},
   {id:'repetitions',label:'Clean repetitions',needs:[],description:'Count clean and attempted repetitions.',metric:'Clean repetitions'},
   {id:'chord-changes',label:'Chord changes',needs:['chords'],description:'Practice a specific sequence; log the totals after playing.',metric:'Clean transitions'},
   {id:'groove',label:'Groove & control',needs:['tempo'],description:'Hold a groove, then assess time and control.',metric:'Time / control / articulation'},

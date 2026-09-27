@@ -9,20 +9,22 @@ import { contextForIntent } from '../domain/practice-state.js';
 import { finalizeSession, get, insertActiveSession, updateSession } from '../db/database.js';
 import { store } from '../app/store.js';
 import { audio } from '../audio/engine.js';
+import { rhythmAudio, type RhythmPlaybackEvent } from '../audio/rhythm-engine.js';
 import { defaultAccents, type BeatEvent } from '../audio/scheduler.js';
+import { rhythmConfigFromProtocol } from '../domain/rhythm-lab.js';
 import { blockElapsed, checkpointSession, createSession, finishBlock, pauseSession, preserveReadingIdentity, recoverSession, restartBlock } from './logic.js';
 import { clampBpm, nowISO, uuid } from '../domain/utils.js';
 import { trainerBpm, trainerTargetSeconds } from '../domain/trainer.js';
 import { ExclusiveLease, SESSION_LOCK } from '../platform/locks.js';
 import { requireActive } from './guards.js';
 export class PracticeController {
-  session?:PracticeSession;external=false;recovered=false;beat?:BeatEvent;error='';
+  session?:PracticeSession;external=false;recovered=false;beat?:BeatEvent;rhythmEvent?:RhythmPlaybackEvent;error='';
   private listeners=new Set<()=>void>();private queue:Promise<unknown>=Promise.resolve();
   private heartbeat?:ReturnType<typeof setInterval>;private trainerTimer?:ReturnType<typeof setInterval>;
   private lease=new ExclusiveLease(SESSION_LOCK,'This session is running in another tab. Pause it there before continuing here.');private wake?:WakeLockSentinel;private changingTempo=false;private generation=0;
   subscribe(fn:()=>void):()=>void{this.listeners.add(fn);return()=>this.listeners.delete(fn);}
   private emit():void{this.listeners.forEach(fn=>fn());}
-  private report(error:unknown):void{reference.stop();this.generation++;this.error=error instanceof Error ? error.message : 'Practice data could not be saved. Check browser storage permissions.';audio.stop();this.stopTimers();this.unlock();if(this.session)this.session=recoverSession(this.session);this.emit();}
+  private report(error:unknown):void{reference.stop();this.generation++;this.error=error instanceof Error ? error.message : 'Practice data could not be saved. Check browser storage permissions.';this.stopPlayback();this.stopTimers();this.unlock();if(this.session)this.session=recoverSession(this.session);this.emit();}
   private async lock():Promise<void>{await this.lease.acquire();}
   /** Reflect committed changes made by another tab without counting its timer locally. */
   observePersisted():void{
@@ -32,7 +34,7 @@ export class PracticeController {
     if(JSON.stringify(next)===JSON.stringify(this.session))return;
     this.generation++;
     if(this.session?.status==='active' && !this.external && ['running','countin'].includes(this.session.runtime.phase)){
-      audio.stop();this.stopTimers();
+      this.stopPlayback();this.stopTimers();
     }
     this.session=next;
     this.external=!!next && next.status==='active' && ['running','countin'].includes(next.runtime.phase);
@@ -76,6 +78,30 @@ export class PracticeController {
     const s=this.session!,block=s.blocks[s.activeBlockIndex]!,settings=store.snapshot().settings.metronome;
     return {...structuredClone(settings),bpm:s.runtime.bpm,meter:block.meterSnapshot,subdivision:block.subdivisionSnapshot,accents:settings.meter.beats===block.meterSnapshot.beats && settings.meter.beatUnit===block.meterSnapshot.beatUnit ? [...settings.accents] : defaultAccents(block.meterSnapshot.beats,block.meterSnapshot.beatUnit),timing:structuredClone(block.timingClickSnapshot??settings.timing??DEFAULT_TIMING_CLICK)};
   }
+  private rhythmProtocol():Extract<PracticeProtocol,{kind:'drum-rhythm'}>|undefined{
+    const protocol=this.session?.blocks[this.session.activeBlockIndex]?.protocolSnapshot;
+    return protocol?.kind==='drum-rhythm'?protocol:undefined;
+  }
+  private stopPlayback():void{audio.stop();rhythmAudio.stop();this.beat=undefined;this.rhythmEvent=undefined;}
+  private async beginRunning(generation:number,time:number):Promise<void>{
+    if(generation!==this.generation)return;
+    await this.mutate(s=>{if(generation!==this.generation||s.status!=='active'||(s.runtime.phase!=='countin'&&s.runtime.phase!=='ready'&&s.runtime.phase!=='paused'))return s;const block=s.blocks[s.activeBlockIndex]!;const iso=new Date(time).toISOString();block.startedAt??=iso;s.runtime.phase='running';s.runtime.runStartedAt=iso;s.runtime.checkpointAt=iso;return s;});
+    if(generation===this.generation&&this.session?.runtime.phase==='running')this.startTimers();
+  }
+  private async startRhythmPlayback(generation:number,countInBeats:number,onReady?:(wallTime:number)=>void):Promise<void>{
+    const session=this.session,protocol=this.rhythmProtocol();if(!session||!protocol)throw new Error('Rhythm practice configuration is unavailable.');
+    const settings=store.snapshot().settings.metronome;
+    await rhythmAudio.start(rhythmConfigFromProtocol(protocol,session.runtime.bpm),{volume:settings.volume,countInBeats,primaryOn:protocol.primaryOn,secondaryOn:protocol.secondaryOn},{
+      onReady:(wallTime)=>{if(generation===this.generation)onReady?.(wallTime);},
+      onEvent:event=>{
+        if(generation!==this.generation)return;
+        this.rhythmEvent=event;
+        if(event.layer==='primary')this.beat={time:event.time,beat:event.beat,part:event.part,bar:event.cycle,accent:event.accent,countingIn:event.countingIn,firstPracticeBeat:!event.countingIn&&event.cycle===0&&event.cyclePosition===0};
+        this.emit();
+      },
+      onInterrupted:()=>{if(generation!==this.generation)return;void this.pause().then(()=>{this.error='Audio was suspended by the browser. The session is paused; tap Resume when ready.';this.emit();}).catch(error=>this.report(error));},
+    });
+  }
   private async requestWake():Promise<void>{
     if(!store.snapshot().settings.wakeLock || !('wakeLock' in navigator) || document.hidden)return;
     try{this.wake=await navigator.wakeLock.request('screen');}catch{/* Optional; audio and persistence do not depend on wake lock. */}
@@ -104,35 +130,36 @@ export class PracticeController {
     reference.stop();const generation=++this.generation;this.error='';await this.lock();
     if(generation!==this.generation){this.unlock();return;}
     this.external=false;this.recovered=false;
-    const countIn=this.session.runtime.metronomeOn ? this.config().countIn : 0;
-    const startRunning=async(time:number)=>{
-      if(generation!==this.generation)return;
-      await this.mutate(s=>{if(generation!==this.generation || s.status!=='active' || (s.runtime.phase!=='countin' && s.runtime.phase!=='ready' && s.runtime.phase!=='paused'))return s;const block=s.blocks[s.activeBlockIndex]!;const iso=new Date(time).toISOString();block.startedAt??=iso;s.runtime.phase='running';s.runtime.runStartedAt=iso;s.runtime.checkpointAt=iso;return s;});if(generation===this.generation&&this.session?.runtime.phase==='running')this.startTimers();
-    };
+    const metronome=this.config(),countIn=this.session.runtime.metronomeOn ? metronome.countIn : 0,rhythm=this.rhythmProtocol();
     try{
       if(this.session.runtime.metronomeOn){
         await this.mutate(s=>{if(generation!==this.generation)return s;s.runtime.phase='countin';delete s.runtime.runStartedAt;return s;});
         if(generation!==this.generation)return;
-        await audio.start({...this.config(),countIn},{onReady:time=>{void startRunning(time).catch(error=>this.report(error));},onBeat:event=>{this.beat=event;this.emit();},onInterrupted:()=>{void this.pause().then(()=>{this.error='Audio was suspended by the browser. The session is paused; tap Resume when ready.';this.emit();}).catch(error=>this.report(error));}});
-      }else await startRunning(Date.now());
+        if(rhythm)await this.startRhythmPlayback(generation,countIn*rhythm.pulse.beats,time=>{void this.beginRunning(generation,time).catch(error=>this.report(error));});
+        else await audio.start({...metronome,countIn},{onReady:time=>{void this.beginRunning(generation,time).catch(error=>this.report(error));},onBeat:event=>{this.beat=event;this.emit();},onInterrupted:()=>{void this.pause().then(()=>{this.error='Audio was suspended by the browser. The session is paused; tap Resume when ready.';this.emit();}).catch(error=>this.report(error));}});
+      }else await this.beginRunning(generation,Date.now());
     }catch(error){if(generation!==this.generation)return;this.stopTimers();await this.mutate(s=>pauseSession(s)).catch(()=>{});throw error;}
   }
   async pause():Promise<void>{
-    this.generation++;reference.stop();audio.stop();this.stopTimers();
-    if(this.session?.status==='active'){await this.mutate(s=>pauseSession(s));this.beat=undefined;this.emit();}
+    this.generation++;reference.stop();this.stopPlayback();this.stopTimers();
+    if(this.session?.status==='active'){await this.mutate(s=>pauseSession(s));this.emit();}
   }
   async setBpm(value:number):Promise<void>{
     const current=this.session?.blocks[this.session.activeBlockIndex];if(current?.protocolSnapshot&&!protocolPulse(current.protocolSnapshot))throw new Error('This exercise has no tempo target.');
-    const bpm=clampBpm(value);
+    const bpm=clampBpm(value),phase=this.session?.runtime.phase;
     await this.mutate(s=>{s=checkpointSession(s);s.runtime.bpm=bpm;const block=s.blocks[s.activeBlockIndex]!;block.finalBpm=bpm;delete block.tempoTrainer;if(block.progressionSnapshot?.bpm!==undefined&&block.progressionSnapshot.bpm!==bpm)delete block.progressionSnapshot;return s;});
     if(audio.running)audio.update(this.config());
+    else if(rhythmAudio.running){
+      const generation=this.generation;
+      await this.startRhythmPlayback(generation,0,phase==='countin'?time=>{void this.beginRunning(generation,time).catch(error=>this.report(error));}:undefined);
+    }
   }
   async toggleAudio():Promise<void>{
     const session=this.session;if(!session||session.status!=='active')return;
     const active=['running','countin'].includes(session.runtime.phase),turningOn=!session.runtime.metronomeOn;
     if(!active){await this.mutate(s=>{s.runtime.metronomeOn=turningOn;return s;});return;}
     const generation=++this.generation;reference.stop();
-    if(!turningOn)audio.stop();
+    if(!turningOn)this.stopPlayback();
     await this.mutate(s=>{
       s=checkpointSession(s);s.runtime.metronomeOn=turningOn;
       if(s.runtime.phase==='countin'){const iso=nowISO();s.runtime.phase='running';s.runtime.runStartedAt=iso;s.runtime.checkpointAt=iso;}
@@ -142,7 +169,8 @@ export class PracticeController {
     this.beat=undefined;this.startTimers();
     if(!turningOn){this.emit();return;}
     try{
-      await audio.start({...this.config(),countIn:0},{
+      if(this.rhythmProtocol())await this.startRhythmPlayback(generation,0);
+      else await audio.start({...this.config(),countIn:0},{
         onBeat:event=>{if(generation!==this.generation)return;this.beat=event;this.emit();},
         onInterrupted:()=>{if(generation!==this.generation)return;void this.pause().then(()=>{this.error='Audio was suspended by the browser. The session is paused; tap Resume when ready.';this.emit();}).catch(error=>this.report(error));},
       });
@@ -232,23 +260,23 @@ export class PracticeController {
   async completeBlock(result:PracticeResult,limitations:LimitationTag[]=[],note=''):Promise<void>{
     if(new Set(limitations).size!==limitations.length)throw new Error('Practice limitations must be unique.');
     const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;
-    this.generation++;reference.stop();audio.stop();this.stopTimers();
+    this.generation++;reference.stop();this.stopPlayback();this.stopTimers();
     await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(!block.startedAt&&block.actualActiveSeconds<=0&&!(block.outcomes?.length)&&!block.tempoAttempts.length)throw new Error('Start this block before evaluating it.');block.evaluation={id:uuid(),timestamp:nowISO(),result,context:block.prescriptionSnapshot?contextForIntent(block.prescriptionSnapshot.intent):'normal',limitations:[...limitations],note:note.trim()};return finishBlock(s,false);},ending);
     this.beat=undefined;this.emit();
   }
   async trainer(config:TrainerConfig | undefined):Promise<void>{
     await this.pause();await this.mutate(s=>{const block=s.blocks[s.activeBlockIndex]!;if(block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo')throw new Error('Tempo trainers apply to tempo-practice tasks only.');block.tempoTrainer=config;if(config)delete block.progressionSnapshot;s.runtime.trainerStartSeconds=block.actualActiveSeconds;s.runtime.trainerCleanRounds=0;if(config){s.runtime.bpm=trainerBpm(config,0,0);block.finalBpm=s.runtime.bpm;const target=trainerTargetSeconds(config);if(target!==undefined)block.targetSeconds=Math.ceil(block.actualActiveSeconds)+target;}return s;});
   }
-  async finishBlock(skip=false):Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;await this.mutate(s=>finishBlock(s,skip),ending);this.beat=undefined;this.emit();}
-  async restart():Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.mutate(restartBlock);this.beat=undefined;this.emit();}
+  async finishBlock(skip=false):Promise<void>{this.generation++;reference.stop();this.stopPlayback();this.stopTimers();const ending=!!this.session&&this.session.activeBlockIndex===this.session.blocks.length-1;await this.mutate(s=>finishBlock(s,skip),ending);this.beat=undefined;this.emit();}
+  async restart():Promise<void>{this.generation++;reference.stop();this.stopPlayback();this.stopTimers();await this.mutate(restartBlock);this.beat=undefined;this.emit();}
   async finish(abandon=false):Promise<void>{
-    this.generation++;this.recovered=false;reference.stop();audio.stop();this.stopTimers();await this.mutate(s=>{
+    this.generation++;this.recovered=false;reference.stop();this.stopPlayback();this.stopTimers();await this.mutate(s=>{
       s=pauseSession(s);const now=nowISO();
       s.blocks.forEach((b,i)=>{if(i===s.activeBlockIndex){b.completed=!abandon;b.endedAt=now;if(!b.protocolSnapshot||protocolPulse(b.protocolSnapshot))b.finalBpm=s.runtime.bpm;}else if(i>s.activeBlockIndex){b.skipped=true;b.endedAt=now;}});
       s.status=abandon?'abandoned':'completed';s.endedAt=now;return s;
     },true);
   }
-  async discard():Promise<void>{this.generation++;reference.stop();audio.stop();this.stopTimers();await this.lock();try{if(this.session){await store.delete('sessions',this.session.id);this.session=undefined;this.recovered=false;this.emit();}}finally{this.unlock();}}
+  async discard():Promise<void>{this.generation++;reference.stop();this.stopPlayback();this.stopTimers();await this.lock();try{if(this.session){await store.delete('sessions',this.session.id);this.session=undefined;this.recovered=false;this.emit();}}finally{this.unlock();}}
   async onVisibility():Promise<void>{
     if(!this.session || this.session.status!=='active')return;
     if(document.hidden && store.snapshot().settings.pauseWhenHidden && ['running','countin'].includes(this.session.runtime.phase)){await this.pause();this.error='Paused when the app went into the background. Tap Resume to continue.';this.emit();}

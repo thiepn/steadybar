@@ -1395,6 +1395,80 @@ class Workbench(e2e.MusicPracticeTests):
             self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
 
 
+    def test_79_rhythm_lab_persists_exact_setup_into_today_library_and_focus_player(self):
+        self.onboard()
+        self.route('/rhythm')
+        self.page.get_by_label('Training mode',exact=True).select_option('polyrhythm')
+        self.page.get_by_label('Polyrhythm ratio',exact=True).select_option('5:4')
+        self.page.get_by_label('BPM',exact=True).fill('96')
+        self.page.get_by_label('BPM',exact=True).press('Tab')
+        self.page.get_by_label('Practice minutes',exact=True).fill('6')
+        overlay=self.page.locator('.rhythm-transport button').filter(has_text='Overlay')
+        overlay.click()
+        expect(overlay).to_have_attribute('aria-pressed','false')
+
+        self.page.get_by_role('button',name='Add to Today',exact=True).click()
+        planned=None
+        for _ in range(70):
+            planned=self.read("""(()=>{
+              const d=load('app/store.js').store.snapshot(),plan=d.dailyPlans.find(p=>p.date===load('domain/utils.js').localDate()),b=plan?.blocks.at(-1),p=b?.protocol;
+              return p?{kind:p.kind,mode:p.mode,bpm:b.bpm,targetSeconds:b.targetSeconds,primary:p.primary,secondary:p.secondary,primaryOn:p.primaryOn,secondaryOn:p.secondaryOn,pulse:p.pulse}:null;
+            })()""")
+            if planned and planned.get('kind')=='drum-rhythm':break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(planned)
+        self.assertEqual(planned['mode'],'polyrhythm')
+        self.assertEqual(planned['bpm'],96)
+        self.assertEqual(planned['targetSeconds'],360)
+        self.assertEqual((planned['primary'],planned['secondary']),(5,4))
+        self.assertEqual((planned['primaryOn'],planned['secondaryOn']),(True,False))
+        self.assertEqual(planned['pulse'],{'bpm':96,'beats':4,'beatUnit':4,'subdivision':1})
+
+        self.page.get_by_role('button',name='Save as exercise',exact=True).click()
+        saved=None
+        for _ in range(70):
+            saved=self.read("""(()=>{
+              const rows=load('app/store.js').store.snapshot().exercises.filter(e=>e.protocol?.kind==='drum-rhythm'&&!e.archived&&!e.builtin),e=rows.at(-1);
+              return e?{id:e.id,category:e.category,skillArea:e.skillArea,primarySkillId:e.primarySkillId,secondarySkillIds:e.secondarySkillIds,defaultSeconds:e.defaultSeconds,protocol:e.protocol}:null;
+            })()""")
+            if saved:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(saved)
+        self.assertEqual(saved['category'],'timing')
+        self.assertEqual(saved['skillArea'],'timing')
+        self.assertEqual(saved['primarySkillId'],'drums.timing')
+        self.assertIn('drums.groove',saved['secondarySkillIds'])
+        self.assertIn('drums.coordination',saved['secondarySkillIds'])
+        self.assertEqual(saved['defaultSeconds'],360)
+        self.assertEqual((saved['protocol']['primaryOn'],saved['protocol']['secondaryOn']),(True,False))
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active
+    names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
+    result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
+    raise SystemExit(0 if result.wasSuccessful() else 1)
+))
+        expect(self.page.locator('.protocol-task[data-protocol="drum-rhythm"]')).to_be_visible()
+        expect(self.page.locator('.focus-rhythm-visual')).to_be_visible()
+        expect(self.page.locator('.focus-rhythm-visual .muted-layer')).to_have_count(1)
+        snapshot=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex],p=b.protocolSnapshot;
+          return {kind:p?.kind,mode:p?.mode,bpm:s.runtime.bpm,targetSeconds:b.targetSeconds,primary:p?.primary,secondary:p?.secondary,primaryOn:p?.primaryOn,secondaryOn:p?.secondaryOn};
+        })()""")
+        self.assertEqual(snapshot,{'kind':'drum-rhythm','mode':'polyrhythm','bpm':96,'targetSeconds':360,'primary':5,'secondary':4,'primaryOn':True,'secondaryOn':False})
+
+        focus_start=self.page.get_by_role('button',name='Start practice',exact=True)
+        focus_start.click()
+        expect(focus_start).to_have_attribute('aria-label','Pause practice')
+        self.assertTrue(self.read("load('audio/rhythm-engine.js').rhythmAudio.running"))
+        self.assertFalse(self.read("load('audio/engine.js').audio.running"))
+        focus_start.click()
+        expect(self.page.get_by_text('Paused',exact=True)).to_be_visible()
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height});self.assert_bounds(width)
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))

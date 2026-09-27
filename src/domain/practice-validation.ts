@@ -3,6 +3,7 @@ import { arr, bool, bpm, id, iso, name, num, obj, one, optional, order, text, un
 import { definition, supportedProtocols } from './profiles.js';
 import { patternFits } from './protocols.js';
 const kind=(v:unknown):unknown=>v!==null&&typeof v==='object'&&'kind' in v?v.kind:undefined;
+const rhythmMode=(v:unknown):unknown=>v!==null&&typeof v==='object'&&'mode' in v?v.mode:undefined;
 const hands=one('left','right','together','not-applicable');
 const quality=one('major','natural-minor','minor-pentatonic','major-pentatonic','chromatic');
 const midi=num(21,108,true), pitchClass=num(0,11,true);
@@ -41,6 +42,29 @@ export const validateProtocol:Validator<PracticeProtocol>=(v,p='Protocol')=>{
       if(!r.lanes.some(row=>/[123]/.test(row.steps)))fail(p,'drum dynamics score needs at least one active hit');
       return r;
     }
+    case 'drum-rhythm':{
+      if(rhythmMode(v)==='swing'){
+        const r=obj({kind:one('drum-rhythm'),mode:one('swing'),pulse,name:text(160,1),focus:text(2000,1),ratio:num(50,75),primaryOn:bool,secondaryOn:bool})(v,p);
+        if(r.pulse.beatUnit!==4||r.pulse.subdivision!==2||r.pulse.beats<2||r.pulse.beats>7)fail(p,'swing practice uses 2–7 quarter-note beats with two authored placements per beat');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
+        return r;
+      }
+      if(rhythmMode(v)==='subdivision-switch'){
+        const r=obj({kind:one('drum-rhythm'),mode:one('subdivision-switch'),pulse,name:text(160,1),focus:text(2000,1),sequence:arr(one(1,2,3,4),8),barsPerStage:one(1,2,4),primaryOn:bool,secondaryOn:bool})(v,p);
+        if(r.pulse.beatUnit!==4||r.pulse.subdivision!==1||r.pulse.beats<2||r.pulse.beats>7)fail(p,'subdivision-switch practice uses a 2–7 beat quarter-note anchor pulse');
+        if(!r.sequence.length)fail(p,'subdivision switching needs at least one stage');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
+        return r;
+      }
+      if(rhythmMode(v)==='polyrhythm'){
+        const r=obj({kind:one('drum-rhythm'),mode:one('polyrhythm'),pulse,name:text(160,1),focus:text(2000,1),primary:one(2,3,4,5),secondary:one(2,3,4,5),primaryOn:bool,secondaryOn:bool})(v,p);
+        if(r.primary===r.secondary)fail(p,'polyrhythm layers must use different counts');
+        if(r.pulse.beatUnit!==4||r.pulse.subdivision!==1||r.pulse.beats!==r.secondary)fail(p,'polyrhythm anchor meter must match the secondary quarter-note count');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
+        return r;
+      }
+      return fail(p,'unknown drum rhythm mode');
+    }
     case 'repetitions':return obj({kind:one('repetitions'),task:text(),target:num(1,10000,true),pulse:optional(pulse)})(v,p);
     case 'chord-changes':{const r=obj({kind:one('chord-changes'),chords:arr(text(40,1),24),target:num(1,10000,true),technique:text(1000),pulse:optional(pulse)})(v,p);if(r.chords.length<2)fail(p,'choose at least two chords');return r;}
     case 'groove':return obj({kind:one('groove'),pulse,key:text(40),style:text(200),focus:one('time','muting','articulation','coordination'),progression:text(1000)})(v,p);
@@ -72,10 +96,10 @@ export const validateProtocolState:Validator<ProtocolState>=obj({step:num(0,1000
 export function assertProtocolCompatible(p:PracticeProtocol,profile:PracticeProfile):void {
   if(!supportedProtocols(profile).some(s=>s.id===p.kind))fail('Protocol',`${p.kind} is not supported by this profile family`);
   if(p.kind==='tempo'&&p.sticking&&profile.family!=='percussion')fail('Protocol','sticking is only available for percussion');
-  if((p.kind==='drum-grid'||p.kind==='drum-phrase'||p.kind==='drum-dynamics')&&profile.family!=='percussion')fail('Protocol','drum grid, phrase and dynamics tasks are only available for percussion profiles');
+  if((p.kind==='drum-grid'||p.kind==='drum-phrase'||p.kind==='drum-dynamics'||p.kind==='drum-rhythm')&&profile.family!=='percussion')fail('Protocol','drum grid, phrase, dynamics and rhythm tasks are only available for percussion profiles');
 }
 export function assertOutcomeMatches(outcome:ProtocolOutcome,protocol:PracticeProtocol):void {
-  const map:Record<PracticeProtocol['kind'],readonly ProtocolOutcome['kind'][]>={free:['reflection'],tempo:['reflection'],'drum-grid':['reflection'],'drum-phrase':['reflection'],'drum-dynamics':['reflection'],repetitions:['count'],'chord-changes':['count'],groove:['groove'],'scale-cycle':['scale'],fretboard:['recall'],'vocal-pattern':['voice'],'pitch-match':['pitch'],'sight-reading':['reading'],repertoire:['reflection']};
+  const map:Record<PracticeProtocol['kind'],readonly ProtocolOutcome['kind'][]>={free:['reflection'],tempo:['reflection'],'drum-grid':['reflection'],'drum-phrase':['reflection'],'drum-dynamics':['reflection'],'drum-rhythm':['reflection'],repetitions:['count'],'chord-changes':['count'],groove:['groove'],'scale-cycle':['scale'],fretboard:['recall'],'vocal-pattern':['voice'],'pitch-match':['pitch'],'sight-reading':['reading'],repertoire:['reflection']};
   if(!map[protocol.kind].includes(outcome.kind))fail('Outcome','result does not belong to this protocol');
   if(outcome.kind==='count'&&outcome.protocol!==protocol.kind)fail('Outcome','count result belongs to a different protocol');
   if(outcome.kind==='scale'&&protocol.kind==='scale-cycle'&&(!protocol.keys.includes(outcome.key)||outcome.hands!==protocol.hands||outcome.quality!==protocol.quality))fail('Outcome','scale result does not match the exercise');

@@ -2,7 +2,11 @@ import { rhythmAudio } from '../audio/rhythm-engine.js';
 import { tapTempo } from '../audio/scheduler.js';
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
-import { rhythmCycle, rhythmCyclePositions, subdivisionName, swingFeelLabel, type RhythmLabConfig, type RhythmSubdivision } from '../domain/rhythm-lab.js';
+import type { Exercise } from '../domain/models.js';
+import { activeProfile } from '../domain/profiles.js';
+import { rhythmCycle, rhythmCyclePositions, rhythmProtocolFromConfig, subdivisionName, swingFeelLabel, type RhythmLabConfig, type RhythmSubdivision } from '../domain/rhythm-lab.js';
+import { metadata } from '../domain/utils.js';
+import { addToday, freeBlock, launchPractice } from '../practice/launch.js';
 import { el } from '../ui/dom.js';
 import { button, confirmAction, field, link, notify, pageHeader, sectionHeader, select } from '../ui/components.js';
 
@@ -17,11 +21,11 @@ const sequenceOptions:[string,string][]=[
 const ratioOptions:[string,string][]=[['3:2','3:2 · three over two beats'],['2:3','2:3 · two over three beats'],['4:3','4:3 · four over three beats'],['3:4','3:4 · three over four beats'],['5:4','5:4 · five over four beats'],['4:5','4:5 · four over five beats'],['5:3','5:3 · five over three beats'],['3:5','3:5 · three over five beats']];
 
 export function rhythmLabPage():Page{
-  const metronome=store.snapshot().settings.metronome;
+  const snapshot=store.snapshot(),metronome=snapshot.settings.metronome,profile=activeProfile(snapshot),canPersist=profile.family==='percussion';
   let mode:RhythmMode='swing',running=false,disposed=false,taps:number[]=[],primaryOn=true,secondaryOn=true;
   const page=el('div',{class:'page rhythm-lab-page'},pageHeader('Drum time & coordination','Rhythm Lab','Swing placement, subdivision switching, and layered polyrhythms on a deterministic audio-time clock.',[link('Metronome','/metronome','button secondary','pulse'),link('Pocket Lab','/pocket','button secondary','pulse')]));
   const modeSelect=select('rhythmMode','Training mode',[['swing','Swing / shuffle'],['subdivision-switch','Subdivision switching'],['polyrhythm','Polyrhythm']],mode);
-  const bpm=el('input',{type:'number',min:20,max:300,step:1,value:metronome.bpm,inputmode:'numeric','aria-label':'BPM'}),countIn=select('rhythmCountIn','Count-in',[['0','None'],['2','2 beats'],['4','4 beats']],'4');
+  const bpm=el('input',{type:'number',min:20,max:300,step:1,value:metronome.bpm,inputmode:'numeric','aria-label':'BPM'}),minutes=el('input',{type:'number',min:1,max:180,step:1,value:8,inputmode:'numeric','aria-label':'Practice minutes'}),countIn=select('rhythmCountIn','Count-in',[['0','None'],['2','2 beats'],['4','4 beats']],'4');
   const volume=el('input',{type:'range',min:0,max:1,step:.05,value:metronome.volume,'aria-label':'Rhythm Lab volume'}),volumeText=el('span',{class:'muted small'},`${Math.round(metronome.volume*100)}%`);
   const swingBeats=select('swingBeats','Beats per bar',[['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']],'4');
   const swingRatio=el('input',{type:'range',min:50,max:75,step:.5,value:66.5,'aria-label':'Swing ratio'}),swingRatioText=el('strong',{class:'rhythm-ratio-value'},'66.5 / 33.5');
@@ -96,7 +100,27 @@ export function rhythmLabPage():Page{
   primaryButton=button('Primary on',()=>toggleLayer('primary'),'secondary','volume');secondaryButton=button('Secondary on',()=>toggleLayer('secondary'),'secondary','volume');primaryButton.setAttribute('aria-keyshortcuts','1');secondaryButton.setAttribute('aria-keyshortcuts','2');
   const tap=button('Tap tempo',()=>{const result=tapTempo(taps,performance.now());taps=result.taps;if(result.bpm){bpm.value=String(result.bpm);setupChanged();status.textContent=`${result.bpm} BPM from ${taps.length} taps.`;}else status.textContent=`${taps.length} tap${taps.length===1?'':'s'} · keep going.`;},'ghost','pulse');
   const tempoSteps=el('div',{class:'actions wrap rhythm-tempo-steps'},...[-5,-1,1,5].map(step=>button(step>0?`+${step}`:`−${Math.abs(step)}`,()=>{bpm.value=String(Math.max(20,Math.min(300,Number(bpm.value)+step)));setupChanged();},'ghost compact')));
-  const transport=el('section',{class:'panel rhythm-transport'},sectionHeader('Pulse','Changes stop playback so the next start always follows one deterministic score.'),el('div',{class:'form-grid rhythm-common-grid'},field('BPM',bpm),countIn,el('div',{class:'rhythm-volume-field'},field('Volume',volume),volumeText)),tempoSteps,el('div',{class:'actions wrap'},tap,startButton,primaryButton,secondaryButton),status);
+  const validPractice=()=>bpm.reportValidity()&&minutes.reportValidity();
+  const practiceProtocol=()=>rhythmProtocolFromConfig(config(),primaryOn,secondaryOn);
+  const practiceBlock=()=>{
+    const protocol=practiceProtocol(),seconds=Math.round(Number(minutes.value)*60);
+    return {...freeBlock(seconds,protocol.pulse.bpm,`Rhythm · ${protocol.name}`),profileId:profile.id,protocol,notes:protocol.focus};
+  };
+  const startPractice=async()=>{if(!canPersist){notify('Switch to a percussion practice profile before saving Rhythm Lab work.','info');return;}if(!validPractice())return;stop();await launchPractice([practiceBlock()]);};
+  const addPractice=async()=>{if(!canPersist){notify('Switch to a percussion practice profile before adding Rhythm Lab work to Today.','info');return;}if(!validPractice())return;await addToday(practiceBlock());};
+  const saveExercise=async()=>{
+    if(!canPersist){notify('Switch to a percussion practice profile before saving a Rhythm Lab exercise.','info');return;}if(!validPractice())return;
+    const protocol=practiceProtocol(),seconds=Math.round(Number(minutes.value)*60),exercise:Exercise={
+      ...metadata(),name:protocol.name,instrument:profile.instrumentType==='drums'?'Drums':profile.name,category:'timing',description:protocol.focus,instructions:protocol.focus,profileId:profile.id,skillArea:'timing',
+      ...(profile.instrumentType==='drums'?{primarySkillId:'drums.timing',secondarySkillIds:['drums.groove','drums.coordination']}:{secondarySkillIds:[]}),
+      protocol,level:profile.level,defaultSeconds:seconds,defaultBpm:protocol.pulse.bpm,minBpm:20,maxBpm:300,meter:{beats:protocol.pulse.beats,beatUnit:protocol.pulse.beatUnit},subdivision:protocol.pulse.subdivision,accents:'',tags:['rhythm-lab',protocol.mode],notes:'',builtin:false,archived:false,
+    };
+    await store.save('exercises',exercise);notify('Rhythm study saved to the exercise library.');
+  };
+  const integrationActions=canPersist
+    ? el('div',{class:'actions wrap rhythm-practice-actions'},button('Start practice',startPractice,'primary','play'),button('Add to Today',addPractice,'secondary','plus'),button('Save as exercise',saveExercise,'secondary','library'))
+    : el('div',{class:'rhythm-practice-unavailable'},el('p',{class:'field-hint'},'Standalone Rhythm Lab works here, but durable Rhythm practice blocks are percussion-profile tasks.'),link('Manage practice profiles','/profiles','button secondary','settings'));
+  const transport=el('section',{class:'panel rhythm-transport'},sectionHeader('Pulse','Changes stop playback so the next start always follows one deterministic score.'),el('div',{class:'form-grid rhythm-common-grid'},field('BPM',bpm),field('Practice minutes',minutes),countIn,el('div',{class:'rhythm-volume-field'},field('Volume',volume),volumeText)),tempoSteps,el('div',{class:'actions wrap'},tap,startButton,primaryButton,secondaryButton),status,integrationActions);
   const training=el('section',{class:'panel rhythm-training'},sectionHeader('Training pattern','Start with both layers, then mute support without changing the underlying pulse.'),modeSelect,settingsHost,summary,cue);
   const visualPanel=el('section',{class:'panel rhythm-visual-panel'},sectionHeader('Cycle','Visuals mirror the audio clock; they never determine click timing.'),visual);
   const method=el('section',{class:'panel'},sectionHeader('Practice method','Stability first, complexity second.'),el('ol',{class:'rhythm-method'},el('li',{},'Establish the quarter-note pulse before adding the second layer or moving the offbeat.'),el('li',{},'Change one variable at a time: tempo, swing ratio, subdivision stage, or polyrhythm ratio.'),el('li',{},'Use the layer buttons to remove support while keeping the same internal pulse.'),el('li',{},'If the pulse bends when density changes, lower BPM before adding complexity.'),el('li',{},'Rhythm Lab describes timing relationships; it does not claim one swing ratio or polyrhythm feel is universally better.')));

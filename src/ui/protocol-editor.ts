@@ -41,6 +41,18 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
         text('dynTom','Tom levels',lane('tom'))
       );break;
     }
+    case 'drum-rhythm':{
+      node.append(
+        text('rhythmName','Rhythm exercise name',p.name),
+        textarea('rhythmFocus','Practice focus',p.focus,3),
+        el('div',{class:'form-grid'},number('rhythmBpm','BPM',p.pulse.bpm,20,300),p.mode==='polyrhythm'?'':select('rhythmBeats','Beats per cycle',[['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']],String(p.pulse.beats))),
+        el('fieldset',{class:'key-options'},el('legend',{},'Audible layers'),checkbox('rhythmPrimaryOn',p.mode==='polyrhythm'?'Anchor':p.mode==='swing'?'Beat':'Beat',p.primaryOn),checkbox('rhythmSecondaryOn',p.mode==='polyrhythm'?'Overlay':p.mode==='swing'?'Offbeat':'Subdivision',p.secondaryOn))
+      );
+      if(p.mode==='swing')node.append(number('rhythmRatio','Swing first-half percentage',p.ratio,50,75,.5),el('p',{class:'field-hint'},'50 = straight. 66.5 approximates triplet swing. The quarter-note pulse stays fixed.'));
+      else if(p.mode==='subdivision-switch')node.append(text('rhythmSequence','Subdivision sequence',p.sequence.join(', '),'Use 1, 2, 3, 4 for quarter, eighth, triplet, sixteenth stages.'),select('rhythmBarsPerStage','Bars per stage',[['1','1 bar'],['2','2 bars'],['4','4 bars']],String(p.barsPerStage)));
+      else node.append(el('div',{class:'form-grid'},select('rhythmPrimary','Overlay count',[['2','2'],['3','3'],['4','4'],['5','5']],String(p.primary)),select('rhythmSecondary','Anchor beats',[['2','2'],['3','3'],['4','4'],['5','5']],String(p.secondary))),el('p',{class:'field-hint'},'A:B means A evenly spaced overlay hits across B quarter-note anchor beats.'));
+      break;
+    }
     case 'repetitions':node.append(text('task','Repeated task',p.task),number('target','Target clean repetitions',p.target,1,10000));break;
     case 'chord-changes':node.append(text('chords','Chord sequence',p.chords.join(', '),'Separate chords with commas. Count results after playing; tapping is not required for every change.'),text('technique','Technique / rhythm',p.technique),number('target','Target clean changes',p.target,1,10000));break;
     case 'groove':node.append(el('div',{class:'form-grid'},text('key','Key',p.key),text('style','Style / feel',p.style)),select('grooveFocus','Listening focus',[['time','Time'],['muting','Muting'],['articulation','Articulation'],['coordination','Coordination']],p.focus),text('progression','Progression / groove notes',p.progression));break;
@@ -61,7 +73,7 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
     case 'repertoire':node.append(textarea('focus','Passage goal',p.focus),text('measures','Measures / phrase',p.measures),profile.family==='keyboard'?hand(p.hands):'');break;
   }
   let readPulse:((data:FormData)=>Pulse|undefined)|undefined;
-  if('pulse' in p || ['free','repetitions','chord-changes','scale-cycle','sight-reading','repertoire'].includes(p.kind)){
+  if(('pulse' in p&&p.kind!=='drum-rhythm') || ['free','repetitions','chord-changes','scale-cycle','sight-reading','repertoire'].includes(p.kind)){
     const mandatory=p.kind==='tempo'||p.kind==='groove'||p.kind==='drum-grid'||p.kind==='drum-phrase'||p.kind==='drum-dynamics',c=protocolPulse(p)??pulse();
     const enabled=checkbox('useClick','Use a metronome with this exercise',mandatory||!!protocolPulse(p));enabled.hidden=mandatory;
     const controls=el('div',{class:'form-grid'},number('protocolBpm','Starting BPM',c.bpm,20,300),select('beats','Beats per bar',Array.from({length:16},(_,i)=>String(i+1)),String(c.beats)),select('beatUnit','Beat unit',[['4','Quarter note'],['8','Eighth note']],String(c.beatUnit)),select('subdivision','Subdivision',[['1','1 per beat'],['2','2 per beat'],['3','3 per beat'],['4','4 per beat']],String(c.subdivision)));
@@ -78,6 +90,14 @@ export function protocolEditor(initial:PracticeProtocol,profile:PracticeProfile)
       case 'drum-grid':{const gridPulse=readPulse?.(data);if(!gridPulse)throw new Error('Drum grids require a metronome pulse.');const size=gridPulse.beats*gridPulse.subdivision,normalize=(value:string)=>value.replace(/\s+/g,'').slice(0,size).padEnd(size,'.');candidate={kind:p.kind,pulse:gridPulse,name:text('gridName'),focus:text('gridFocus'),lanes:([['right-hand','gridRightHand'],['left-hand','gridLeftHand'],['kick','gridKick'],['hihat-foot','gridHihatFoot']] as const).map(([voice,key])=>({voice,steps:normalize(text(key))}))};break;}
       case 'drum-phrase':{const phrasePulse=readPulse?.(data);if(!phrasePulse)throw new Error('Drum phrases require a metronome pulse.');const size=phrasePulse.beats*phrasePulse.subdivision,normalize=(value:string)=>value.replace(/\s+/g,'').slice(0,size).padEnd(size,'.');candidate={kind:p.kind,pulse:phrasePulse,name:text('phraseName'),focus:text('phraseFocus'),bars:p.bars.map((bar,index)=>({role:bar.role,label:text(`phrase-${index}-label`),lanes:([['right-hand','rh'],['left-hand','lh'],['kick','kick'],['hihat-foot','foot']] as const).map(([voice,key])=>({voice,steps:normalize(text(`phrase-${index}-${key}`))}))}))};break;}
       case 'drum-dynamics':{const dynPulse=readPulse?.(data);if(!dynPulse)throw new Error('Drum dynamics tasks require a metronome pulse.');const size=dynPulse.beats*dynPulse.subdivision,normalize=(value:string)=>value.replace(/\s+/g,'').slice(0,size).padEnd(size,'.');candidate={kind:p.kind,pulse:dynPulse,name:text('dynName'),focus:text('dynFocus'),lanes:([['snare','dynSnare'],['hihat','dynHihat'],['kick','dynKick'],['ride','dynRide'],['tom','dynTom']] as const).map(([surface,key])=>({surface,steps:normalize(text(key))})).filter(row=>/[123]/.test(row.steps))};break;}
+      case 'drum-rhythm':{
+        const bpm=n('rhythmBpm'),name=text('rhythmName'),focus=text('rhythmFocus'),primaryOn=data.has('rhythmPrimaryOn'),secondaryOn=data.has('rhythmSecondaryOn');
+        if(!primaryOn&&!secondaryOn)throw new Error('Keep at least one Rhythm Lab layer audible.');
+        if(p.mode==='swing'){const beats=n('rhythmBeats');candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats,beatUnit:4,subdivision:2},name,focus,ratio:n('rhythmRatio'),primaryOn,secondaryOn};}
+        else if(p.mode==='subdivision-switch'){const beats=n('rhythmBeats'),sequence=list('rhythmSequence').map(Number);candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats,beatUnit:4,subdivision:1},name,focus,sequence,barsPerStage:n('rhythmBarsPerStage'),primaryOn,secondaryOn};}
+        else {const primary=n('rhythmPrimary'),secondary=n('rhythmSecondary');candidate={kind:p.kind,mode:p.mode,pulse:{bpm,beats:secondary,beatUnit:4,subdivision:1},name,focus,primary,secondary,primaryOn,secondaryOn};}
+        break;
+      }
       case 'repetitions':candidate={kind:p.kind,task:text('task'),target:n('target'),pulse:readPulse?.(data)};break;
       case 'chord-changes':candidate={kind:p.kind,chords:list('chords'),target:n('target'),technique:text('technique'),pulse:readPulse?.(data)};break;
       case 'groove':candidate={kind:p.kind,pulse:readPulse?.(data),key:text('key'),style:text('style'),focus:text('grooveFocus'),progression:text('progression')};break;

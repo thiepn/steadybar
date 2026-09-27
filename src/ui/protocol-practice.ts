@@ -4,6 +4,7 @@ import { protocolDefinition } from '../domain/profiles.js';
 import { fretPrompt, noteName, NOTE_NAMES, patternFits, protocolSummary, scaleOffsets } from '../domain/protocols.js';
 import { drumGridStepLabels, DRUM_GRID_VOICES } from '../domain/drum-grid.js';
 import { DRUM_DYNAMIC_SURFACES, drumDynamicsLevelLabel } from '../domain/drum-dynamics.js';
+import { rhythmConfigFromProtocol, rhythmCyclePositions, rhythmLayerLabels, subdivisionName } from '../domain/rhythm-lab.js';
 import { outcomeSummary } from '../domain/protocol-analytics.js';
 import { reference } from '../audio/reference.js';
 import { audio } from '../audio/engine.js';
@@ -16,7 +17,7 @@ import { el } from './dom.js';
 
 export interface TaskPanel {node:HTMLElement;update:(block:PracticeBlock)=>void;cleanup:()=>void}
 export function taskPanel(initial:PracticeBlock):TaskPanel {
-  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined,dynamicsGrid:HTMLElement|undefined,phraseTimeline:HTMLElement|undefined,phraseGrid:HTMLElement|undefined,phraseBarIndex=-1;let renderPhraseBar:((index:number)=>void)|undefined;
+  let block=initial,stamp='',restUntil=0,drumGrid:HTMLElement|undefined,dynamicsGrid:HTMLElement|undefined,rhythmVisual:HTMLElement|undefined,phraseTimeline:HTMLElement|undefined,phraseGrid:HTMLElement|undefined,phraseBarIndex=-1;let renderPhraseBar:((index:number)=>void)|undefined;
   const p=initial.protocolSnapshot;
   const node=el('section',{class:'protocol-task','data-protocol':p?.kind??'legacy'}),heading=el('h2',{class:'task-heading'}),cue=el('p',{class:'task-cue'}),detail=el('p',{class:'muted small'}),actions=el('div',{class:'task-actions'}),feedback=el('p',{class:'task-feedback',role:'status'}),recent=el('p',{class:'muted small task-result'});
   if(!p||p.kind==='tempo')return {node,update:()=>{},cleanup:()=>reference.stop()};
@@ -118,6 +119,19 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       }));
     node.insertBefore(dynamicsGrid,actions);
     actions.append(button('Review dynamics',()=>{ensureStarted();const step=state().step;formDialog('Dynamics review',[score('rating','Dynamic control / contrast'),textarea('note','Did the intended levels stay distinct without changing pulse, tone, or relaxation?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save review');},'secondary'));
+  }else if(p.kind==='drum-rhythm'){
+    const config=rhythmConfigFromProtocol(p),labels=rhythmLayerLabels(config);
+    rhythmVisual=el('div',{class:'focus-rhythm-visual rhythm-visual','aria-label':'Rhythm relationship score'});
+    if(config.mode==='subdivision-switch'){
+      rhythmVisual.append(el('div',{class:'rhythm-stage-grid'},...config.sequence.map((stage,index)=>el('div',{class:'rhythm-stage-card','data-stage-index':index},el('strong',{},`${index+1}. ${subdivisionName(stage)}`),el('span',{class:'muted small'},`${config.barsPerStage} bar${config.barsPerStage===1?'':'s'} · ${stage} pulse${stage===1?'':'s'} per beat`),el('div',{class:'rhythm-stage-dots'},...Array.from({length:stage},(_,part)=>el('span',{class:part===0?'primary':''},String(part+1))))))));
+    }else{
+      const positions=rhythmCyclePositions(config);
+      const lane=(label:string,layer:'primary'|'secondary',values:number[],on:boolean)=>el('div',{class:`rhythm-lane ${on?'':'muted-layer'}`},el('strong',{},`${label} · ${on?'on':'off'}`),el('div',{class:'rhythm-lane-track'},...values.map((position,index)=>el('span',{class:`rhythm-marker layer-${layer}`,'data-layer':layer,'data-pos':index,style:`left:${(position*100).toFixed(4)}%`},String(index+1)))));
+      rhythmVisual.append(lane(labels[0],'primary',positions.primary,p.primaryOn),lane(labels[1],'secondary',positions.secondary,p.secondaryOn));
+    }
+    rhythmVisual.append(el('p',{class:'muted small rhythm-focus-layers'},`${labels[0]} ${p.primaryOn?'on':'off'} · ${labels[1]} ${p.secondaryOn?'on':'off'}`));
+    node.insertBefore(rhythmVisual,actions);
+    actions.append(button('Review rhythm',()=>{ensureStarted();const step=state().step;formDialog('Rhythm review',[score('rating','Pulse / relationship control'),textarea('note','Did the underlying pulse stay stable while the authored timing relationship remained clear?','',3)],async form=>log({...base(),kind:'reflection',rating:formNumber(form,'rating'),note:formText(form,'note')},step),'Save review');},'secondary'));
   }else if(p.kind==='sight-reading'){
     actions.append(button('Log reading attempt',()=>{ensureStarted();const step=state().step;formDialog('Reading result',[
       input('errors','Note / rhythm errors',0,'number',{min:0,max:1000,step:1,required:true}),score('continuity','Continuity'),textarea('note','Observation','',2),
@@ -127,7 +141,7 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
   }
   node.append(button(p.kind==='vocal-pattern'?'Adjust range / pattern':'Task settings',configure,'ghost compact'));
   const update=(current:PracticeBlock)=>{
-    block=current;const state=block.protocolState??{step:0,clean:0,total:0},next=JSON.stringify([state,block.outcomes?.length,practice.session?.runtime.phase,practice.beat?.bar,practice.beat?.beat,practice.beat?.part]);if(next===stamp)return;stamp=next;
+    block=current;const state=block.protocolState??{step:0,clean:0,total:0},next=JSON.stringify([state,block.outcomes?.length,practice.session?.runtime.phase,practice.beat?.bar,practice.beat?.beat,practice.beat?.part,practice.rhythmEvent?.cycle,practice.rhythmEvent?.layer,practice.rhythmEvent?.cyclePosition,practice.rhythmEvent?.stage]);if(next===stamp)return;stamp=next;
     heading.textContent=protocolDefinition(p.kind).label;cue.textContent=protocolSummary(p);detail.textContent=protocolDefinition(p.kind).description;
     if(p.kind==='chord-changes'||p.kind==='repetitions')detail.textContent=`${state.clean} clean / ${state.total} attempts · goal ${p.target} clean`;
     if(p.kind==='scale-cycle')detail.textContent=[p.motion==='contrary'?'Contrary motion':'Parallel motion',p.fingering,p.position].filter(Boolean).join(' · ');
@@ -149,6 +163,13 @@ export function taskPanel(initial:PracticeBlock):TaskPanel {
       cue.textContent=`${p.name} · ${p.pulse.bpm} BPM`;detail.textContent=p.focus;
       const currentIndex=practice.beat&&['running','countin'].includes(practice.session?.runtime.phase??'')?practice.beat.beat*p.pulse.subdivision+practice.beat.part:-1;
       dynamicsGrid?.querySelectorAll<HTMLElement>('.dynamics-cell').forEach(cell=>cell.classList.toggle('current',Number(cell.dataset.index)===currentIndex));
+    }
+    if(p.kind==='drum-rhythm'){
+      const config=rhythmConfigFromProtocol(p,practice.session?.runtime.bpm??p.pulse.bpm),labels=rhythmLayerLabels(config),event=practice.rhythmEvent,phase=practice.session?.runtime.phase??'ready',active=!!event&&phase==='running'&&!event.countingIn;
+      cue.textContent=`${p.name} · ${practice.session?.runtime.bpm??p.pulse.bpm} BPM`;detail.textContent=`${p.focus} · ${labels[0]} ${p.primaryOn?'on':'off'} · ${labels[1]} ${p.secondaryOn?'on':'off'}`;
+      rhythmVisual?.querySelectorAll('.on').forEach(node=>node.classList.remove('on'));
+      if(active&&config.mode==='subdivision-switch'&&event.stage!==undefined)rhythmVisual?.querySelector<HTMLElement>(`[data-stage-index="${event.stage}"]`)?.classList.add('on');
+      else if(active&&config.mode!=='subdivision-switch')rhythmVisual?.querySelector<HTMLElement>(`[data-layer="${event.layer}"][data-pos="${event.cyclePosition}"]`)?.classList.add('on');
     }
     if(p.kind==='sight-reading')cue.textContent=p.material||'Choose a short passage from your own score';
     if(p.kind==='scale-cycle')cue.textContent=`${NOTE_NAMES[p.keys[state.step%p.keys.length]!]} ${p.quality.replaceAll('-',' ')} · ${p.hands==='not-applicable'?p.position:p.hands+' hands'} · ${p.octaves} octave${p.octaves===1?'':'s'}`;

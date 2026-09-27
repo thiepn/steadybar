@@ -19,7 +19,7 @@ const dataset=type=>{const p=profile(type),c=starterContent(p),data=migratePract
 const block=e=>({id:'b',profileId:e.profileId,type:'exercise',exerciseId:e.id,title:e.name,targetSeconds:60,bpm:protocolPulse(exerciseProtocol(e))?.bpm,notes:'',order:0});
 const result=extra=>({id:'r',timestamp:at,note:'',source:'self-report',...extra});
 const complete=(data,e,r)=>{const s=createSession([block(e)],data);s.blocks[0].outcomes=r?[r]:[];s.blocks[0].actualActiveSeconds=60;return finishBlock(s);};
-const baseCounts={drums:39,guitar:36,bass:31,piano:36,voice:31};
+const baseCounts={drums:42,guitar:36,bass:31,piano:36,voice:31};
 for(const type of Object.keys(baseCounts)){
  test(`${type}: original starter library validates with distinct skills and protocols`,()=>{
   const d=dataset(type);assert.equal(d.exercises.length,baseCounts[type]);assert.ok(new Set(d.exercises.map(e=>e.skillArea)).size>=5);
@@ -49,6 +49,21 @@ test('drum starter content ships dedicated dynamics scores and reconciliation ne
  const reconciled=reconcileStarterContent(d);
  assert.equal(reconciled.exercises.find(e=>e.id===existingId).name,'User-edited single strokes');
  assert.equal(reconciled.exercises.filter(e=>/dynamics-\d+$/.test(e.id)).length,3);
+ assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
+});
+
+test('drum starter content ships first-class Rhythm practice across all three Lab modes',()=>{
+ const d=dataset('drums'),rhythm=d.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
+ assert.equal(rhythm.length,3);assert.deepEqual(rhythm.map(e=>e.protocol.mode).sort(),['polyrhythm','subdivision-switch','swing']);
+ for(const e of rhythm){
+  assert.equal(e.category,'timing');assert.equal(e.skillArea,'timing');assert.equal(e.primarySkillId,'drums.timing');
+  assert.ok(e.secondarySkillIds.includes('drums.groove'));assert.ok(e.secondarySkillIds.includes('drums.coordination'));
+  assert.equal(e.protocol.kind,'drum-rhythm');assert.equal(e.protocol.primaryOn||e.protocol.secondaryOn,true);
+  assertProtocolCompatible(e.protocol,d.profiles[0]);assert.deepEqual(validateProtocol(e.protocol),e.protocol);
+ }
+ d.exercises=d.exercises.filter(e=>!/^rhythm-\d+$/.test(e.id.split('.').at(-1)??''));
+ const reconciled=reconcileStarterContent(d);
+ assert.equal(reconciled.exercises.filter(e=>/^rhythm-\d+$/.test(e.id.split('.').at(-1)??'')).length,3);
  assert.deepEqual(reconcileStarterContent(reconciled),reconciled);
 });
 

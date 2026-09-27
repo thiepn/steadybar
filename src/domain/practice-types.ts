@@ -15,6 +15,11 @@ export interface PracticeProfile {
   attribution?: 'selected' | 'exercise-instrument' | 'unresolved-history';
 }
 export interface Pulse { bpm: number; beats: number; beatUnit: 4 | 8; subdivision: 1 | 2 | 3 | 4 }
+interface DrumRhythmBase { kind: 'drum-rhythm'; pulse: Pulse; name: string; focus: string; primaryOn: boolean; secondaryOn: boolean }
+export type DrumRhythmProtocol =
+  | (DrumRhythmBase & { mode: 'swing'; ratio: number })
+  | (DrumRhythmBase & { mode: 'subdivision-switch'; sequence: (1 | 2 | 3 | 4)[]; barsPerStage: 1 | 2 | 4 })
+  | (DrumRhythmBase & { mode: 'polyrhythm'; primary: 2 | 3 | 4 | 5; secondary: 2 | 3 | 4 | 5 });
 export type Hands = 'left' | 'right' | 'together' | 'not-applicable';
 export type ScaleQuality = 'major' | 'natural-minor' | 'minor-pentatonic' | 'major-pentatonic' | 'chromatic';
 export type PracticeProtocol =
@@ -23,6 +28,7 @@ export type PracticeProtocol =
   | { kind: 'drum-grid'; pulse: Pulse; name: string; focus: string; lanes: DrumGridLane[] }
   | { kind: 'drum-phrase'; pulse: Pulse; name: string; focus: string; bars: DrumPhraseBar[] }
   | { kind: 'drum-dynamics'; pulse: Pulse; name: string; focus: string; lanes: DrumDynamicsLane[] }
+  | DrumRhythmProtocol
   | { kind: 'repetitions'; task: string; target: number; pulse?: Pulse }
   | { kind: 'chord-changes'; chords: string[]; target: number; technique: string; pulse?: Pulse }
   | { kind: 'groove'; pulse: Pulse; key: string; style: string; focus: 'time' | 'muting' | 'articulation' | 'coordination'; progression: string }
