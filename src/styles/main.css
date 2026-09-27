@@ -240,6 +240,15 @@ table {width:100%;border-collapse:collapse;font-size:12px}th,td {padding:10px 8p
 .launcher-options {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-block:1px solid var(--border);margin:0 0 28px}
 .launcher-option,.button.launcher-option {display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:16px 8px;border:0;border-radius:0;font-size:13px;color:var(--muted)}
 .launcher-option>svg {width:17px;height:17px}.launcher-option:hover {background:var(--surface-soft);color:var(--text)}
+.practice-start-plan{margin-bottom:22px}
+.practice-start-plan .launch-sequence{margin-bottom:14px}
+.practice-plan-actions{justify-content:flex-start}
+.practice-start-grid{align-items:start;gap:28px}
+.practice-start-grid>.panel{margin-bottom:24px}
+.practice-quick-card .launcher-options{grid-template-columns:repeat(2,minmax(0,1fr));margin:0;border-block:0}
+.practice-quick-card .launcher-option,.practice-quick-card .button.launcher-option{min-height:52px;padding:12px 8px;border-bottom:1px solid var(--border)}
+.practice-free-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.practice-free-card>.button.primary{min-height:44px}
 .quick-exercises {display:flex;gap:12px;flex-wrap:wrap}.button.quick-exercise {justify-content:flex-start;border-bottom:1px solid var(--border);border-radius:0;padding-left:0}
 .metronome-grid {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(240px,1fr);gap:40px;align-items:start}
 .metronome-main {background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:22px 28px;margin:0}
@@ -402,7 +411,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .setlist-song-row {display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px}.setlist-song-row>.block-index {grid-row:1 / 3}.song-row-title {grid-column:2}.song-row-meta {grid-column:2;min-width:0}.setlist-song-row>.actions {grid-column:2;justify-content:flex-end}.song-row-title>a {font-size:15px}
   .history-card {gap:12px;padding:18px 4px;align-items:flex-start;flex-wrap:wrap}.history-date {min-width:64px;font-size:11px}.history-main {min-width:140px}.history-main h2 {font-size:14px}.history-duration {flex-direction:row;flex-basis:100%;align-items:center;justify-content:space-between;padding-left:76px}.history-duration>strong {font-size:20px}.history-block-row {gap:10px;font-size:12px}.history-block-row .attempt-tags {margin:0}.review-metrics {flex-wrap:wrap;gap:16px}.review-block>.split {flex-wrap:wrap}
   .range-toolbar {gap:10px}.range-toolbar>.field {min-width:100px;flex:1}.range-toolbar>.actions {margin:0;flex-basis:100%}.range-toolbar .segmented {flex-wrap:wrap}.tempo-chart-stats {margin-bottom:14px}.tempo-chart-header>.field {max-width:none;min-width:0;flex-basis:100%}.distribution-row {grid-template-columns:92px minmax(30px,1fr) auto;gap:8px}
-  .launcher-options {grid-template-columns:repeat(2,minmax(0,1fr))}.launcher-option,.button.launcher-option {padding:14px 4px;font-size:12px}.launch-sequence>li {flex-wrap:wrap;gap:3px 12px}.quick-exercises {gap:8px}
+  .launcher-options {grid-template-columns:repeat(2,minmax(0,1fr))}.launcher-option,.button.launcher-option {padding:14px 4px;font-size:12px}.launch-sequence>li {flex-wrap:wrap;gap:3px 12px}.quick-exercises {gap:8px}.practice-start-grid{gap:0}.practice-plan-actions>.button{flex:1 1 160px}.practice-quick-card .launcher-option,.practice-quick-card .button.launcher-option{padding:12px 6px}.practice-free-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .metronome-grid {grid-template-columns:minmax(0,1fr);gap:24px}.metronome-main {padding:16px}.metronome-side .panel {margin-bottom:16px}.metronome-page .page-heading {margin-bottom:20px}
   input.metronome-bpm {font-size:88px;height:108px;letter-spacing:-5px}.tempo-display {margin:8px 0}.standalone-tempo-steps {gap:4px}.button.tempo-step {font-size:12px;min-height:40px}
   .metronome-transport {gap:10px;margin:12px 0 20px}.metronome-play {font-size:12px}.tap-tempo>.button {font-size:12px}.tap-tempo>.small {font-size:10px}.metronome-config {grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:8px}.metronome-config>.field:last-child {grid-column:1 / -1}.metronome-config .field:last-child {display:grid;grid-template-columns:1fr 1fr;align-items:center;margin-bottom:12px}.metronome-config select {font-size:13px;min-height:44px}.metronome-config label {font-size:11px}.meter-workspace {padding-top:16px}
