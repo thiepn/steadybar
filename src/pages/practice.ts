@@ -227,7 +227,7 @@ export function activePracticePage():Page{
       const hasTempo=!block.protocolSnapshot||!!protocolPulse(block.protocolSnapshot),tempoRating=!block.protocolSnapshot||block.protocolSnapshot.kind==='tempo';
       main.classList.toggle('without-tempo',!hasTempo);page.classList.toggle('protocol-practice',!!block.protocolSnapshot&&block.protocolSnapshot.kind!=='tempo');
       mount(tempoReadout,readouts,null,hasTempo);mount(beats,main,taskHost,hasTempo);mount(metro,controls,null,hasTempo);
-      attempts.hidden=!tempoRating;trainerButton.hidden=!tempoRating;timingButton.hidden=!hasTempo;
+      attempts.hidden=!tempoRating;trainerButton.hidden=!tempoRating;timingButton.hidden=!hasTempo||block.protocolSnapshot?.kind==='drum-rhythm';
       ratingButtons.forEach(b=>b.disabled=phase==='ready'||phase==='countin');
       summaryButtons.forEach(b=>b.disabled=phase==='ready'||phase==='countin');
       error.hidden=!practice.error;text(error,practice.error);
