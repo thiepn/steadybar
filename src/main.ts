@@ -27,6 +27,7 @@ import { weeklyReviewPage } from './pages/review.js';
 import { settingsPage } from './pages/settings.js';
 import { profilesPage } from './pages/profiles.js';
 import { practicePage, activePracticePage } from './pages/practice.js';
+import { drumToolsPage } from './pages/drum-tools.js';
 import { metronomePage } from './pages/metronome.js';
 import { timingLabPage } from './pages/timing-lab.js';
 import { midiLabPage } from './pages/midi-lab.js';
@@ -38,7 +39,10 @@ import { rhythmLabPage } from './pages/rhythm-lab.js';
 import { repertoireAudioPage } from './pages/repertoire-audio.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/rudiments','Rudiment Lab','routine'],['/phrases','Phrase Lab','routine'],['/drum-grid','Grid Lab','routine'],['/timing-lab','Timing Lab','pulse'],['/pocket','Pocket Lab','pulse'],['/dynamics','Dynamics Lab','routine'],['/rhythm','Rhythm Lab','pulse'],['/midi-lab','MIDI Lab','pulse'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
+const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/drums','Drum Tools','routine'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
+const drumToolRoutes=new Set(['/rudiments','/phrases','/drum-grid','/timing-lab','/pocket','/dynamics','/rhythm','/midi-lab']);
+const routeTitles:Record<string,string>={'/rudiments':'Rudiment Lab','/phrases':'Phrase Lab','/drum-grid':'Grid Lab','/timing-lab':'Timing Lab','/pocket':'Pocket Lab','/dynamics':'Dynamics Lab','/rhythm':'Rhythm Lab','/midi-lab':'MIDI Lab'};
+const visibleNavigation=()=>navigation.filter(([href])=>href!=='/drums'||activeProfile(store.snapshot()).instrumentType==='drums');
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
@@ -46,6 +50,7 @@ function route(path:string):Page{
   if(path==='/')return todayPage();
   if(path==='/practice/active')return activePracticePage();
   if(path==='/practice')return practicePage();
+  if(path==='/drums')return drumToolsPage();
   if(path==='/metronome')return metronomePage();
   if(path==='/timing-lab')return timingLabPage('timing');
   if(path==='/pocket')return timingLabPage('pocket');
@@ -72,10 +77,10 @@ function route(path:string):Page{
   if(path==='/settings')return settingsPage();
   return {node:el('div',{class:'empty-state'},el('h1',{},'Page not found.'),el('p',{},'This page does not exist.'),link('Open Today','/','button primary'))};
 }
-const activeLink=(href:string,path:string)=>href==='/'?path==='/':path===href||path.startsWith(`${href}/`);
+const activeLink=(href:string,path:string)=>href==='/'?path==='/':href==='/drums'?(path==='/drums'||drumToolRoutes.has(path)):path===href||path.startsWith(`${href}/`);
 function moreMenu():void{
   const menu=el('div',{class:'more-nav'}),handle=dialog('Navigation',[menu]);
-  for(const [path,label,symbol] of navigation)menu.append(button(label,()=>{handle.close();navigate(path);},'more-link',symbol));
+  for(const [path,label,symbol] of visibleNavigation())menu.append(button(label,()=>{handle.close();navigate(path);},'more-link',symbol));
 }
 function render():void{
   const path=routePath(),changed=path!==renderedPath;
@@ -91,7 +96,7 @@ function render():void{
   if(active)root.replaceChildren(main);
   else{
     const nav=el('nav',{'aria-label':'Main navigation',class:'sidebar-nav'});
-    for(const [href,label,symbol] of navigation){
+    for(const [href,label,symbol] of visibleNavigation()){
       const group=href==='/'?'Practice':href==='/library'?'Collection':href==='/goals'?'Review':null;
       if(group)nav.append(el('div',{class:'nav-group-label','aria-hidden':'true'},group));
       const a=el('a',{href:`#${href}`,title:label,'aria-label':label,class:`nav-link ${activeLink(href,path)?'active':''}`},icon(symbol),el('span',{},label));
@@ -122,7 +127,7 @@ function render():void{
   }
   const disconnectCharts=path==='/progress'?()=>{}:observeCharts(main),cleanup=current.cleanup;
   current.cleanup=()=>{disconnectCharts();cleanup?.();};
-  document.title=`${path==='/practice/active'?'Practice':path==='/profiles'?'Profiles':navigation.find(([p])=>activeLink(p,path))?.[1]||'Steadybar'} · Steadybar`;
+  document.title=`${path==='/practice/active'?'Practice':path==='/profiles'?'Profiles':routeTitles[path]??visibleNavigation().find(([p])=>activeLink(p,path))?.[1]||'Steadybar'} · Steadybar`;
   renderedPath=path;
   if(changed){window.scrollTo(0,0);main.focus({preventScroll:true});}
   else if(focusLabel&&!document.querySelector('dialog[open]')){
