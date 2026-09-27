@@ -87,7 +87,7 @@ test('durable rhythm protocols preserve structural pulse semantics for Focus Pla
   assert.deepEqual(switching.pulse,{bpm:100,beats:3,beatUnit:4,subdivision:1});
   const poly=rhythmProtocolFromConfig({mode:'polyrhythm',bpm:100,primary:3,secondary:2});
   assert.deepEqual(poly.pulse,{bpm:100,beats:2,beatUnit:4,subdivision:1});
-  assert.throws(()=>rhythmProtocolFromConfig({mode:'swing',bpm:100,beats:4,ratio:66.5},false,false),/audible layer/i);
+  assert.throws(()=>rhythmProtocolFromConfig({mode:'swing',bpm:100,beats:4,ratio:66.5},false,false),/layer.*audible/i);
 });
 
 test('rhythm cycle events carry beat/part/stage metadata for audio-clock UI following',()=>{
