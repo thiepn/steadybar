@@ -50,6 +50,10 @@ export class RhythmLabAudioEngine {
       const event:RhythmPlaybackEvent={offsetSeconds:index*beatSeconds,time,layer:'primary',accent:index===0?2:1,cycle:-1,cyclePosition:index,label:`Count-in ${index+1}`,countingIn:true};
       this.click(event);this.visuals.push(event);
     }
+    if(this.countInIndex>=this.settings.countInBeats&&cycle.durationSeconds>0&&stale>this.practiceStartTime){
+      const catchUp=Math.floor((stale-this.practiceStartTime)/cycle.durationSeconds);
+      if(catchUp>this.cycleIndex){this.cycleIndex=catchUp;this.eventIndex=0;}
+    }
     while(this.countInIndex>=this.settings.countInBeats){
       const source=cycle.events[this.eventIndex];if(!source)break;
       const time=this.practiceStartTime+this.cycleIndex*cycle.durationSeconds+source.offsetSeconds;if(time>=horizon)break;
