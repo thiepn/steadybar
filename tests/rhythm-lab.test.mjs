@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {rhythmConfigFromProtocol,rhythmCycle,rhythmCyclePositions,rhythmProtocolFromConfig,subdivisionName,swingFeelLabel,validateRhythmLabConfig} from '../dist/app/domain/rhythm-lab.js';
+import {rhythmConfigFromProtocol,rhythmCountInAccent,rhythmCycle,rhythmCyclePositions,rhythmProtocolFromConfig,subdivisionName,swingFeelLabel,validateRhythmLabConfig} from '../dist/app/domain/rhythm-lab.js';
 import {validateProtocol} from '../dist/app/domain/practice-validation.js';
 
 test('swing cycle places the offbeat at the configured ratio without moving the beat',()=>{
@@ -64,6 +64,15 @@ test('rhythm lab validation rejects ambiguous or unsafe configurations',()=>{
   assert.equal(subdivisionName(4),'Sixteenth notes');
 });
 
+
+test('Rhythm count-ins preserve a downbeat accent on every translated bar',()=>{
+  const fourFour={mode:'swing',bpm:80,beats:4,ratio:66.5};
+  assert.deepEqual(Array.from({length:8},(_,i)=>rhythmCountInAccent(fourFour,i)),[2,1,1,1,2,1,1,1]);
+  const fiveFour={mode:'subdivision-switch',bpm:80,beats:5,sequence:[2,3],barsPerStage:1};
+  assert.deepEqual(Array.from({length:10},(_,i)=>rhythmCountInAccent(fiveFour,i)),[2,1,1,1,1,2,1,1,1,1]);
+  const poly={mode:'polyrhythm',bpm:80,primary:5,secondary:3};
+  assert.deepEqual(Array.from({length:6},(_,i)=>rhythmCountInAccent(poly,i)),[2,1,1,2,1,1]);
+});
 
 test('Rhythm Lab configurations round-trip into durable drum practice protocols',()=>{
   const configs=[
