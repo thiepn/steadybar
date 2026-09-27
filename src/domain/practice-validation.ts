@@ -44,20 +44,23 @@ export const validateProtocol:Validator<PracticeProtocol>=(v,p='Protocol')=>{
     }
     case 'drum-rhythm':{
       if(rhythmMode(v)==='swing'){
-        const r=obj({kind:one('drum-rhythm'),mode:one('swing'),pulse,name:text(160,1),focus:text(2000,1),ratio:num(50,75)})(v,p);
+        const r=obj({kind:one('drum-rhythm'),mode:one('swing'),pulse,name:text(160,1),focus:text(2000,1),ratio:num(50,75),primaryOn:bool,secondaryOn:bool})(v,p);
         if(r.pulse.beatUnit!==4||r.pulse.subdivision!==2||r.pulse.beats<2||r.pulse.beats>7)fail(p,'swing practice uses 2–7 quarter-note beats with two authored placements per beat');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
         return r;
       }
       if(rhythmMode(v)==='subdivision-switch'){
-        const r=obj({kind:one('drum-rhythm'),mode:one('subdivision-switch'),pulse,name:text(160,1),focus:text(2000,1),sequence:arr(one(1,2,3,4),8),barsPerStage:one(1,2,4)})(v,p);
+        const r=obj({kind:one('drum-rhythm'),mode:one('subdivision-switch'),pulse,name:text(160,1),focus:text(2000,1),sequence:arr(one(1,2,3,4),8),barsPerStage:one(1,2,4),primaryOn:bool,secondaryOn:bool})(v,p);
         if(r.pulse.beatUnit!==4||r.pulse.subdivision!==1||r.pulse.beats<2||r.pulse.beats>7)fail(p,'subdivision-switch practice uses a 2–7 beat quarter-note anchor pulse');
         if(!r.sequence.length)fail(p,'subdivision switching needs at least one stage');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
         return r;
       }
       if(rhythmMode(v)==='polyrhythm'){
-        const r=obj({kind:one('drum-rhythm'),mode:one('polyrhythm'),pulse,name:text(160,1),focus:text(2000,1),primary:one(2,3,4,5),secondary:one(2,3,4,5)})(v,p);
+        const r=obj({kind:one('drum-rhythm'),mode:one('polyrhythm'),pulse,name:text(160,1),focus:text(2000,1),primary:one(2,3,4,5),secondary:one(2,3,4,5),primaryOn:bool,secondaryOn:bool})(v,p);
         if(r.primary===r.secondary)fail(p,'polyrhythm layers must use different counts');
         if(r.pulse.beatUnit!==4||r.pulse.subdivision!==1||r.pulse.beats!==r.secondary)fail(p,'polyrhythm anchor meter must match the secondary quarter-note count');
+        if(!r.primaryOn&&!r.secondaryOn)fail(p,'drum rhythm practice needs at least one audible layer');
         return r;
       }
       return fail(p,'unknown drum rhythm mode');
