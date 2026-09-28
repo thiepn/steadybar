@@ -1729,6 +1729,39 @@ class Workbench(e2e.MusicPracticeTests):
 
 
 
+    def test_85_practice_returns_to_exact_launch_surface_after_leave_and_completion(self):
+        self.onboard()
+        self.route('/rhythm')
+        expect(self.page.get_by_role('heading',name='Rhythm Lab',exact=True)).to_be_visible()
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        origin=self.read("load('practice/controller.js').practice.session.returnTo")
+        self.assertEqual(origin,{'path':'/rhythm','label':'Rhythm Lab'})
+
+        self.page.get_by_role('button',name='Save & leave',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/rhythm$'))
+        expect(self.page.get_by_role('heading',name='Rhythm Lab',exact=True)).to_be_visible()
+
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        self.page.locator('.focus-session-menu > summary').click()
+        self.page.get_by_role('button',name='Finish session',exact=True).click()
+        self.confirm('Finish session')
+        expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('link',name='Back to Rhythm Lab',exact=True).first).to_be_visible()
+        expect(self.page.get_by_text('return to Rhythm Lab.',exact=False)).to_be_visible()
+
+        self.page.get_by_role('link',name='Back to Rhythm Lab',exact=True).first.click()
+        self.page.wait_for_url(re.compile(r'.*#/rhythm$'))
+        expect(self.page.get_by_role('heading',name='Rhythm Lab',exact=True)).to_be_visible()
+
+        session=self.read("load('app/store.js').store.snapshot().sessions.at(-1)")
+        self.assertEqual(session['status'],'completed')
+        self.assertEqual(session['returnTo'],{'path':'/rhythm','label':'Rhythm Lab'})
+
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
