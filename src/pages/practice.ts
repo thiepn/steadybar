@@ -204,7 +204,7 @@ export function activePracticePage():Page{
     el('div',{class:'focus-result-heading'},el('span',{class:'label'},'How did that block feel?'),el('span',{class:'muted small'},'Saves result and moves on')),
     el('div',{class:'focus-result-buttons'},summaryButtons),
     summaryFeedback);
-  const primaryControls=el('div',{class:'focus-primary-controls','aria-label':'Practice controls'},transport,resultDock);
+  const primaryControls=el('div',{class:'focus-primary-controls',role:'group','aria-label':'Practice controls'},transport,resultDock);
   const secondary=el('section',{class:'focus-secondary'},attempts,cues,limitations,tools,queueDrawer);
 
   const main=el('section',{class:'practice-workspace focus-workspace'},identity,readouts,beats,primaryControls,taskHost,progressText,notesText,error,next,secondary);
