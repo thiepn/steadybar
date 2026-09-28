@@ -129,12 +129,12 @@ function render():void{
     const appearance=button('Appearance',openAppearance,'sidebar-appearance','sun');
     appearance.setAttribute('aria-haspopup','dialog');appearance.title='Appearance';
     const secondaryActive=!sidebarItems.some(([href])=>activeLink(href,path))&&path!=='/settings';
-    const more=button('More',moreMenu,'sidebar-footer-action','more');more.setAttribute('aria-haspopup','dialog');if(secondaryActive)more.classList.add('active');
+    const sidebarMore=button('More',moreMenu,'sidebar-footer-action','more');sidebarMore.setAttribute('aria-haspopup','dialog');if(secondaryActive)sidebarMore.classList.add('active');
     const settings=el('a',{href:'#/settings',class:`sidebar-footer-link ${activeLink('/settings',path)?'active':''}`,'aria-label':'Settings'},icon('settings'),el('span',{},'Settings'));
     if(activeLink('/settings',path))settings.setAttribute('aria-current','page');
     const sidebar=el('aside',{class:'sidebar'},
       el('a',{href:'#/',class:'brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
-      profilePicker(),makeSearch(),nav,el('div',{class:'sidebar-footer'},more,settings,appearance));
+      profilePicker(),makeSearch(),nav,el('div',{class:'sidebar-footer'},sidebarMore,settings,appearance));
     const header=el('header',{class:'topbar'},
       el('a',{href:'#/',class:'mobile-brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
       el('div',{class:'actions'},profilePicker(),makeSearch(),iconButton('Appearance','sun',openAppearance)));
