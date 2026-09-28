@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.36.0 — Today Surface Hierarchy & Decision-Friction Reduction — 2026-09-28
+
+- Make the current **Today’s plan** the dominant surface immediately below unfinished-session recovery.
+- Hide the normal **Start full session** action while another session is unfinished so Resume remains the unambiguous next action.
+- Move plan generation into one progressive **Plan or rebuild today** disclosure; it opens automatically only when no plan exists.
+- Keep Calendar-derived duration/emphasis context inside the planning disclosure next to the controls it actually affects.
+- Put Practice Intelligence and Guided Learning behind a separate **Guidance & learning** disclosure so they no longer compete visually with the current plan.
+- Put saved routines, weekly totals, current goals and recent sessions behind **Review & context** instead of rendering a second dashboard below the plan.
+- Preserve every existing action, recommendation, routine, goal, history link, Calendar default and Autopilot capability.
+- Keep Today responsive from 320px through desktop with clear 44px+ primary controls and no horizontal overflow.
+- Add cross-browser hierarchy regression coverage, including empty-plan defaults, collapsed secondary context, active-session priority and post-build behavior.
+- No persistence, protocol, history, schema or backup-format migration is required.
+
+
 ## 2.35.0 — Practice Surface Simplification — 2026-09-28
 
 - Give **Today** and **Practice** distinct jobs instead of maintaining two partially overlapping dashboards.

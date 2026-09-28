@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Today hierarchy & decision-friction reduction — 2.36.0
+
+Today now has one obvious hierarchy. An unfinished session comes first, followed by the current **Today’s plan** and its single session-start action. Plan-generation controls move into **Plan or rebuild today**, which opens automatically only when no plan exists and otherwise stays out of the way.
+
+Practice Intelligence and Guided Learning live under **Guidance & learning**. Saved routines, weekly totals, goals and recent sessions live under **Review & context**. These systems are unchanged; the redesign changes when they compete for attention, not what data or actions they provide.
+
+The result is a plan-first Today surface with planning, guidance and review available on demand rather than all rendered at full weight simultaneously. No data migration is required.
+
 ## Practice surface simplification — 2.35.0
 
 **Today** and **Practice** now have deliberately different roles. Today remains the planning/dashboard surface: Autopilot, Practice Intelligence, Calendar context, guided learning, goals, routines and editable multi-block planning all stay there. Practice is the execution surface: resume unfinished work, start today’s existing plan, open a focused drum tool, or quickly launch one exercise/routine/song/free session.

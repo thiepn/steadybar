@@ -711,6 +711,7 @@ class Workbench(e2e.MusicPracticeTests):
           d.dailyPlans=[];await load('db/database.js').replaceData(d);await store.refresh();return {id:exercise.id,name:exercise.name};
         })()""")
         self.route('/')
+        self.page.locator('details.today-guidance summary').click()
         expect(self.page.get_by_role('heading',name='What matters now',exact=True)).to_be_visible()
         row=self.page.locator('.today-intelligence-row').filter(has_text=fixture['name']).first
         expect(row).to_be_visible()
@@ -1601,8 +1602,10 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_have_count(0)
 
         self.route('/')
+        expect(self.page.locator('details.today-planning')).to_have_attribute('open','')
         expect(self.page.get_by_role('button',name='Start Autopilot',exact=True)).to_be_visible()
         expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_be_visible()
+        expect(self.page.locator('details.today-guidance')).not_to_have_attribute('open','')
 
         self.route('/practice')
         for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
@@ -1614,6 +1617,48 @@ class Workbench(e2e.MusicPracticeTests):
                 box=control.bounding_box();self.assertIsNotNone(box)
                 self.assertGreaterEqual(box['height'],44)
 
+
+
+    def test_83_today_plan_first_hierarchy_and_progressive_disclosure(self):
+        self.onboard()
+        self.route('/')
+        planning=self.page.locator('details.today-planning')
+        guidance=self.page.locator('details.today-guidance')
+        review=self.page.locator('details.today-review')
+        expect(self.page.get_by_role('heading',name='Today’s plan',exact=True)).to_be_visible()
+        expect(planning).to_have_attribute('open','')
+        expect(guidance).not_to_have_attribute('open','')
+        expect(review).not_to_have_attribute('open','')
+        expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='What matters now',exact=True)).to_have_count(0)
+
+        self.page.get_by_role('button',name='Build plan',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("load('app/store.js').store.view().dailyPlans[0] ?? null")
+            if plan and len(plan.get('blocks',[]))>0:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan)
+        expect(self.page.get_by_role('button',name='Start full session',exact=True)).to_be_visible()
+        expect(self.page.locator('details.today-planning')).not_to_have_attribute('open','')
+        expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_be_hidden()
+
+        self.page.locator('details.today-planning summary').click()
+        expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_be_visible()
+        self.page.locator('details.today-review summary').click()
+        expect(self.page.get_by_role('heading',name='Current goals',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Recent sessions',exact=True)).to_be_visible()
+
+        self.page.get_by_role('button',name='Start full session',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        self.page.get_by_role('button',name='Save & leave',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/$'))
+        expect(self.page.get_by_role('link',name='Resume session',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('button',name='Start full session',exact=True)).to_have_count(0)
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height})
+            self.assert_bounds(width)
 
 
 if __name__=='__main__':
