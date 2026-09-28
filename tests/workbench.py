@@ -1661,6 +1661,73 @@ class Workbench(e2e.MusicPracticeTests):
             self.assert_bounds(width)
 
 
+    def test_84_mobile_practice_flow_keeps_thumb_actions_and_focus_controls_reachable(self):
+        self.onboard()
+        self.page.set_viewport_size({'width':390,'height':844})
+        self.route('/')
+
+        mobile_nav=self.page.get_by_role('navigation',name='Mobile navigation')
+        expect(mobile_nav).to_be_visible()
+        self.assertEqual([x.strip() for x in mobile_nav.locator('span').all_text_contents()],['Today','Practice','Metronome','Drum Tools','More'])
+        expect(mobile_nav.get_by_role('link',name='Drum Tools',exact=True)).to_be_visible()
+        expect(mobile_nav.get_by_role('link',name='Library',exact=True)).to_have_count(0)
+
+        today_dock=self.page.get_by_role('navigation',name='Today quick actions')
+        expect(today_dock).to_be_visible()
+        expect(today_dock.get_by_role('button',name='Plan today',exact=True)).to_be_visible()
+        expect(today_dock.get_by_role('link',name='Practice now',exact=True)).to_be_visible()
+        dock_box=today_dock.bounding_box();nav_box=mobile_nav.bounding_box()
+        self.assertIsNotNone(dock_box);self.assertIsNotNone(nav_box)
+        self.assertLessEqual(dock_box['y']+dock_box['height'],nav_box['y']+2)
+
+        today_dock.get_by_role('button',name='Plan today',exact=True).click()
+        expect(self.page.locator('details.today-planning')).to_have_attribute('open','')
+        self.page.get_by_role('button',name='Build plan',exact=True).click()
+        plan=None
+        for _ in range(70):
+            plan=self.read("load('app/store.js').store.view().dailyPlans[0] ?? null")
+            if plan and len(plan.get('blocks',[]))>0:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan)
+        expect(self.page.get_by_role('navigation',name='Today quick actions').get_by_role('button',name='Start session',exact=True)).to_be_visible()
+
+        mobile_nav=self.page.get_by_role('navigation',name='Mobile navigation')
+        mobile_nav.get_by_role('link',name='Practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice$'))
+        practice_dock=self.page.get_by_role('navigation',name='Practice quick actions')
+        expect(practice_dock.get_by_role('button',name='Start plan',exact=True)).to_be_visible()
+        expect(practice_dock.get_by_role('link',name='Drum Tools',exact=True)).to_be_visible()
+
+        tool_strip=self.page.locator('.practice-launcher .drum-tool-grid')
+        self.assertGreater(tool_strip.evaluate('(e)=>e.scrollWidth'),tool_strip.evaluate('(e)=>e.clientWidth'))
+        first_card=self.page.locator('.practice-launcher .drum-tool-card').first.bounding_box()
+        last_card=self.page.locator('.practice-launcher .drum-tool-card').last.bounding_box()
+        self.assertIsNotNone(first_card);self.assertIsNotNone(last_card)
+        self.assertAlmostEqual(first_card['y'],last_card['y'],delta=3)
+
+        practice_dock.get_by_role('button',name='Start plan',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        self.assertEqual(self.page.locator('.mobile-nav').count(),0)
+        primary=self.page.get_by_role('group',name='Practice controls')
+        expect(primary).to_be_visible()
+        self.assertEqual(primary.evaluate('(e)=>getComputedStyle(e).position'),'fixed')
+        primary_box=primary.bounding_box();self.assertIsNotNone(primary_box)
+        self.assertLessEqual(primary_box['y']+primary_box['height'],844)
+        expect(primary.get_by_role('button',name='Start practice',exact=True)).to_be_visible()
+        for control in primary.locator('button').all():
+            box=control.bounding_box()
+            if box:self.assertGreaterEqual(box['height'],44)
+
+        primary.get_by_role('button',name='Start practice',exact=True).click()
+        expect(primary.get_by_role('button',name='Pause practice',exact=True)).to_be_visible()
+        for width,height in ((320,720),(390,844),(430,932)):
+            self.page.set_viewport_size({'width':width,'height':height})
+            self.assert_bounds(width)
+            box=primary.bounding_box();self.assertIsNotNone(box)
+            self.assertLessEqual(box['y']+box['height'],height)
+
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
