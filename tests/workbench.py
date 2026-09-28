@@ -1699,11 +1699,12 @@ class Workbench(e2e.MusicPracticeTests):
         expect(practice_dock.get_by_role('link',name='Drum Tools',exact=True)).to_be_visible()
 
         tool_strip=self.page.locator('.practice-launcher .drum-tool-grid')
-        self.assertGreater(tool_strip.evaluate('(e)=>e.scrollWidth'),tool_strip.evaluate('(e)=>e.clientWidth'))
-        first_card=self.page.locator('.practice-launcher .drum-tool-card').first.bounding_box()
-        last_card=self.page.locator('.practice-launcher .drum-tool-card').last.bounding_box()
-        self.assertIsNotNone(first_card);self.assertIsNotNone(last_card)
-        self.assertAlmostEqual(first_card['y'],last_card['y'],delta=3)
+        columns=tool_strip.evaluate("(e)=>getComputedStyle(e).gridTemplateColumns.split(' ').filter(Boolean).length")
+        self.assertEqual(columns,4)
+        strip_box=tool_strip.bounding_box();self.assertIsNotNone(strip_box);self.assertLess(strip_box['height'],140)
+        for card in self.page.locator('.practice-launcher .drum-tool-card').all():
+            box=card.bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],50)
+            self.assertGreaterEqual(box['x'],-.5);self.assertLessEqual(box['x']+box['width'],390.5)
 
         practice_dock.get_by_role('button',name='Start plan',exact=True).click()
         self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
