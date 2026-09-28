@@ -1825,6 +1825,44 @@ class Workbench(e2e.MusicPracticeTests):
 
 
 
+    def test_87_ui_simplification_keeps_core_navigation_clear_and_everything_reachable(self):
+        self.onboard()
+        self.page.set_viewport_size({'width':1440,'height':900})
+        self.route('/')
+
+        sidebar=self.page.get_by_role('navigation',name='Main navigation')
+        direct=[x.strip() for x in sidebar.locator('a span').all_text_contents()]
+        self.assertEqual(direct,['Today','Practice','Metronome','Drum Tools','Library','Learn','Progress','History'])
+        for hidden in ('Routines','Songs','Setlists','Goals','Cycles','Calendar','Weekly Review','Recordings'):
+            expect(sidebar.get_by_role('link',name=hidden,exact=True)).to_have_count(0)
+
+        settings=self.page.locator('.sidebar-footer-link[aria-label="Settings"]')
+        expect(settings).to_be_visible()
+        more=self.page.locator('.sidebar .sidebar-footer-action').filter(has_text='More')
+        expect(more).to_be_visible()
+        more.click()
+        dialog=self.page.get_by_role('dialog',name='All Steadybar pages')
+        expect(dialog).to_be_visible()
+        for heading in ('Practice','Plan & organize','Review','System'):
+            expect(dialog.get_by_role('heading',name=heading,exact=True)).to_be_visible()
+        for destination in ('Routines','Songs','Setlists','Goals','Cycles','Calendar','Weekly Review','Recordings','Settings'):
+            expect(dialog.get_by_role('button',name=destination,exact=True)).to_be_visible()
+        dialog.get_by_role('button',name='Routines',exact=True).click()
+        expect(self.page.get_by_role('heading',name='Routines',exact=True)).to_be_visible()
+        expect(self.page.locator('.sidebar .sidebar-footer-action.active')).to_be_visible()
+
+        self.route('/library')
+        expect(self.page.get_by_role('heading',name='Library',exact=True)).to_be_visible()
+        play=self.page.get_by_role('button',name='Practice Double Stroke Roll',exact=True)
+        expect(play).to_be_visible()
+        expect(play).to_have_text('Practice')
+
+        for width,height in ((320,720),(390,844),(820,1000),(1440,900)):
+            self.page.set_viewport_size({'width':width,'height':height})
+            self.assert_bounds(width)
+
+
+
 if __name__=='__main__':
     names=[name for name in Workbench.__dict__ if name.startswith('test_') and (not e2e.OPTIONS.test or name.startswith(e2e.OPTIONS.test))]
     result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Workbench(name) for name in names))
