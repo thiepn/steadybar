@@ -63,6 +63,19 @@ export function practicePage():Page{
     button('Start free practice',async()=>{if(minutes.reportValidity()&&bpm.reportValidity())await launchPractice([{...freeBlock(Number(minutes.value)*60,Number(bpm.value)),bpm:click.querySelector('input')!.checked?Number(bpm.value):undefined}]);},'primary','play'));
   drawClick();
   page.append(el('div',{class:'two-column practice-start-grid'},quick,free));
+
+  const mobileDock=el('nav',{class:'mobile-action-dock practice-mobile-dock','aria-label':'Practice quick actions'});
+  if(active)mobileDock.append(link('Resume session','/practice/active','button primary mobile-dock-primary','play'));
+  else if(plan?.blocks.length)mobileDock.append(
+    button('Start today’s plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary mobile-dock-primary','play'),
+    profile.instrumentType==='drums'?link('Drum Tools','/drums','button secondary mobile-dock-secondary','routine'):link('Library','/library','button secondary mobile-dock-secondary','library'));
+  else if(profile.instrumentType==='drums')mobileDock.append(
+    link('Drum Tools','/drums','button primary mobile-dock-primary','routine'),
+    button('Free practice',()=>free.scrollIntoView({behavior:'smooth',block:'center'}),'secondary mobile-dock-secondary','play'));
+  else mobileDock.append(
+    link('Choose exercise','/library','button primary mobile-dock-primary','library'),
+    button('Free practice',()=>free.scrollIntoView({behavior:'smooth',block:'center'}),'secondary mobile-dock-secondary','play'));
+  page.append(mobileDock);
   return {node:page};
 }
 export function activePracticePage():Page{
@@ -191,9 +204,10 @@ export function activePracticePage():Page{
     el('div',{class:'focus-result-heading'},el('span',{class:'label'},'How did that block feel?'),el('span',{class:'muted small'},'Saves result and moves on')),
     el('div',{class:'focus-result-buttons'},summaryButtons),
     summaryFeedback);
+  const primaryControls=el('div',{class:'focus-primary-controls','aria-label':'Practice controls'},transport,resultDock);
   const secondary=el('section',{class:'focus-secondary'},attempts,cues,limitations,tools,queueDrawer);
 
-  const main=el('section',{class:'practice-workspace focus-workspace'},identity,readouts,beats,transport,taskHost,resultDock,progressText,notesText,error,next,secondary);
+  const main=el('section',{class:'practice-workspace focus-workspace'},identity,readouts,beats,primaryControls,taskHost,progressText,notesText,error,next,secondary);
   const recovery=el('section',{class:'session-recovery',hidden:!practice.recovered},
     el('strong',{},'Saved session recovered.'),
     el('p',{},'Your saved time, attempts, and notes are intact. Time while the app was closed is not counted.'),
