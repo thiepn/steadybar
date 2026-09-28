@@ -65,9 +65,9 @@ export function practicePage():Page{
   page.append(el('div',{class:'two-column practice-start-grid'},quick,free));
 
   const mobileDock=el('nav',{class:'mobile-action-dock practice-mobile-dock','aria-label':'Practice quick actions'});
-  if(active)mobileDock.append(link('Resume session','/practice/active','button primary mobile-dock-primary','play'));
+  if(active)mobileDock.append(link('Resume','/practice/active','button primary mobile-dock-primary','play'));
   else if(plan?.blocks.length)mobileDock.append(
-    button('Start today’s plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary mobile-dock-primary','play'),
+    button('Start plan',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary mobile-dock-primary','play'),
     profile.instrumentType==='drums'?link('Drum Tools','/drums','button secondary mobile-dock-secondary','routine'):link('Library','/library','button secondary mobile-dock-secondary','library'));
   else if(profile.instrumentType==='drums')mobileDock.append(
     link('Drum Tools','/drums','button primary mobile-dock-primary','routine'),
