@@ -315,7 +315,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.route('/settings');self.page.get_by_label('Default BPM',exact=True).fill('150');self.route('/library')
         expect(self.page.get_by_role('dialog',name='Discard unsaved preferences?',exact=True)).to_be_visible()
         self.confirm('Discard edits')
-        expect(self.page.get_by_role('heading',name='Exercise library',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('heading',name='Library',exact=True)).to_be_visible()
 
     def test_11_backup_validation_ui(self):
         self.onboard();self.route('/settings')
