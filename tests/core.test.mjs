@@ -40,6 +40,14 @@ test('large attempt history does not overflow argument stack',()=>assert.equal(a
 test('built-in library includes every required rudiment, no history',()=>{const d=seedData();assert.equal(d.exercises.filter(e=>e.category==='rudiment').length,21);assert.equal(d.exercises.length,36);assert.equal(d.sessions.length,0);assert.equal(d.songs.length,0);assert.equal(d.goals.length,0);});
 test('starter routines have exact 20/30/45/60 minute duration',()=>assert.deepEqual(seedData().routines.map(r=>analytics.routineDuration(r.blocks)),[1200,1800,2700,3600]));
 test('all starter content validates and round-trips as backup',()=>{const b=createBackup(seedData(),date);assert.deepEqual(parseBackup(JSON.stringify(b)),b);});
+test('practice launch origin is snapshotted, validated, and optional for legacy sessions',()=>{
+  const d=seedData(),s=logic.createSession([free()],d,{returnTo:{path:'/rhythm',label:'Rhythm Lab'}});
+  assert.deepEqual(s.returnTo,{path:'/rhythm',label:'Rhythm Lab'});
+  assert.deepEqual(v.validateSession(s).returnTo,{path:'/rhythm',label:'Rhythm Lab'});
+  const legacy=structuredClone(s);delete legacy.returnTo;assert.doesNotThrow(()=>v.validateSession(legacy));
+  assert.throws(()=>v.validateSession({...s,returnTo:{path:'https://example.com',label:'Outside'}}),/internal application route/);
+  assert.throws(()=>v.validateSession({...s,returnTo:{path:'/practice/active',label:'Recursive'}}),/internal application route/);
+});
 test('new daily-plan blocks have independent IDs',()=>{const blocks=[free(),free()];const copies=u.freshBlocks(blocks);assert.notEqual(copies[0].id,blocks[0].id);assert.equal(copies[1].order,1);});
 test('reorder is immutable and rejects out-of-range moves safely',()=>{const a=['a','b','c'];assert.deepEqual(u.reorder(a,0,2),['b','c','a']);assert.deepEqual(a,['a','b','c']);assert.deepEqual(u.reorder(a,-1,2),a);});
 test('exercise history keeps snapshots after edit/archive',()=>{const d=seedData(),e=d.exercises[1];const s=logic.createSession([{...free(),type:'exercise',exerciseId:e.id}],d);e.name='Renamed';e.archived=true;assert.equal(s.blocks[0].titleSnapshot,'Double Stroke Roll');assert.equal(s.blocks[0].stickingSnapshot.replaceAll(' ',''),'RRLLRRLL');});
