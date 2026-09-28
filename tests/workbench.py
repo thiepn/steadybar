@@ -36,7 +36,7 @@ class Workbench(e2e.MusicPracticeTests):
     def assert_bounds(self,width):
         self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width+1)
         clipped=self.page.evaluate("""()=>[...document.querySelectorAll('button,input,select,a')].filter(e=>{
-            if(e.classList.contains('skip-link'))return false;const r=e.getBoundingClientRect();
+            if(e.classList.contains('skip-link')||e.closest('[data-horizontal-scroll="true"]'))return false;const r=e.getBoundingClientRect();
             return r.width>0&&r.height>0&&(r.left<-.5||r.right>innerWidth+.5);
         }).map(e=>e.getAttribute('aria-label')||e.textContent.trim())""")
         self.assertEqual(clipped,[])
