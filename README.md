@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Mobile practice flow & one-handed UX — 2.37.0
+
+Phone use now keeps the next practice action in the lower thumb zone. Today and Practice render a contextual action dock immediately above the fixed mobile navigation, while the desktop UI remains unchanged. Drum profiles also promote **Drum Tools** into the fourth bottom-nav slot; other instruments retain Library there.
+
+Practice’s eight drum workstations become one horizontal swipe strip on phones, reducing vertical travel before Quick Start. During an active session, Focus Player combines transport and block-result controls into one fixed bottom control group, so Start/Pause, click state, and Not yet / Usable / Solid remain reachable without scrolling back through the page.
+
+These are presentation and navigation changes only. Session state, evidence, history, keyboard/pedal controls, tool URLs and persistence semantics are unchanged.
+
 ## Today hierarchy & decision-friction reduction — 2.36.0
 
 Today now has one obvious hierarchy. An unfinished session comes first, followed by the current **Today’s plan** and its single session-start action. Plan-generation controls move into **Plan or rebuild today**, which opens automatically only when no plan exists and otherwise stays out of the way.
