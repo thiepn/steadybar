@@ -185,8 +185,9 @@ class Profiles(e2e.MusicPracticeTests):
         self.assertEqual(self.state()['sessions'][0]['profileNameSnapshot'],'Electric guitar')
         self.use_profile('Drums');self.assertEqual(self.read("load('app/store.js').store.view().sessions.length"),0)
         self.assertEqual(self.read("load('app/store.js').store.view().dailyPlans[0].profileId"),original['id'])
-        self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click()
-        expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
+        active_exercise=self.launch('tempo');self.page.get_by_role('button',name='Save & leave',exact=True).click()
+        expect(self.page.get_by_role('heading',name=active_exercise['name'],exact=True)).to_be_visible()
+        self.assertEqual(next(s for s in self.state()['sessions'] if s['status']=='active')['returnTo'],{'path':'/library/'+active_exercise['id'],'label':active_exercise['name']})
         created_while_active=self.add_profile('bass','Session-time bass');self.assertEqual(created_while_active['instrumentType'],'bass')
         active=next(s for s in self.state()['sessions'] if s['status']=='active');self.assertEqual(active['profileId'],original['id']);self.assertEqual(active['profileNameSnapshot'],'Drums')
         self.use_profile('Stage guitar');self.assertEqual(self.profile()['id'],guitar['id'])
@@ -322,8 +323,9 @@ class Profiles(e2e.MusicPracticeTests):
 
     def test_72_cross_profile_active_session_stays_recoverable(self):
         self.onboard_type('drums');drums=self.profile();guitar=self.add_profile('guitar','Recovery guitar')
-        self.use_profile(drums['name']);self.launch('tempo')
-        self.page.get_by_role('button',name='Save & leave',exact=True).click();expect(self.page.get_by_role('heading',name='Today',exact=True)).to_be_visible()
+        self.use_profile(drums['name']);exercise=self.launch('tempo')
+        self.page.get_by_role('button',name='Save & leave',exact=True).click();expect(self.page.get_by_role('heading',name=exercise['name'],exact=True)).to_be_visible()
+        self.assertEqual(next(s for s in self.state()['sessions'] if s['status']=='active')['returnTo'],{'path':'/library/'+exercise['id'],'label':exercise['name']})
         self.read("load('app/store.js').store.workspace(d=>{d.settings.activeProfileId="+json.dumps(guitar['id'])+";return d})")
         self.route('/');expect(self.page.get_by_text('Unfinished Drums session',exact=True)).to_be_visible();expect(self.page.get_by_role('link',name='Resume session',exact=True)).to_be_visible()
         self.route('/practice');expect(self.page.get_by_text('Unfinished Drums session',exact=True)).to_be_visible()

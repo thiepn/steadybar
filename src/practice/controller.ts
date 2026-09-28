@@ -3,7 +3,7 @@ import type { PracticeProtocol } from '../domain/practice-types.js';
 import { validateProtocol, validateOutcome, assertOutcomeMatches, assertProtocolCompatible } from '../domain/practice-validation.js';
 import { protocolPulse, patternFits, fretPrompt } from '../domain/protocols.js';
 import { DEFAULT_TIMING_CLICK } from '../domain/models.js';
-import type { MetronomeConfig, PracticeSession, Rating, RoutineBlock, TimingClickConfig, TrainerConfig } from '../domain/models.js';
+import type { MetronomeConfig, PracticeLaunchSource, PracticeSession, Rating, RoutineBlock, TimingClickConfig, TrainerConfig } from '../domain/models.js';
 import type { LimitationTag, PracticeContext, PracticeResult } from '../domain/practice-state.js';
 import { contextForIntent } from '../domain/practice-state.js';
 import { finalizeSession, get, insertActiveSession, updateSession } from '../db/database.js';
@@ -50,7 +50,7 @@ export class PracticeController {
       await store.refresh(false);this.external=false;this.emit();return wasInterrupted;
     }finally{this.unlock();}
   }
-  async create(blocks:RoutineBlock[],source:{routineId?:string;planId?:string;profileId?:string}={}):Promise<void>{
+  async create(blocks:RoutineBlock[],source:PracticeLaunchSource={}):Promise<void>{
     const session=createSession(blocks,store.snapshot(),source);await insertActiveSession(session);this.session=session;this.error='';this.external=false;this.recovered=false;
     await store.refresh();store.broadcast();this.emit();
   }

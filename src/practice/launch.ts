@@ -1,7 +1,7 @@
 import { switchProfile } from '../app/profiles.js';
 import { exerciseBpm } from '../domain/protocols.js';
 import { activeProfile } from '../domain/profiles.js';
-import type { Exercise, Routine, RoutineBlock, Song } from '../domain/models.js';
+import type { Exercise, PracticeLaunchSource, PracticeReturnTarget, Routine, RoutineBlock, Song } from '../domain/models.js';
 import { metadata, localDate, freshBlocks, uuid } from '../domain/utils.js';
 import { store } from '../app/store.js';
 import { practice } from './controller.js';
@@ -13,14 +13,20 @@ export function songBlock(song:Song,sectionId?:string,seconds=600,partId?:string
   return {id:uuid(),type:section?'song-section':'song',profileId:part?.profileId??profile.id,songPartId:part?.id,songId:song.id,songSectionId:section?.id,title:song.title+(section?` · ${section.name}`:''),targetSeconds:seconds,bpm:section?.bpmOverride||song.bpm,notes:'',order:0};
 }
 export function freeBlock(seconds=600,bpm=80,title='Free Practice'):RoutineBlock{return {id:uuid(),type:'free',title,targetSeconds:seconds,bpm,notes:'',order:0};}
-export async function launchPractice(blocks:RoutineBlock[],source:{routineId?:string;planId?:string;profileId?:string}={}):Promise<void>{
+function launchReturnTarget():PracticeReturnTarget{
+  const raw=location.hash.slice(1)||'/',path=raw.startsWith('/')&&raw!=='/practice/active'?raw:'/practice';
+  const heading=document.querySelector<HTMLElement>('#main h1')?.textContent?.trim();
+  const fallback=path==='/'?'Today':path==='/practice'?'Practice':'Previous screen';
+  return {path,label:(heading||fallback).slice(0,80)};
+}
+export async function launchPractice(blocks:RoutineBlock[],source:PracticeLaunchSource={}):Promise<void>{
   const active=await store.activeSession();
   if(active){notify('Your unfinished session is ready to resume. End it before starting a new session.','info');if(practice.session?.id!==active.id || practice.session?.status!=='active')await practice.recover();navigate('/practice/active');return;}
   const requested=blocks[0]?.profileId;
   if(requested&&requested!==activeProfile(store.snapshot()).id)await switchProfile(requested);
   const profile=activeProfile(store.snapshot());
   const attributed=blocks.map(b=>({...b,profileId:b.profileId??profile.id}));
-  await practice.create(attributed,source);navigate('/practice/active');
+  await practice.create(attributed,{...source,returnTo:source.returnTo??launchReturnTarget()});navigate('/practice/active');
 }
 export async function addToday(block:RoutineBlock):Promise<void>{
   const profile=activeProfile(store.snapshot());

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.38.0 — Practice Continuity & Return Paths — 2026-09-28
+
+- Snapshot the exact internal page that launched a practice session, together with its visible page title.
+- Preserve that launch origin inside the immutable session record so recovery, reloads and completed history keep the same return target.
+- Make **Save & leave** return to the page that actually started practice instead of always dumping the user back on Today.
+- Make the completion screen’s primary return action context-aware: Rhythm Lab returns to Rhythm Lab, a song returns to that song, Library/detail practice returns to that source, Practice returns to Practice, and Today stays Today.
+- Keep old sessions and backups valid when they have no launch-origin field; they fall back to Today exactly as before.
+- Validate saved return targets as internal app routes only and reject recursive `/practice/active` targets.
+- Preserve existing routine/daily-plan attribution independently from navigation origin.
+- Add domain coverage for origin snapshot validation/legacy compatibility and Chromium/Firefox/WebKit coverage for Rhythm Lab → Focus Player → Save & leave / Complete → Rhythm Lab.
+- No IndexedDB schema, backup-envelope or migration version change is required.
+
+
 ## 2.37.0 — Mobile Practice Flow & One-Handed UX — 2026-09-28
 
 - Make the phone workflow thumb-first without changing desktop layout or practice data.

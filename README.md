@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Practice continuity & return paths — 2.38.0
+
+A practice session now remembers the page that launched it. **Save & leave** and the completed-session review both return to that exact internal source instead of always routing through Today. Starting from Rhythm Lab returns to Rhythm Lab; starting from an exercise, song, Practice, Today, or another supported internal surface returns there.
+
+The origin is stored as a validated immutable session snapshot, so it survives reload/recovery and remains meaningful even if the surrounding workspace later changes. Existing sessions and backups without an origin remain fully valid and fall back to Today.
+
+This navigation snapshot is separate from routine, daily-plan, lesson, repertoire and evidence attribution. No database or backup-format migration is required.
+
 ## Mobile practice flow & one-handed UX — 2.37.0
 
 Phone use now keeps the next practice action in the lower thumb zone. Today and Practice render a contextual action dock immediately above the fixed mobile navigation, while the desktop UI remains unchanged. Drum profiles also promote **Drum Tools** into the fourth bottom-nav slot; other instruments retain Library there.

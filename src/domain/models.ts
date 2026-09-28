@@ -115,11 +115,13 @@ export interface SessionRuntime {
   bpm: number; trainerCleanRounds: number; trainerStartSeconds: number;
   checkpointAt: string; metronomeOn: boolean;
 }
+export interface PracticeReturnTarget { path: string; label: string }
+export interface PracticeLaunchSource { routineId?: string; planId?: string; profileId?: string; returnTo?: PracticeReturnTarget }
 export interface PracticeSession extends Entity {
   profileId?: string; profileNameSnapshot?: string;
   status: 'active' | 'completed' | 'abandoned'; startedAt: string; endedAt?: string;
   activeBlockIndex: number; blocks: PracticeBlock[]; sessionNotes: string; sessionRating?: 1 | 2 | 3 | 4 | 5;
-  sourceRoutineId?: string; sourceDailyPlanId?: string; runtime: SessionRuntime;
+  sourceRoutineId?: string; sourceDailyPlanId?: string; returnTo?: PracticeReturnTarget; runtime: SessionRuntime;
 }
 export interface Goal extends Entity {
   profileId?: string; songPartId?: string; metric?: 'clean-count' | 'keys-practiced' | 'recall-correct' | 'pitch-sessions';
