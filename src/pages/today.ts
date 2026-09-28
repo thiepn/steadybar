@@ -130,7 +130,7 @@ export function todayPage(): Page {
   page.append(review);
 
   const mobileDock=el('nav',{class:'mobile-action-dock today-mobile-dock','aria-label':'Today quick actions'});
-  if(active)mobileDock.append(link('Resume session','/practice/active','button primary mobile-dock-primary','play'));
+  if(active)mobileDock.append(link('Resume','/practice/active','button primary mobile-dock-primary','play'));
   else if(plan?.blocks.length)mobileDock.append(
     button('Start session',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary mobile-dock-primary','play'),
     link('Practice','/practice','button secondary mobile-dock-secondary','play'));
