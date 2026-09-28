@@ -90,7 +90,7 @@ export function todayPage(): Page {
 
   const intelligence=buildPracticeIntelligence(snapshot,{profileId:profile.id,recommendationLimit:5});
   const immediate=intelligence.recommendations.filter(row=>row.band==='now'||row.confidence!=='low').slice(0,3);
-  const guidance=el('details',{class:'today-disclosure today-guidance',open:!plan?.blocks.length&&immediate.length>0},
+  const guidance=el('details',{class:'today-disclosure today-guidance'},
     el('summary',{},el('div',{},el('strong',{},'Guidance & learning'),el('span',{class:'muted small'},immediate.length?`${immediate.length} evidence-based next action${immediate.length===1?'':'s'} · guided learning`:'Guided learning and evidence-based next actions')),el('span',{class:'today-disclosure-state','aria-hidden':'true'},'Open')));
   if(immediate.length){
     const panel=el('section',{class:'today-intelligence today-guidance-block'},sectionHeader('What matters now','Practice Intelligence',[link('Why these?','/progress','text-link','arrow')]));
