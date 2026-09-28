@@ -53,7 +53,7 @@ export function drumToolsPage():Page{
     empty('Switch to a drum profile','These tools use drum-specific limb, surface, sticking and MIDI assumptions.',link('Manage practice profiles','/profiles','button primary','settings')))};
 
   const page=el('div',{class:'page drum-tools-page'},
-    pageHeader('Drum practice','Drum Tools','Choose the musical problem first. Every tool feeds the same Today, Focus Player, history and evidence system.',[
+    pageHeader('Drum practice','Drum Tools','Pick what you want to improve, then start practicing. Every tool saves into the same Steadybar history.',[
       link('Practice','/practice','button secondary','play'),
       link('Metronome','/metronome','button secondary','pulse'),
     ]));

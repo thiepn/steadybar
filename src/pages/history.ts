@@ -25,7 +25,7 @@ export function editSessionReview(session:PracticeSession):void{
 }
 export function historyPage():Page{
   const data=store.snapshot(),selected=activeProfile(data),sessions=finishedSessions(data.sessions).sort((a,b)=>b.startedAt.localeCompare(a.startedAt));
-  const page=el('div',{class:'page'},pageHeader('','History','Review saved sessions without changing the profile you are currently practicing.'));
+  const page=el('div',{class:'page history-page'},pageHeader('','History','See what you practiced, when you practiced it, and how each session went.'));
   const search=el('input',{type:'search',placeholder:'Find a session by exercise, song, or note…','aria-label':'Search practice history'});
   const profileFilter=select('historyProfile','History profile',[
     ['selected',`Selected · ${selected.name}`],['all','All profiles'],

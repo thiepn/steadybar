@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.40.0 — UI & Navigation Simplification — 2026-09-28
+
+- Reduce desktop navigation from a long list of equally prominent destinations to the high-frequency practice path:
+  - Today
+  - Practice
+  - Metronome
+  - Drum Tools for drum profiles
+  - Library
+  - Learn
+  - Progress
+  - History
+- Keep **Settings** directly reachable in the sidebar footer and move lower-frequency planning, repertoire and evidence pages into one clearly labeled **More** menu.
+- Rebuild More as a categorized destination picker with Practice, Plan & organize, Review and System groups so secondary tools remain easy to find without crowding the main shell.
+- Highlight More when the current page is a secondary destination, preserving location awareness even when that route is intentionally not pinned in the sidebar.
+- Refine the shell with a calmer sidebar surface, stronger active states, clearer group labels, more consistent spacing, a narrower reading width and larger rounded controls.
+- Make Practice, Drum Tools and Settings use consistent bounded card surfaces instead of loose dashboard sections.
+- Give Library search/filter controls a clear contained surface and render exercise/history rows as separated cards for easier scanning.
+- Replace Library’s icon-only play affordance with a visible **Practice** button while preserving a specific accessible name for each exercise.
+- Align the Library page title with the navigation label and simplify explanatory copy on Practice, Drum Tools, History and Settings.
+- Preserve all routes, search commands, keyboard shortcuts, mobile bottom navigation, direct URLs and underlying practice/history behavior.
+- Add regression coverage for the simplified desktop information architecture, categorized More menu, direct Settings access, visible Library practice action and 320–1440px bounds.
+- No persistence, schema, backup, practice-state or evidence migration is required.
+
+
 ## 2.39.0 — Post-Practice Review & Session Completion UX — 2026-09-28
 
 - Turn the immediate **Session complete** screen into a compact next-step surface instead of rendering the entire History record at full length.

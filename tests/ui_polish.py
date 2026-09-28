@@ -133,7 +133,7 @@ class UIPolish(e2e.MusicPracticeTests):
             nav.get_by_role('button',name='More',exact=True).click()
             self.page.get_by_role('dialog').get_by_role('button',name=name,exact=True).click()
             expect(self.page.get_by_role('dialog')).to_have_count(0)
-            title={'Library':'Exercise library','Songs':'Songs','Goals':'Goals','Progress':'Progress','History':'History','Routines':'Routines'}.get(name,name)
+            title={'Library':'Library','Songs':'Songs','Goals':'Goals','Progress':'Progress','History':'History','Routines':'Routines'}.get(name,name)
             expect(self.page.get_by_role('heading',name=title,exact=True)).to_be_visible()
 
 if __name__=='__main__':

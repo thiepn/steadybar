@@ -20,7 +20,7 @@ import { activeProfile, practiceProfiles } from '../domain/profiles.js';
 export function settingsPage():Page{
   const data=store.snapshot(),settings=data.settings;
   let dirty=false;
-  const page=el('div',{class:'page settings-page'},pageHeader('','Settings','Appearance, practice defaults, and backups.'));
+  const page=el('div',{class:'page settings-page'},pageHeader('','Settings','Customize how Steadybar looks and behaves, and manage your local data.'));
   const selectedProfile=activeProfile(data);
   const profilePanel=el('section',{class:'panel settings-profile-summary'},sectionHeader('Practice profiles',`${practiceProfiles(data).length} available`),
     el('p',{},el('strong',{},selectedProfile.name),' is the selected practice workspace.'),

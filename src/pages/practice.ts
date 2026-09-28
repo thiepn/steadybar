@@ -22,7 +22,7 @@ import { sessionPage } from './history.js';
 import { PRACTICE_SHORTCUTS, practiceRemoteCommand } from '../practice/remote.js';
 export function practicePage():Page{
   const snapshot=store.snapshot(),data=store.view(),profile=activeProfile(snapshot),plan=data.dailyPlans.find(p=>p.date===localDate()),active=snapshot.sessions.find(s=>s.status==='active');
-  const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Start what is already planned, or jump directly into one focused task.'));
+  const page=el('div',{class:'page practice-launcher'},pageHeader('','Practice','Start today’s plan, or pick one thing to work on right now.'));
   if(active)page.append(el('div',{class:'recovery-banner'},el('div',{},el('strong',{},`Unfinished ${profileName(snapshot,active.profileId)} session`),el('span',{},active.blocks[active.activeBlockIndex]?.titleSnapshot)),link('Resume session','/practice/active','button primary','play')));
 
   const planned=el('section',{class:'panel launcher-plan practice-start-plan'},sectionHeader('Today’s plan',plan?.blocks.length?`${plan.blocks.length} blocks · ${duration(routineDuration(plan.blocks))}`:'Nothing planned yet'));

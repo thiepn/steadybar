@@ -40,10 +40,22 @@ import { repertoireAudioPage } from './pages/repertoire-audio.js';
 import { practice } from './practice/controller.js';
 import { errorMessage } from './domain/utils.js';
 import { activeProfile } from './domain/profiles.js';
-const navigation:[string,string,IconName][]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/drums','Drum Tools','routine'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
+type NavItem=[string,string,IconName];
+const navigation:NavItem[]=[['/','Today','today'],['/practice','Practice','play'],['/metronome','Metronome','pulse'],['/library','Library','library'],['/drums','Drum Tools','routine'],['/courses','Learn','library'],['/routines','Routines','routine'],['/songs','Songs','song'],['/setlists','Setlists','setlist'],['/goals','Goals','goal'],['/cycles','Cycles','routine'],['/calendar','Calendar','today'],['/review','Weekly Review','progress'],['/progress','Progress','progress'],['/recordings','Recordings','note'],['/history','History','history'],['/settings','Settings','settings']];
 const drumToolRoutes=new Set(['/rudiments','/phrases','/drum-grid','/timing-lab','/pocket','/dynamics','/rhythm','/midi-lab']);
 const routeTitles:Record<string,string>={'/rudiments':'Rudiment Lab','/phrases':'Phrase Lab','/drum-grid':'Grid Lab','/timing-lab':'Timing Lab','/pocket':'Pocket Lab','/dynamics':'Dynamics Lab','/rhythm':'Rhythm Lab','/midi-lab':'MIDI Lab'};
 const visibleNavigation=()=>navigation.filter(([href])=>href!=='/drums'||activeProfile(store.snapshot()).instrumentType==='drums');
+const sidebarNavigation=():NavItem[]=>{
+  const visible=visibleNavigation(),drums=visible.some(([href])=>href==='/drums');
+  const paths=['/','/practice','/metronome',...(drums?['/drums']:[]),'/library','/courses','/progress','/history'];
+  return paths.map(path=>visible.find(([href])=>href===path)!).filter(Boolean);
+};
+const moreGroups:{label:string;paths:string[]}[]=[
+  {label:'Practice',paths:['/','/practice','/metronome','/drums','/library','/courses']},
+  {label:'Plan & organize',paths:['/routines','/songs','/setlists','/goals','/cycles','/calendar','/review']},
+  {label:'Review',paths:['/progress','/recordings','/history']},
+  {label:'System',paths:['/settings']},
+];
 let current:Page|undefined,renderedPath='';
 const root=document.querySelector('#app')!;
 function route(path:string):Page{
@@ -80,8 +92,14 @@ function route(path:string):Page{
 }
 const activeLink=(href:string,path:string)=>href==='/'?path==='/':href==='/drums'?(path==='/drums'||drumToolRoutes.has(path)):path===href||path.startsWith(`${href}/`);
 function moreMenu():void{
-  const menu=el('div',{class:'more-nav'}),handle=dialog('Navigation',[menu]);
-  for(const [path,label,symbol] of visibleNavigation())menu.append(button(label,()=>{handle.close();navigate(path);},'more-link',symbol));
+  const menu=el('div',{class:'more-nav'}),handle=dialog('All Steadybar pages',[menu]),visible=visibleNavigation();
+  for(const group of moreGroups){
+    const items=group.paths.map(path=>visible.find(([href])=>href===path)).filter((item):item is NavItem=>Boolean(item));
+    if(!items.length)continue;
+    const section=el('section',{class:'more-nav-section'},el('h3',{},group.label));
+    for(const [path,label,symbol] of items)section.append(button(label,()=>{handle.close();navigate(path);},'more-link',symbol));
+    menu.append(section);
+  }
 }
 function render():void{
   const path=routePath(),changed=path!==renderedPath;
@@ -96,13 +114,12 @@ function render():void{
   const main=el('main',{id:'main',tabindex:-1,class:active?'active-main':'main-content'},current.node);
   if(active)root.replaceChildren(main);
   else{
-    const nav=el('nav',{'aria-label':'Main navigation',class:'sidebar-nav'});
-    for(const [href,label,symbol] of visibleNavigation()){
-      const group=href==='/'?'Practice':href==='/library'?'Collection':href==='/goals'?'Review':null;
+    const nav=el('nav',{'aria-label':'Main navigation',class:'sidebar-nav'}),sidebarItems=sidebarNavigation();
+    for(const [href,label,symbol] of sidebarItems){
+      const group=href==='/'?'Practice':href==='/library'?'Explore':href==='/progress'?'Review':null;
       if(group)nav.append(el('div',{class:'nav-group-label','aria-hidden':'true'},group));
       const a=el('a',{href:`#${href}`,title:label,'aria-label':label,class:`nav-link ${activeLink(href,path)?'active':''}`},icon(symbol),el('span',{},label));
       if(activeLink(href,path))a.setAttribute('aria-current','page');
-      if(href==='/settings')a.classList.add('settings-nav');
       nav.append(a);
     }
     const makeSearch=()=>{
@@ -111,9 +128,13 @@ function render():void{
     };
     const appearance=button('Appearance',openAppearance,'sidebar-appearance','sun');
     appearance.setAttribute('aria-haspopup','dialog');appearance.title='Appearance';
+    const secondaryActive=!sidebarItems.some(([href])=>activeLink(href,path))&&path!=='/settings';
+    const sidebarMore=button('More',moreMenu,'sidebar-footer-action','more');sidebarMore.setAttribute('aria-haspopup','dialog');if(secondaryActive)sidebarMore.classList.add('active');
+    const settings=el('a',{href:'#/settings',class:`sidebar-footer-link ${activeLink('/settings',path)?'active':''}`,'aria-label':'Settings'},icon('settings'),el('span',{},'Settings'));
+    if(activeLink('/settings',path))settings.setAttribute('aria-current','page');
     const sidebar=el('aside',{class:'sidebar'},
       el('a',{href:'#/',class:'brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
-      profilePicker(),makeSearch(),nav,el('div',{class:'sidebar-footer'},appearance));
+      profilePicker(),makeSearch(),nav,el('div',{class:'sidebar-footer'},sidebarMore,settings,appearance));
     const header=el('header',{class:'topbar'},
       el('a',{href:'#/',class:'mobile-brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
       el('div',{class:'actions'},profilePicker(),makeSearch(),iconButton('Appearance','sun',openAppearance)));

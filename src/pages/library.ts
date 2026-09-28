@@ -5,7 +5,7 @@ import { protocolResults, summarizeResults, outcomeSummary } from '../domain/pro
 import { store } from '../app/store.js';
 import type { Page } from '../app/navigation.js';
 import { el } from '../ui/dom.js';
-import { badge, button, empty, iconButton, link, notify, pageHeader, sectionHeader, stat } from '../ui/components.js';
+import { badge, button, empty, link, notify, pageHeader, sectionHeader, stat } from '../ui/components.js';
 import { editExercise, trainerDialog } from '../ui/editors.js';
 import { buildCleanTempoIndex, calculateBestCleanBpm, calculateHighestAttemptedBpm, exerciseAttempts, buildTempoProgressionSeries, finishedSessions, latestSuccessfulBpm } from '../domain/analytics.js';
 import { duration, formatDate } from '../domain/utils.js';
@@ -41,12 +41,16 @@ export function libraryPage(): Page {
     if (!exercises.length) rows.push(empty('No matching exercises', 'Change a filter or add an exercise.', button('New exercise', () => editExercise(), 'secondary', 'plus')));
     for (const e of exercises.slice(0, view.visible)) {
       const best = clean.get(e.id),protocol=exerciseProtocol(e),tempo=exerciseBpm(e);
+      const play=button('Practice',()=>launchPractice([exerciseBlock(e)]),'secondary compact','play');
+      play.setAttribute('aria-label',`Practice ${e.name}`);
       rows.push(el('article', { class: 'exercise-card' },
         el('div', { class: 'exercise-card-top' }, badge(skillLabel(e.skillArea??e.category)), el('span', { class: 'muted tiny' }, e.archived ? 'Archived' : e.builtin ? 'Built-in' : 'Custom')),
         el('h2', {}, link(e.name, `/library/${e.id}`)),
         protocol.kind==='tempo'&&protocol.sticking ? el('p', { class: 'sticking small-sticking' }, protocol.sticking) : el('p', { class: 'muted exercise-description' }, protocolSummary(protocol)),
-        el('div', { class: 'exercise-card-bottom' }, el('div', {}, el('span', { class: 'muted tiny' }, tempo!==undefined?(best ? 'Best clean' : 'Starting tempo'):protocolDefinition(protocol.kind).label),
-          el('strong', {}, tempo!==undefined?`${best??tempo} BPM`:scope.value==='all'?(data.profiles?.find(p=>p.id===e.profileId)?.name??'Earlier practice'):'Self-paced')), iconButton(`Practice ${e.name}`, 'play', () => launchPractice([exerciseBlock(e)])))));
+        el('div', { class: 'exercise-card-bottom' },
+          el('div', {}, el('span', { class: 'muted tiny' }, tempo!==undefined?(best ? 'Best clean' : 'Starting tempo'):protocolDefinition(protocol.kind).label),
+            el('strong', {}, tempo!==undefined?`${best??tempo} BPM`:scope.value==='all'?(data.profiles?.find(p=>p.id===e.profileId)?.name??'Earlier practice'):'Self-paced')),
+          play)));
     }
     results.replaceChildren(...rows);
   };
@@ -60,7 +64,7 @@ export function libraryPage(): Page {
     b.dataset.view = label.toLowerCase(); b.setAttribute('aria-pressed', String(view.mode === b.dataset.view)); return b;
   });
   render();
-  return { node: el('div', { class: 'page library-page' }, pageHeader('', 'Exercise library', `${profile.name} · ${definition(profile.instrumentType).summary}`, [button('New exercise', () => editExercise(), 'primary', 'plus')]),
+  return { node: el('div', { class: 'page library-page' }, pageHeader('', 'Library', `Find one thing to practice, or open an exercise for cues, history and progression. · ${profile.name}`, [button('New exercise', () => editExercise(), 'primary', 'plus')]),
     el('div', { class: 'library-toolbar' }, el('div', { class: 'search-field' }, search), scope,category, source, sort),
     el('div', { class: 'split result-meta' }, count, el('div', { class: 'segmented', role: 'group', 'aria-label': 'Exercise view' }, viewButtons)), results,
     el('div', { class: 'page-footer' }, more)) };
