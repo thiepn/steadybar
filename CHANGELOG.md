@@ -12,7 +12,7 @@
   - Resume unfinished work.
   - Start the existing Today plan + open Drum Tools/Library.
   - Drum Tools or Choose exercise + Free practice when no plan exists.
-- Convert the eight-tool Practice drum launcher into a single horizontal, swipeable row on phones instead of four vertical rows.
+- Compress the eight-tool Practice drum launcher into a thumb-sized 4×2 grid on phones instead of four tall two-column rows.
 - Consolidate Focus Player transport and Not yet / Usable / Solid into one fixed bottom control group so the most-used controls stay within thumb reach while playing.
 - Increase Focus Player bottom breathing room and move practice notifications above the consolidated control dock.
 - Preserve all desktop behavior, direct tool routes, keyboard/pedal shortcuts, session semantics, evidence capture and safe-area support.
