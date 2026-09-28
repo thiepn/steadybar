@@ -24,6 +24,36 @@ export function snapshotBlock(block:RoutineBlock,data:Data):PracticeBlock {
   const title=block.type==='free' ? block.title : exercise?.name || (song ? (block.title || `${song.title}${section ? ` · ${section.name}` : ''}`) : block.title);
   return {id:uuid(),lessonSource:block.lessonSource?structuredClone(block.lessonSource):undefined,...(block.prescription?{prescriptionSnapshot:structuredClone(block.prescription)}:{}),...(protocol?{profileId,profileNameSnapshot:profileName(data,profileId),protocolSnapshot:protocol,instructionsSnapshot:exercise?.instructions??[part?.name,part?.key?`Key ${part.key}`:'',part?.tuning?`Tuning ${part.tuning}`:'',part?.capo!==undefined?`Capo ${part.capo}`:'',part?.range,part?.role,part?.notes,section?.notes,block.notes].filter(Boolean).join('\n'),outcomes:[],protocolState:{step:0,clean:0,total:0,...(protocol.kind==='vocal-pattern'?{rootMidi:protocol.startMidi}:{})}}:{}),sourceSongPartId:part?.id,type:block.type,sourceExerciseId:exercise?.id,sourceSongId:song?.id,sourceSongSectionId:section?.id,titleSnapshot:title,categorySnapshot:exercise?.skillArea||exercise?.category || (song ? 'song' : 'other'),stickingSnapshot:protocol?.kind==='tempo'?protocol.sticking??'':protocol?'':exercise?.sticking||'',meterSnapshot:structuredClone(timing?{beats:timing.beats,beatUnit:timing.beatUnit}:exercise?.meter || song?.meter || data.settings.metronome.meter),subdivisionSnapshot:timing?.subdivision??exercise?.subdivision??data.settings.metronome.subdivision,...(bpm!==undefined&&protocol?.kind!=='drum-rhythm'?{timingClickSnapshot:structuredClone(block.progression?.timingClick??data.settings.metronome.timing??DEFAULT_TIMING_CLICK)}:{}),...(block.progression?{progressionSnapshot:structuredClone(block.progression)}:{}),...(block.setPrep?{setPrepSnapshot:structuredClone(block.setPrep)}:{}),targetSeconds:block.tempoTrainer?(trainerTargetSeconds(block.tempoTrainer)??block.targetSeconds):block.targetSeconds,actualActiveSeconds:0,initialBpm:bpm,finalBpm:bpm,tempoAttempts:[],notes:[block.notes,section?.notes].filter(Boolean).join('\n'),completed:false,skipped:false,tempoTrainer:block.tempoTrainer ? structuredClone(block.tempoTrainer) : undefined};
 }
+export function replayBlocks(session:PracticeSession,data:Data):RoutineBlock[] {
+  const candidates=session.blocks.filter(block=>block.completed||block.skipped);
+  const source=candidates.length?candidates:session.blocks;
+  return source.map((block,order)=>{
+    let type=block.type,exerciseId=block.sourceExerciseId,songId=block.sourceSongId,songSectionId=block.sourceSongSectionId,songPartId=block.sourceSongPartId;
+    if(type==='exercise'&&!data.exercises.some(exercise=>exercise.id===exerciseId)){type='free';exerciseId=undefined;}
+    if(type==='song'||type==='song-section'){
+      const song=data.songs.find(item=>item.id===songId),part=songPartId?song?.parts?.find(item=>item.id===songPartId):undefined;
+      const sections=part?.sections??song?.sections??[];
+      if(!song||(songPartId&&!part)||(type==='song-section'&&!sections.some(section=>section.id===songSectionId))){
+        type='free';songId=undefined;songSectionId=undefined;songPartId=undefined;
+      }
+    }
+    const setPrep=(type==='song'||type==='song-section')&&block.setPrepSnapshot?structuredClone(block.setPrepSnapshot):undefined;
+    const prescription=block.prescriptionSnapshot?.generatedBy==='set-prep'&&!setPrep?undefined:block.prescriptionSnapshot?structuredClone(block.prescriptionSnapshot):undefined;
+    const bpm=block.finalBpm??block.initialBpm;
+    return {
+      id:uuid(),type,profileId:block.profileId,
+      ...(exerciseId?{exerciseId}:{}),...(songId?{songId}:{}),...(songSectionId?{songSectionId}:{}),...(songPartId?{songPartId}:{}),
+      ...(block.lessonSource?{lessonSource:structuredClone(block.lessonSource)}:{}),
+      ...(block.protocolSnapshot?{protocol:structuredClone(block.protocolSnapshot)}:{}),
+      title:block.titleSnapshot,targetSeconds:block.targetSeconds,...(bpm===undefined?{}:{bpm}),notes:block.notes,
+      ...(block.tempoTrainer?{tempoTrainer:structuredClone(block.tempoTrainer)}:{}),
+      ...(prescription?{prescription}:{}),
+      ...(type==='exercise'&&block.progressionSnapshot?{progression:structuredClone(block.progressionSnapshot)}:{}),
+      ...(setPrep?{setPrep}:{}),order,
+    };
+  });
+}
+
 export function createSession(blocks:RoutineBlock[],data:Data,source:PracticeLaunchSource={}):PracticeSession {
   if(!blocks.length)throw new Error('Add at least one block before starting practice.');
   const snapshots=blocks.map(b=>snapshotBlock(b,data)),now=nowISO();
