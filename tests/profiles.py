@@ -175,6 +175,7 @@ class Profiles(e2e.MusicPracticeTests):
         self.route('/');self.page.get_by_role('button',name='Build plan',exact=True).click()
         self.wait_read("load('app/store.js').store.view().dailyPlans.length",lambda value:value==1)
         original_plan=next(p for p in self.state()['dailyPlans'] if p['profileId']==guitar['id']);self.page.wait_for_timeout(2)
+        self.page.locator('details.today-planning summary').click()
         self.page.get_by_role('button',name='Build plan',exact=True).click();self.confirm('Build plan')
         rebuilt=self.wait_read("load('app/store.js').store.snapshot().dailyPlans.find(p=>p.id==="+json.dumps(original_plan['id'])+")",lambda plan:bool(plan) and plan['updatedAt']>original_plan['updatedAt'])
         self.assertEqual(rebuilt['id'],original_plan['id']);self.assertEqual(rebuilt['createdAt'],original_plan['createdAt']);self.assertGreater(rebuilt['updatedAt'],original_plan['updatedAt'])
