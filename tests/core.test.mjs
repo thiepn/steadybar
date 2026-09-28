@@ -60,6 +60,15 @@ test('count-in never advances active time',()=>{const s=logic.createSession([fre
 test('recovery pauses at persisted checkpoint, excludes unknown downtime',()=>{let s=logic.createSession([free()],seedData());s.runtime.phase='running';s.runtime.runStartedAt=date;s=logic.checkpointSession(s,Date.parse(date)+5000);const r=logic.recoverSession(s);assert.equal(r.runtime.phase,'paused');assert.equal(logic.blockElapsed(r,Date.parse(date)+600000),5);});
 test('finish and skip preserve independent block state',()=>{let s=logic.createSession([free('one'),free('two'),free('three')],seedData());s=logic.finishBlock(s,false);assert.equal(s.activeBlockIndex,1);assert.equal(s.runtime.phase,'ready');s=logic.finishBlock(s,true);s=logic.finishBlock(s,false);assert.equal(s.status,'completed');assert.deepEqual(s.blocks.map(b=>[b.completed,b.skipped]),[[true,false],[false,true],[true,false]]);assert.doesNotThrow(()=>v.validateSession(s));});
 test('restart retains prior time and attempts in a separate segment',()=>{const s=logic.createSession([free()],seedData());s.blocks[0].actualActiveSeconds=12;s.blocks[0].tempoAttempts=[attempt(105)];const r=logic.restartBlock(s);assert.equal(r.blocks.length,2);assert.equal(r.blocks[0].actualActiveSeconds,12);assert.equal(r.blocks[0].tempoAttempts.length,1);assert.equal(r.blocks[1].actualActiveSeconds,0);assert.equal(r.blocks[1].tempoAttempts.length,0);});
+test('Practice again rebuilds fresh blocks, skips obsolete restart segments, and starts from final tempo',()=>{
+ const d=seedData();let s=logic.createSession([free('Repeat me',120)],d,{returnTo:{path:'/practice',label:'Practice'}});
+ s.blocks[0].actualActiveSeconds=15;s.blocks[0].tempoAttempts=[attempt(90,'messy')];s.runtime.bpm=96;s=logic.restartBlock(s);
+ s.runtime.bpm=104;s.blocks[s.activeBlockIndex].finalBpm=104;s=logic.finishBlock(s,false,Date.parse(date)+30000);
+ const blocks=logic.replayBlocks(s,d);
+ assert.equal(blocks.length,1);assert.notEqual(blocks[0].id,s.blocks[1].id);assert.equal(blocks[0].title,'Repeat me');
+ assert.equal(blocks[0].bpm,104);assert.equal(blocks[0].targetSeconds,120);assert.equal(blocks[0].order,0);
+ assert.equal('tempoAttempts' in blocks[0],false);assert.equal('actualActiveSeconds' in blocks[0],false);
+});
 test('wall clock going backward cannot create negative active duration',()=>{const s=logic.createSession([free()],seedData());s.runtime.phase='running';s.runtime.runStartedAt=date;assert.equal(logic.blockElapsed(s,Date.parse(date)-1000),0);});
 test('progressive trainer clamps at max without wrapping',()=>{const c={mode:'progressive',start:80,step:5,seconds:120,max:120};assert.deepEqual([0,119,120,960,3000].map(t=>trainerBpm(c,t,0)),[80,80,85,120,120]);});
 test('repetition trainer advances only at complete clean-round thresholds',()=>{const c={mode:'repetition',start:80,step:5,rounds:3,max:90};assert.deepEqual([0,2,3,5,6,300].map(n=>trainerBpm(c,900,n)),[80,80,85,85,90,90]);});

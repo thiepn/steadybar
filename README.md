@@ -168,6 +168,14 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## Post-practice completion UX — 2.39.0
+
+The immediate completion screen is now a **decision surface**, not a duplicate of History. It opens with the saved time/block/result summary and three clear choices: return to the source that launched practice, repeat the session, or open Progress. Reflection is optional and can be added or edited without blocking those actions.
+
+**Practice again** creates a genuinely fresh session from the immutable completed snapshots. It keeps the authored exercise/protocol/setup and the tempo reached at the end of the last session, but creates new session/block IDs and does not copy attempts, outcomes, evaluation state, or elapsed time. Obsolete restart segments are not repeated.
+
+Detailed block history, recordings, attempts and notes remain available under **Review session details** and on the normal History page. Guided-learning follow-up stays visible when a completed session belongs to a lesson. No persistence or backup-format migration is required.
+
 ## Practice continuity & return paths — 2.38.0
 
 A practice session now remembers the page that launched it. **Save & leave** and the completed-session review both return to that exact internal source instead of always routing through Today. Starting from Rhythm Lab returns to Rhythm Lab; starting from an exercise, song, Practice, Today, or another supported internal surface returns there.

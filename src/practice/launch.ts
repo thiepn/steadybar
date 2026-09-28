@@ -1,10 +1,11 @@
 import { switchProfile } from '../app/profiles.js';
 import { exerciseBpm } from '../domain/protocols.js';
 import { activeProfile } from '../domain/profiles.js';
-import type { Exercise, PracticeLaunchSource, PracticeReturnTarget, Routine, RoutineBlock, Song } from '../domain/models.js';
+import type { Exercise, PracticeLaunchSource, PracticeReturnTarget, PracticeSession, Routine, RoutineBlock, Song } from '../domain/models.js';
 import { metadata, localDate, freshBlocks, uuid } from '../domain/utils.js';
 import { store } from '../app/store.js';
 import { practice } from './controller.js';
+import { replayBlocks } from './logic.js';
 import { navigate } from '../app/navigation.js';
 import { confirmAction, notify } from '../ui/components.js';
 export function exerciseBlock(exercise:Exercise,seconds=exercise.defaultSeconds??600):RoutineBlock{return {id:uuid(),type:'exercise',exerciseId:exercise.id,profileId:exercise.profileId,title:exercise.name,targetSeconds:seconds,bpm:exerciseBpm(exercise),notes:'',order:0};}
@@ -27,6 +28,10 @@ export async function launchPractice(blocks:RoutineBlock[],source:PracticeLaunch
   const profile=activeProfile(store.snapshot());
   const attributed=blocks.map(b=>({...b,profileId:b.profileId??profile.id}));
   await practice.create(attributed,{...source,returnTo:source.returnTo??launchReturnTarget()});navigate('/practice/active');
+}
+export async function replaySession(session:PracticeSession):Promise<void>{
+  const blocks=replayBlocks(session,store.snapshot());
+  await launchPractice(blocks,{profileId:session.profileId,returnTo:session.returnTo});
 }
 export async function addToday(block:RoutineBlock):Promise<void>{
   const profile=activeProfile(store.snapshot());

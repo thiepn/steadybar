@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.39.0 — Post-Practice Review & Session Completion UX — 2026-09-28
+
+- Turn the immediate **Session complete** screen into a compact next-step surface instead of rendering the entire History record at full length.
+- Lead with three saved-session metrics: active practice time, completed blocks and results saved.
+- Make reflection explicitly optional; it no longer occupies the primary completion action or interrupts leaving the session.
+- Keep a saved reflection visible in compact form with a direct **Edit reflection** action.
+- Promote three clear post-practice choices:
+  - return to the exact launch surface captured by 2.38,
+  - **Practice again**,
+  - open Progress.
+- Add true **Practice again** behavior that rebuilds fresh routine blocks from immutable session snapshots, starts tempo tasks from the tempo just reached, preserves authored protocol/setup, and skips obsolete restart segments.
+- Keep repeated sessions independent: new session/block IDs, no copied attempts, outcomes, evaluations or elapsed time.
+- Preserve the original session’s return destination when repeating so a repeated Rhythm Lab task still returns to Rhythm Lab.
+- Keep guided-course follow-up visible when applicable, while moving block snapshots, attempts, recordings and detailed notes behind **Review session details**.
+- Leave normal History session pages unchanged as the full durable evidence view.
+- On phones, keep Return / Practice again / Progress in one fixed safe-area-aware completion action dock with 44px+ touch targets.
+- Add deterministic repeat-block tests plus Chromium/Firefox/WebKit completion-flow coverage for optional reflection, collapsed details, fresh replay state and source return.
+- No schema, IndexedDB, history or backup-format migration is required.
+
+
 ## 2.38.0 — Practice Continuity & Return Paths — 2026-09-28
 
 - Snapshot the exact internal page that launched a practice session, together with its visible page title.

@@ -156,6 +156,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.dialog_fill('What did you notice?','Left hand stayed relaxed at 105.')
         self.save_dialog('Save note')
         self.finish()
+        self.open_focus_drawer('Review session details')
         expect(self.page.get_by_text('New best clean tempo: 105 BPM',exact=True)).to_be_visible()
         self.route('/progress')
         self.page.get_by_label('Progress exercise',exact=True).select_option('rudiment-2')
@@ -212,6 +213,7 @@ class MusicPracticeTests(unittest.TestCase):
         self.page.get_by_role('button',name='Practice transition',exact=True).click()
         self.save_dialog('Start transition')
         self.start();self.finish()
+        self.open_focus_drawer('Review session details')
         self.assertIn('Intro → Verse',self.page.locator('body').inner_text())
 
     def test_05_routine_creation_four_blocks_and_duplication(self):
