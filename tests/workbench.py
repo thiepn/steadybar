@@ -1750,7 +1750,7 @@ class Workbench(e2e.MusicPracticeTests):
         self.confirm('Finish session')
         expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
         expect(self.page.get_by_role('link',name='Back to Rhythm Lab',exact=True).first).to_be_visible()
-        expect(self.page.get_by_text('return to Rhythm Lab.',exact=False)).to_be_visible()
+        expect(self.page.get_by_text('Your practice is saved. Choose what you want to do next.',exact=True)).to_be_visible()
 
         self.page.get_by_role('link',name='Back to Rhythm Lab',exact=True).first.click()
         self.page.wait_for_url(re.compile(r'.*#/rhythm$'))
@@ -1759,6 +1759,65 @@ class Workbench(e2e.MusicPracticeTests):
         session=self.read("load('app/store.js').store.snapshot().sessions.at(-1)")
         self.assertEqual(session['status'],'completed')
         self.assertEqual(session['returnTo'],{'path':'/rhythm','label':'Rhythm Lab'})
+
+
+
+    def test_86_post_practice_completion_is_compact_optional_and_repeatable(self):
+        self.onboard()
+        self.page.set_viewport_size({'width':390,'height':844})
+        self.route('/rhythm')
+        self.page.get_by_label('BPM',exact=True).fill('96')
+        self.page.get_by_label('BPM',exact=True).press('Tab')
+        self.page.get_by_role('button',name='Start practice',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        original=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {sessionId:s.id,blockId:b.id,returnTo:s.returnTo,bpm:s.runtime.bpm};
+        })()""")
+        self.start()
+        self.page.get_by_role('button',name='Solid',exact=True).click()
+
+        expect(self.page.get_by_role('heading',name='Session complete.',exact=True)).to_be_visible()
+        summary=self.page.get_by_role('region',name='Session summary')
+        expect(summary).to_be_visible()
+        expect(summary).to_contain_text('Results saved')
+        expect(summary).to_contain_text('1 solid')
+        details=self.page.locator('details.completion-details')
+        expect(details).not_to_have_attribute('open','')
+        expect(self.page.get_by_role('heading',name='Practice blocks',exact=True)).not_to_be_visible()
+        expect(self.page.get_by_role('button',name='Add reflection',exact=True)).to_be_visible()
+
+        actions=self.page.get_by_role('navigation',name='Session next actions')
+        expect(actions).to_be_visible()
+        self.assertEqual(actions.evaluate('(e)=>getComputedStyle(e).position'),'fixed')
+        for control in actions.locator('a,button').all():
+            box=control.bounding_box();self.assertIsNotNone(box);self.assertGreaterEqual(box['height'],44)
+
+        self.page.get_by_role('button',name='Add reflection',exact=True).click()
+        self.page.locator('dialog[open]').get_by_label('How did the session feel?',exact=True).select_option('4')
+        self.dialog_fill('Session notes','Good pocket; repeat once.')
+        self.save_dialog('Save review')
+        expect(self.page.get_by_text('Reflection saved',exact=True)).to_be_visible()
+        expect(self.page.get_by_role('button',name='Edit reflection',exact=True)).to_be_visible()
+
+        actions=self.page.get_by_role('navigation',name='Session next actions')
+        actions.get_by_role('button',name='Practice again',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
+        repeated=self.read("""(()=>{
+          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
+          return {sessionId:s.id,blockId:b.id,returnTo:s.returnTo,bpm:s.runtime.bpm,evaluation:b.evaluation??null,outcomes:b.outcomes??[],attempts:b.tempoAttempts};
+        })()""")
+        self.assertNotEqual(repeated['sessionId'],original['sessionId'])
+        self.assertNotEqual(repeated['blockId'],original['blockId'])
+        self.assertEqual(repeated['returnTo'],original['returnTo'])
+        self.assertEqual(repeated['bpm'],96)
+        self.assertIsNone(repeated['evaluation'])
+        self.assertEqual(repeated['outcomes'],[])
+        self.assertEqual(repeated['attempts'],[])
+
+        self.page.get_by_role('button',name='Save & leave',exact=True).click()
+        self.page.wait_for_url(re.compile(r'.*#/rhythm$'))
+        expect(self.page.get_by_role('heading',name='Rhythm Lab',exact=True)).to_be_visible()
 
 
 
