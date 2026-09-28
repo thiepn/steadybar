@@ -118,11 +118,16 @@ function render():void{
       el('a',{href:'#/',class:'mobile-brand','aria-label':'Steadybar home'},brandMark(),el('strong',{},'Steadybar')),
       el('div',{class:'actions'},profilePicker(),makeSearch(),iconButton('Appearance','sun',openAppearance)));
     const mobile=el('nav',{class:'mobile-nav','aria-label':'Mobile navigation'});
-    for(const [href,label,symbol] of [navigation[0]!,navigation[1]!,navigation[2]!,navigation[3]!]){
+    const drumMobile=activeProfile(store.snapshot()).instrumentType==='drums';
+    const mobileItems:[string,string,IconName][]=[
+      navigation[0]!,navigation[1]!,navigation[2]!,
+      drumMobile?['/drums','Drum Tools','routine']:navigation[3]!,
+    ];
+    for(const [href,label,symbol] of mobileItems){
       const a=el('a',{href:`#${href}`,class:activeLink(href,path)?'active':''},icon(symbol,20),el('span',{},label));if(activeLink(href,path))a.setAttribute('aria-current','page');mobile.append(a);
     }
     const more=button('More',moreMenu,'mobile-more','more');more.setAttribute('aria-haspopup','dialog');
-    if(!['/','/practice','/metronome','/library'].some(href=>activeLink(href,path)))more.classList.add('active');mobile.append(more);
+    if(!mobileItems.some(([href])=>activeLink(href,path)))more.classList.add('active');mobile.append(more);
     root.replaceChildren(el('div',{class:'app-shell'},sidebar,el('div',{class:'app-body'},header,el('div',{id:'update-banner'}),main),mobile));
     drawPwaState();
   }
