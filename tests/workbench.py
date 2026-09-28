@@ -1633,7 +1633,12 @@ class Workbench(e2e.MusicPracticeTests):
         expect(self.page.get_by_role('heading',name='What matters now',exact=True)).to_have_count(0)
 
         self.page.get_by_role('button',name='Build plan',exact=True).click()
-        plan=self.wait_read("load('app/store.js').store.view().dailyPlans[0]",lambda p:bool(p) and len(p.get('blocks',[]))>0)
+        plan=None
+        for _ in range(70):
+            plan=self.read("load('app/store.js').store.view().dailyPlans[0] ?? null")
+            if plan and len(plan.get('blocks',[]))>0:break
+            self.page.wait_for_timeout(100)
+        self.assertIsNotNone(plan)
         expect(self.page.get_by_role('button',name='Start full session',exact=True)).to_be_visible()
         expect(self.page.locator('details.today-planning')).not_to_have_attribute('open','')
         expect(self.page.get_by_role('button',name='Build plan',exact=True)).to_be_hidden()
