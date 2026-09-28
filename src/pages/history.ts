@@ -78,17 +78,18 @@ export function sessionPage(id:string,review=false):Page{
   if(review){
     const completed=session.blocks.filter(block=>block.completed).length,evaluations=session.blocks.flatMap(block=>block.evaluation?[block.evaluation]:[]);
     const outcomeCount=session.blocks.reduce((sum,block)=>sum+(block.outcomes?.length??0)+block.tempoAttempts.length,0);
+    const resultCount=evaluations.length||outcomeCount||clean.length;
     const resultSummary=evaluations.length
       ? `${evaluations.filter(row=>row.result==='solid').length} solid · ${evaluations.filter(row=>row.result==='usable').length} usable · ${evaluations.filter(row=>row.result==='not-yet').length} not yet`
       : clean.length?`${clean.length} clean tempo attempt${clean.length===1?'':'s'}`
-      : outcomeCount?`${outcomeCount} task result${outcomeCount===1?'':'s'} saved`:'Session saved';
+      : outcomeCount?`${outcomeCount} task result${outcomeCount===1?'':'s'} saved`:'No separate task results';
     const page=el('div',{class:'page session-review session-completion'},
       pageHeader('','Session complete.','Your practice is saved. Choose what you want to do next.'));
     const summary=el('section',{class:'completion-summary','aria-label':'Session summary'},
       el('div',{class:'completion-summary-grid'},
         stat('Active practice',duration(sessionTime(session))),
         stat('Blocks',`${completed} / ${session.blocks.length}`),
-        stat('Results',resultSummary)),
+        stat('Results saved',resultCount,resultSummary)),
       el('p',{class:'session-profile muted'},session.profileNameSnapshot??'Earlier practice'));
     const actions=el('nav',{class:'completion-actions','aria-label':'Session next actions'},
       link(returnLabel,returnTo.path,'button primary completion-return','exit'),
