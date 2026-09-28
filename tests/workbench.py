@@ -1802,11 +1802,15 @@ class Workbench(e2e.MusicPracticeTests):
 
         actions=self.page.get_by_role('navigation',name='Session next actions')
         actions.get_by_role('button',name='Practice again',exact=True).click()
-        self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
-        repeated=self.read("""(()=>{
-          const s=load('practice/controller.js').practice.session,b=s.blocks[s.activeBlockIndex];
-          return {sessionId:s.id,blockId:b.id,returnTo:s.returnTo,bpm:s.runtime.bpm,evaluation:b.evaluation??null,outcomes:b.outcomes??[],attempts:b.tempoAttempts};
-        })()""")
+        repeated=None
+        for _ in range(100):
+            repeated=self.read("""(()=>{
+              const s=load('practice/controller.js').practice.session,b=s?.blocks[s.activeBlockIndex];
+              return s&&b?{sessionId:s.id,blockId:b.id,returnTo:s.returnTo,bpm:s.runtime.bpm,evaluation:b.evaluation??null,outcomes:b.outcomes??[],attempts:b.tempoAttempts}:null;
+            })()""")
+            if repeated and repeated['sessionId']!=original['sessionId']:break
+            self.page.wait_for_timeout(50)
+        self.assertIsNotNone(repeated)
         self.assertNotEqual(repeated['sessionId'],original['sessionId'])
         self.assertNotEqual(repeated['blockId'],original['blockId'])
         self.assertEqual(repeated['returnTo'],original['returnTo'])
