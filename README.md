@@ -168,6 +168,16 @@ The recommendation remains optional. **Start practice** still launches the ordin
 
 This remains a deterministic practice-planning aid, not automatic performance analysis: Not Yet / Usable / Solid and most quality feedback are still user-reported unless a protocol explicitly performs a structured check.
 
+## UI & navigation simplification — 2.40.0
+
+Steadybar’s desktop shell now prioritizes the pages used during ordinary practice instead of presenting every planning, repertoire and review feature at the same visual level. The pinned sidebar is intentionally short: Today, Practice, Metronome, Drum Tools when applicable, Library, Learn, Progress and History. Settings stays directly available in the footer.
+
+Lower-frequency destinations remain fully available through a categorized **More** menu grouped into Practice, Plan & organize, Review and System. Search and direct URLs are unchanged, so simplification does not remove capabilities.
+
+The same pass standardizes spacing, button shape, active navigation, top-level card surfaces and browsing lists. Library now uses a visible **Practice** button instead of requiring users to understand an icon-only play control. Practice, Drum Tools, History and Settings use clearer language focused on what the user can do next.
+
+This release changes presentation and navigation hierarchy only. Practice sessions, evidence, plans, history, IndexedDB state and backups are unchanged.
+
 ## Post-practice completion UX — 2.39.0
 
 The immediate completion screen is now a **decision surface**, not a duplicate of History. It opens with the saved time/block/result summary and three clear choices: return to the source that launched practice, repeat the session, or open Progress. Reflection is optional and can be added or edited without blocking those actions.
