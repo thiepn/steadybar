@@ -44,7 +44,8 @@ export function historyPage():Page{
 export function sessionPage(id:string,review=false):Page{
   const data=store.snapshot(),session=data.sessions.find(s=>s.id===id);if(!session)return {node:empty('Session not found.','This session may have been removed by a data restore.',link('History','/history','button primary'))};
   const clean=session.blocks.flatMap(b=>b.tempoAttempts).filter(a=>a.rating==='clean'||a.rating==='effortless');
-  const page=el('div',{class:'page session-review'},link(review?'Back to today':'Practice history',review?'/':'/history','back-link'),pageHeader(review?'':formatDate(session.startedAt,true),review?'Session complete.':'Session details',review?'Review your time, attempts, and notes.':`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
+  const returnTo=session.returnTo??{path:'/',label:'Today'},returnLabel=returnTo.label.toLowerCase()==='today'?'Back to today':`Back to ${returnTo.label}`;
+  const page=el('div',{class:'page session-review'},link(review?returnLabel:'Practice history',review?returnTo.path:'/history','back-link'),pageHeader(review?'':formatDate(session.startedAt,true),review?'Session complete.':'Session details',review?`Review your time, attempts, and notes, then return to ${returnTo.label}.`:`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
   const sessionRecordings=(data.recordings??[]).filter(row=>row.sessionId===session.id);
   page.append(el('div',{class:'stats-strip'},stat('Active practice',duration(sessionTime(session))),stat('Blocks completed',`${session.blocks.filter(b=>b.completed).length} / ${session.blocks.length}`),stat(clean.length?'Clean tempo attempts':'Task results',clean.length||session.blocks.reduce((n,b)=>n+(b.outcomes?.length??0),0)),stat('Recordings',sessionRecordings.length),stat('Session reflection',session.sessionRating?`${session.sessionRating} / 5`:'Not rated')));
   page.append(el('p',{class:'session-profile muted'},session.profileNameSnapshot??'Earlier practice'));
@@ -76,5 +77,5 @@ export function sessionPage(id:string,review=false):Page{
       block.outcomes?.length?el('ol',{class:'outcome-history'},block.outcomes.map(outcome=>el('li',{},el('span',{},outcomeSummary(outcome)),outcome.note?el('p',{class:'muted small'},outcome.note):null))):null,
       block.notes?el('p',{class:'pre-line'},block.notes):null));
   }
-  page.append(records,el('div',{class:'page-footer'},link('Back to today','/','button primary','today'),link('See progress','/progress','button secondary','progress')));return {node:page};
+  page.append(records,el('div',{class:'page-footer'},review?link(returnLabel,returnTo.path,'button primary','exit'):link('Back to today','/','button primary','today'),link('See progress','/progress','button secondary','progress')));return {node:page};
 }
