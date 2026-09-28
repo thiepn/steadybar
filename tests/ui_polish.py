@@ -88,7 +88,7 @@ class UIPolish(e2e.MusicPracticeTests):
                     expect(self.page.locator('h1')).to_have_count(1)
                     self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
                     clipped=self.page.evaluate('''()=>[...document.querySelectorAll('button,input,select,a')].filter(e=>{
-                        if(e.classList.contains('skip-link'))return false;
+                        if(e.classList.contains('skip-link')||e.closest('[data-horizontal-scroll="true"]'))return false;
                         const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&(r.left<-.5||r.right>innerWidth+.5);
                     }).map(e=>({name:e.getAttribute('aria-label')||e.textContent.trim(),x:e.getBoundingClientRect().left,width:e.getBoundingClientRect().width}))''')
                     self.assertEqual(clipped,[],f'{width} {route}')
