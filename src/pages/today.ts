@@ -39,7 +39,7 @@ export function todayPage(): Page {
   const total=routineDuration(plan?.blocks||[]);
   const planPanel=el('section',{class:'panel plan-panel today-primary-plan','aria-label':'Today’s practice plan'},
     sectionHeader('Today’s plan',plan?.blocks.length?`${duration(total)} · ${plan.blocks.length} blocks${plan.generation?.kind==='autopilot'?' · Autopilot':plan.generation?.kind==='set-prep'?` · Set prep · ${plan.generation.setPrepStage?.replaceAll('-',' ')??'prep'}`:''}`:'Not planned',
-      plan?.blocks.length?[start]:[]));
+      plan?.blocks.length&&!active?[start]:[]));
   if(plan?.blocks.length){
     planPanel.append(blockList(plan.blocks,savePlan,block=>launchPractice([block],{planId:plan.id})),
       el('div',{class:'plan-footer'},button('Use routine',()=>selectRoutineDialog(routineToday),'ghost','routine'),link('Free practice','/practice','text-link')));
