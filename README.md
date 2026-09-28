@@ -172,7 +172,7 @@ This remains a deterministic practice-planning aid, not automatic performance an
 
 Phone use now keeps the next practice action in the lower thumb zone. Today and Practice render a contextual action dock immediately above the fixed mobile navigation, while the desktop UI remains unchanged. Drum profiles also promote **Drum Tools** into the fourth bottom-nav slot; other instruments retain Library there.
 
-Practice’s eight drum workstations become one horizontal swipe strip on phones, reducing vertical travel before Quick Start. During an active session, Focus Player combines transport and block-result controls into one fixed bottom control group, so Start/Pause, click state, and Not yet / Usable / Solid remain reachable without scrolling back through the page.
+Practice’s eight drum workstations become a compact 4×2 grid on phones, cutting the launcher to roughly half its previous height without hiding tools off-screen. During an active session, Focus Player combines transport and block-result controls into one fixed bottom control group, so Start/Pause, click state, and Not yet / Usable / Solid remain reachable without scrolling back through the page.
 
 These are presentation and navigation changes only. Session state, evidence, history, keyboard/pedal controls, tool URLs and persistence semantics are unchanged.
 
