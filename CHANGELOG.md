@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.37.0 — Mobile Practice Flow & One-Handed UX — 2026-09-28
+
+- Make the phone workflow thumb-first without changing desktop layout or practice data.
+- Give drum profiles **Drum Tools** as the fourth direct mobile-nav destination instead of Library; non-drum profiles keep Library there, while every full-navigation route remains available through More/Search.
+- Add a contextual bottom action dock above the mobile navigation on Today:
+  - Resume when a session is unfinished.
+  - Start session when a plan exists.
+  - Plan today + Practice now when the day is empty.
+- Add the same contextual dock on Practice:
+  - Resume unfinished work.
+  - Start the existing Today plan + open Drum Tools/Library.
+  - Drum Tools or Choose exercise + Free practice when no plan exists.
+- Compress the eight-tool Practice drum launcher into a thumb-sized 4×2 grid on phones instead of four tall two-column rows.
+- Consolidate Focus Player transport and Not yet / Usable / Solid into one fixed bottom control group so the most-used controls stay within thumb reach while playing.
+- Increase Focus Player bottom breathing room and move practice notifications above the consolidated control dock.
+- Preserve all desktop behavior, direct tool routes, keyboard/pedal shortcuts, session semantics, evidence capture and safe-area support.
+- Add Chromium/Firefox/WebKit regression coverage for bottom-nav context, dock separation, horizontal drum-tool reachability, fixed Focus controls, 44px touch targets and 320–430px layouts.
+- No persistence, history, protocol, schema or backup-format migration is required.
+
+
 ## 2.36.0 — Today Surface Hierarchy & Decision-Friction Reduction — 2026-09-28
 
 - Make the current **Today’s plan** the dominant surface immediately below unfinished-session recovery.

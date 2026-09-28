@@ -128,6 +128,16 @@ export function todayPage(): Page {
 
   review.append(el('div',{class:'today-review-grid'},side,el('div',{class:'today-review-main'},goals,history)));
   page.append(review);
+
+  const mobileDock=el('nav',{class:'mobile-action-dock today-mobile-dock','aria-label':'Today quick actions'});
+  if(active)mobileDock.append(link('Resume','/practice/active','button primary mobile-dock-primary','play'));
+  else if(plan?.blocks.length)mobileDock.append(
+    button('Start session',()=>launchPractice(plan.blocks,{planId:plan.id}),'primary mobile-dock-primary','play'),
+    link('Practice','/practice','button secondary mobile-dock-secondary','play'));
+  else mobileDock.append(
+    button('Plan today',()=>{planning.open=true;requestAnimationFrame(()=>planning.scrollIntoView({behavior:'smooth',block:'start'}));},'primary mobile-dock-primary','today'),
+    link('Practice now','/practice','button secondary mobile-dock-secondary','play'));
+  page.append(mobileDock);
   return {node:page};
 }
 

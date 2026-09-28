@@ -125,15 +125,15 @@ class UIPolish(e2e.MusicPracticeTests):
     def test_36_mobile_navigation_reaches_every_destination(self):
         self.onboard();self.page.set_viewport_size({'width':390,'height':844})
         nav=self.page.locator('.mobile-nav')
-        for name,path in [('Metronome','/metronome'),('Library','/library'),('Practice','/practice'),('Today','/')]:
+        for name,path in [('Metronome','/metronome'),('Drum Tools','/drums'),('Practice','/practice'),('Today','/')]:
             nav.get_by_role('link',name=name,exact=True).click()
             expect(nav.get_by_role('link',name=name,exact=True)).to_have_class(re.compile('active'))
             self.assertEqual(self.page.evaluate('location.hash'),'#'+path)
-        for name in ('Songs','Setlists','Goals','Progress','History','Settings','Routines'):
+        for name in ('Library','Songs','Setlists','Goals','Progress','History','Settings','Routines'):
             nav.get_by_role('button',name='More',exact=True).click()
             self.page.get_by_role('dialog').get_by_role('button',name=name,exact=True).click()
             expect(self.page.get_by_role('dialog')).to_have_count(0)
-            title={'Songs':'Songs','Goals':'Goals','Progress':'Progress','History':'History','Routines':'Routines'}.get(name,name)
+            title={'Library':'Exercise library','Songs':'Songs','Goals':'Goals','Progress':'Progress','History':'History','Routines':'Routines'}.get(name,name)
             expect(self.page.get_by_role('heading',name=title,exact=True)).to_be_visible()
 
 if __name__=='__main__':

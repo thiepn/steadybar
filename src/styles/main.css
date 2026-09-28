@@ -62,6 +62,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .sidebar-footer {margin-top:auto;border-top:1px solid var(--border);padding-top:12px}
 .sidebar-footer>.button {width:100%;justify-content:flex-start;font-size:12px;color:var(--muted)}
 .app-body {min-width:0}.topbar,.mobile-nav {display:none}
+.mobile-action-dock{display:none}
 .main-content {width:100%;max-width:1380px;margin:0 auto;padding:44px clamp(24px,3.1vw,56px) 64px}
 .page {min-width:0;width:100%}
 .page-heading {display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:32px}
@@ -439,6 +440,14 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .topbar .actions {gap:4px}.topbar .search-trigger {width:40px;min-height:40px;padding:8px;justify-content:center;border:0}.topbar .search-trigger span,.topbar .search-trigger kbd {display:none}
   .main-content {padding:24px 18px calc(94px + env(safe-area-inset-bottom))}.page-heading {gap:12px;margin-bottom:24px;flex-wrap:wrap}.page-heading h1 {font-size:25px}.page-heading p {font-size:12px}.page-heading>.actions {width:100%;justify-content:flex-start;gap:8px;padding:0}
   .page-heading .button {min-height:44px}.panel {padding-top:18px;margin-bottom:24px}.section-heading {gap:10px;margin-bottom:14px}.section-title {gap:5px 10px}.section-title h2 {font-size:15px}
+  .today-page,.practice-launcher{padding-bottom:72px}
+  .mobile-action-dock{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:7px;position:fixed;z-index:19;left:10px;right:10px;bottom:calc(66px + env(safe-area-inset-bottom));padding:7px;border:1px solid var(--border-strong);border-radius:8px;background:color-mix(in srgb,var(--surface) 97%,transparent);box-shadow:0 8px 26px color-mix(in srgb,var(--text) 15%,transparent);backdrop-filter:blur(12px)}
+  .mobile-action-dock>.button:only-child{grid-column:1/-1}
+  .mobile-action-dock>.button{min-width:0;min-height:48px;padding:8px 7px;font-size:12px}
+  .mobile-action-dock>.button>svg{width:15px;height:15px}
+  .practice-launcher .drum-tool-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+  .practice-launcher .drum-tool-card{min-width:0;min-height:58px;flex-direction:column;justify-content:center;gap:4px;padding:7px 3px;text-align:center;font-size:10px;line-height:1.15}
+  .practice-launcher .drum-tool-card>svg{width:16px;height:16px}
   .button {min-height:44px;font-size:13px}.button.compact {min-height:40px}.icon-button,.button.icon-button {width:40px;height:44px;min-height:44px}.topbar .icon-button {width:40px;min-height:40px;height:40px}
   .back-link {min-height:36px;margin-bottom:12px}.actions {gap:8px}.text-link {font-size:13px}.label {font-size:11px}
   .today-grid,.today-overview,.two-column,.two-column.wide-left,.settings-grid {grid-template-columns:minmax(0,1fr);gap:24px}
@@ -591,6 +600,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
 .focus-menu-actions>.button{justify-content:flex-start;min-height:44px}
 .focus-stage{width:min(100%,820px);margin:0 auto;padding:30px 24px 72px}
 .focus-workspace{display:grid;gap:18px;min-width:0}
+.focus-primary-controls{display:grid;gap:18px}
 .focus-identity{margin:0;text-align:center}
 .focus-meta{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;min-height:24px;margin-bottom:6px}
 .focus-intent{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);font-size:10px;font-weight:600;letter-spacing:.03em;text-transform:capitalize;color:var(--muted)}
@@ -651,7 +661,7 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .focus-topbar .button>svg{display:none}
   .focus-topbar-center{gap:6px;font-size:10px}.focus-block-index{font-size:10px}.focus-topbar .status-label{font-size:10px}
   .focus-menu-actions{position:fixed;top:56px;right:10px;width:min(220px,calc(100vw - 20px))}
-  .focus-stage{padding:18px 12px calc(110px + env(safe-area-inset-bottom));width:100%}
+  .focus-stage{padding:18px 12px calc(154px + env(safe-area-inset-bottom));width:100%}
   .focus-workspace{gap:12px}
   .focus-player .active-title{font-size:clamp(23px,7.4vw,31px);letter-spacing:-.7px}
   .focus-player .active-sticking{font-size:14px;margin-top:5px}
@@ -663,25 +673,27 @@ fieldset {min-width:0;border:1px solid var(--border);padding:14px;margin:12px 0}
   .focus-readouts .timer-target{font-size:10px}.focus-readouts .active-tempo-controls{gap:3px}.focus-readouts .active-tempo-controls .tempo-step{min-height:34px;font-size:10px}
   .focus-player .practice-beats{margin:0}.focus-player .practice-beat{height:9px;line-height:9px}
   .focus-task .protocol-task{padding:10px 0}.focus-task .task-heading{font-size:11px}.focus-task .task-cue{font-size:18px}.focus-task .task-actions{margin:10px 0 4px;gap:5px}.focus-task .task-actions>.button{min-height:42px;font-size:11px}
+  .focus-primary-controls{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:24;display:grid;gap:6px;padding:8px;border:1px solid var(--border-strong);border-radius:9px;background:color-mix(in srgb,var(--surface) 97%,transparent);box-shadow:0 8px 28px color-mix(in srgb,var(--text) 16%,transparent);backdrop-filter:blur(12px)}
   .focus-transport.practice-main-controls{position:static;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:6px;padding:0;border:0;background:transparent;margin:0}
   .practice-route .focus-transport.practice-main-controls{position:static}
-  .focus-transport>.button{min-height:50px;font-size:12px;padding:8px 6px}.focus-transport .button>svg{display:none}
-  .focus-result-panel{position:fixed;left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:24;width:auto;margin:0;padding:9px 8px;border-radius:8px;border-color:var(--border-strong);background:color-mix(in srgb,var(--surface) 97%,transparent);box-shadow:0 8px 28px color-mix(in srgb,var(--text) 16%,transparent);backdrop-filter:blur(12px)}
-  .focus-result-heading{font-size:10px}.focus-result-heading .small{display:none}
-  .button.focus-result{min-height:48px;font-size:11px;padding-inline:4px}
+  .focus-transport>.button{min-height:48px;font-size:12px;padding:8px 6px}.focus-transport .button>svg{display:none}
+  .focus-result-panel{position:static;width:auto;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none}
+  .focus-result-heading{display:none}
+  .focus-result-buttons{gap:5px}
+  .button.focus-result{min-height:46px;font-size:11px;padding-inline:4px}
   .focus-next.next-block{padding:9px 0;font-size:10px}.focus-next strong{font-size:10px}
   .focus-secondary{padding-bottom:12px}.focus-drawer>summary{min-height:44px;font-size:11px}.focus-drawer-body{padding-bottom:12px}
   .focus-drawer .rating-buttons{gap:4px}.focus-drawer .button.rating-button{min-height:42px;font-size:10px}
   .focus-limitations{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}
   .focus-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.focus-tool-grid>.button{font-size:10px}
   .focus-player.active-page{padding-bottom:0}
-  .practice-route .notifications{bottom:calc(78px + env(safe-area-inset-bottom))}
+  .practice-route .notifications{bottom:calc(132px + env(safe-area-inset-bottom))}
 }
 @media (max-width:359px){
   .focus-stage{padding-inline:8px}.focus-topbar{padding-inline:8px}
   .focus-readouts .time-readout,.focus-readouts .tempo-readout{padding:10px 7px}
   .focus-readouts .active-time,.focus-readouts input.active-bpm{font-size:38px}
-  .focus-result-panel{left:8px;right:8px}.button.focus-result{font-size:10px}
+  .focus-primary-controls{left:6px;right:6px;padding:6px}.button.focus-result{font-size:10px}
 }
 
 
