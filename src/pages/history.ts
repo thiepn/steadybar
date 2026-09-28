@@ -9,6 +9,7 @@ import { badge, button, empty, formDialog, formNumber, formText, link, notify, p
 import { calculateBestCleanBpm, exerciseAttempts, finishedSessions, sessionTime } from '../domain/analytics.js';
 import { duration, formatDate, nowISO, titleCase } from '../domain/utils.js';
 import type { PracticeSession } from '../domain/models.js';
+import { replaySession } from '../practice/launch.js';
 export function editSessionReview(session:PracticeSession):void{
   formDialog('Session review',[
     select('rating','How did the session feel?',[['','Not rated'],['1','1 · Difficult'],['2','2 · Below usual'],['3','3 · Solid'],['4','4 · Good focus'],['5','5 · Excellent focus']],session.sessionRating?String(session.sessionRating):''),textarea('notes','Session notes',session.sessionNotes,4),
@@ -45,26 +46,17 @@ export function sessionPage(id:string,review=false):Page{
   const data=store.snapshot(),session=data.sessions.find(s=>s.id===id);if(!session)return {node:empty('Session not found.','This session may have been removed by a data restore.',link('History','/history','button primary'))};
   const clean=session.blocks.flatMap(b=>b.tempoAttempts).filter(a=>a.rating==='clean'||a.rating==='effortless');
   const returnTo=session.returnTo??{path:'/',label:'Today'},returnLabel=returnTo.label.toLowerCase()==='today'?'Back to today':`Back to ${returnTo.label}`;
-  const page=el('div',{class:'page session-review'},link(review?returnLabel:'Practice history',review?returnTo.path:'/history','back-link'),pageHeader(review?'':formatDate(session.startedAt,true),review?'Session complete.':'Session details',review?`Review your time, attempts, and notes, then return to ${returnTo.label}.`:`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
   const sessionRecordings=(data.recordings??[]).filter(row=>row.sessionId===session.id);
-  page.append(el('div',{class:'stats-strip'},stat('Active practice',duration(sessionTime(session))),stat('Blocks completed',`${session.blocks.filter(b=>b.completed).length} / ${session.blocks.length}`),stat(clean.length?'Clean tempo attempts':'Task results',clean.length||session.blocks.reduce((n,b)=>n+(b.outcomes?.length??0),0)),stat('Recordings',sessionRecordings.length),stat('Session reflection',session.sessionRating?`${session.sessionRating} / 5`:'Not rated')));
-  page.append(el('p',{class:'session-profile muted'},session.profileNameSnapshot??'Earlier practice'));
+  const lessonFollowups:HTMLElement[]=[];
   const lessonKeys=new Set<string>();
   for(const block of session.blocks){
     const source=block.lessonSource;if(!source||!session.profileId)continue;
     const key=`${source.courseId}/${source.lessonId}`;if(lessonKeys.has(key))continue;lessonKeys.add(key);
     const course=courseById(source.courseId),lesson=course?.lessons.find(l=>l.id===source.lessonId);
-    if(course&&lesson)page.append(el('section',{class:'learning-summary'},el('div',{},el('h2',{},'Review your learning'),el('p',{class:'muted small'},'Practice time does not automatically pass a lesson. Check the performance and understanding separately.')),link('Return to lesson: '+lesson.title,lessonLink(course,lesson,session.profileId),'button secondary')));
+    if(course&&lesson)lessonFollowups.push(el('section',{class:'learning-summary completion-learning'},el('div',{},el('h2',{},'Continue your learning'),el('p',{class:'muted small'},'Practice time is saved, but the lesson still needs its separate performance and understanding check.')),link('Return to lesson: '+lesson.title,lessonLink(course,lesson,session.profileId),'button secondary')));
   }
-  if(session.sessionNotes)page.append(el('section',{class:'panel'},sectionHeader('Reflection'),el('p',{class:'pre-line'},session.sessionNotes)));
-  if(sessionRecordings.length){
-    const evidence=el('section',{class:'panel session-recordings'},sectionHeader('Practice evidence',`${sessionRecordings.length} recording${sessionRecordings.length===1?'':'s'}`,[link('Open recordings','/recordings','text-link','arrow')]));
-    for(const row of sessionRecordings)evidence.append(el('div',{class:'recording-history-row'},
-      el('div',{},el('strong',{},row.title),el('span',{class:'muted small'},`Attempt ${row.attemptNumber}${row.bpm?` · ${row.bpm} BPM`:''} · ${duration(row.durationSeconds)}`)),
-      el('div',{class:'tag-row'},row.markedBest?badge('Best','accent'):null,row.milestone?badge('Milestone','accent'):null,row.rating?badge(`${row.rating}/5`):null)));
-    page.append(evidence);
-  }
-  const records=el('section',{class:'panel'},sectionHeader('Practice blocks','Snapshots are kept even when source exercises or songs change.'));
+
+  const records=el('section',{class:'panel completion-records'},sectionHeader('Practice blocks','Snapshots are kept even when source exercises or songs change.'));
   for(const [i,block] of session.blocks.entries()){
     const best=calculateBestCleanBpm(block.tempoAttempts),previous=block.sourceExerciseId?calculateBestCleanBpm([...exerciseAttempts(data.sessions.filter(s=>s.id!==id&&s.startedAt<session.startedAt),block.sourceExerciseId),...session.blocks.slice(0,i).filter(b=>b.sourceExerciseId===block.sourceExerciseId).flatMap(b=>b.tempoAttempts)]):undefined;
     records.append(el('article',{class:'review-block'},el('div',{class:'split'},el('div',{},el('div',{class:'eyebrow'},`BLOCK ${String(i+1).padStart(2,'0')} · ${titleCase(block.categorySnapshot)}`),el('h2',{},block.titleSnapshot)),badge(block.skipped?'Skipped':block.completed?'Completed':'Restarted / ended')),
@@ -77,5 +69,51 @@ export function sessionPage(id:string,review=false):Page{
       block.outcomes?.length?el('ol',{class:'outcome-history'},block.outcomes.map(outcome=>el('li',{},el('span',{},outcomeSummary(outcome)),outcome.note?el('p',{class:'muted small'},outcome.note):null))):null,
       block.notes?el('p',{class:'pre-line'},block.notes):null));
   }
-  page.append(records,el('div',{class:'page-footer'},review?link(returnLabel,returnTo.path,'button primary','exit'):link('Back to today','/','button primary','today'),link('See progress','/progress','button secondary','progress')));return {node:page};
+
+  const evidence=sessionRecordings.length?el('section',{class:'panel session-recordings'},sectionHeader('Practice evidence',`${sessionRecordings.length} recording${sessionRecordings.length===1?'':'s'}`,[link('Open recordings','/recordings','text-link','arrow')]),
+    sessionRecordings.map(row=>el('div',{class:'recording-history-row'},
+      el('div',{},el('strong',{},row.title),el('span',{class:'muted small'},`Attempt ${row.attemptNumber}${row.bpm?` · ${row.bpm} BPM`:''} · ${duration(row.durationSeconds)}`)),
+      el('div',{class:'tag-row'},row.markedBest?badge('Best','accent'):null,row.milestone?badge('Milestone','accent'):null,row.rating?badge(`${row.rating}/5`):null)))):null;
+
+  if(review){
+    const completed=session.blocks.filter(block=>block.completed).length,evaluations=session.blocks.flatMap(block=>block.evaluation?[block.evaluation]:[]);
+    const outcomeCount=session.blocks.reduce((sum,block)=>sum+(block.outcomes?.length??0)+block.tempoAttempts.length,0);
+    const resultSummary=evaluations.length
+      ? `${evaluations.filter(row=>row.result==='solid').length} solid · ${evaluations.filter(row=>row.result==='usable').length} usable · ${evaluations.filter(row=>row.result==='not-yet').length} not yet`
+      : clean.length?`${clean.length} clean tempo attempt${clean.length===1?'':'s'}`
+      : outcomeCount?`${outcomeCount} task result${outcomeCount===1?'':'s'} saved`:'Session saved';
+    const page=el('div',{class:'page session-review session-completion'},
+      pageHeader('','Session complete.','Your practice is saved. Choose what you want to do next.'));
+    const summary=el('section',{class:'completion-summary','aria-label':'Session summary'},
+      el('div',{class:'completion-summary-grid'},
+        stat('Active practice',duration(sessionTime(session))),
+        stat('Blocks',`${completed} / ${session.blocks.length}`),
+        stat('Results',resultSummary)),
+      el('p',{class:'session-profile muted'},session.profileNameSnapshot??'Earlier practice'));
+    const actions=el('nav',{class:'completion-actions','aria-label':'Session next actions'},
+      link(returnLabel,returnTo.path,'button primary completion-return','exit'),
+      button('Practice again',()=>replaySession(session),'secondary completion-repeat','restart'),
+      link('See progress','/progress','button ghost completion-progress','progress'));
+    const reflected=Boolean(session.sessionRating||session.sessionNotes);
+    const reflection=el('section',{class:'completion-reflection'},
+      el('div',{},el('strong',{},reflected?'Reflection saved':'Reflection · optional'),
+        el('p',{class:'muted small'},reflected
+          ? [session.sessionRating?`${session.sessionRating}/5`:null,session.sessionNotes||null].filter(Boolean).join(' · ')
+          : 'Add a rating or short note only if it will help your next session.')),
+      button(reflected?'Edit reflection':'Add reflection',()=>editSessionReview(session),'secondary compact','note'));
+    const details=el('details',{class:'completion-details'},
+      el('summary',{},el('div',{},el('strong',{},'Review session details'),el('span',{class:'muted small'},'Blocks, attempts, recordings and saved notes')),el('span',{class:'completion-details-state','aria-hidden':'true'},'Open')),
+      el('div',{class:'completion-details-body'},session.sessionNotes?el('section',{class:'panel'},sectionHeader('Reflection'),el('p',{class:'pre-line'},session.sessionNotes)):null,evidence,records));
+    page.append(summary,actions,reflection,...lessonFollowups,details);
+    return {node:page};
+  }
+
+  const page=el('div',{class:'page session-review'},link('Practice history','/history','back-link'),pageHeader(formatDate(session.startedAt,true),'Session details',`${session.status==='completed'?'Completed':'Ended early'} · ${formatDate(session.startedAt,true)}${session.endedAt?` → ${new Date(session.endedAt).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}`:''}`,[button('Add reflection',()=>editSessionReview(session),'primary','note')]));
+  page.append(el('div',{class:'stats-strip'},stat('Active practice',duration(sessionTime(session))),stat('Blocks completed',`${session.blocks.filter(b=>b.completed).length} / ${session.blocks.length}`),stat(clean.length?'Clean tempo attempts':'Task results',clean.length||session.blocks.reduce((n,b)=>n+(b.outcomes?.length??0),0)),stat('Recordings',sessionRecordings.length),stat('Session reflection',session.sessionRating?`${session.sessionRating} / 5`:'Not rated')));
+  page.append(el('p',{class:'session-profile muted'},session.profileNameSnapshot??'Earlier practice'),...lessonFollowups);
+  if(session.sessionNotes)page.append(el('section',{class:'panel'},sectionHeader('Reflection'),el('p',{class:'pre-line'},session.sessionNotes)));
+  if(evidence)page.append(evidence);
+  page.append(records,el('div',{class:'page-footer'},link('Back to today','/','button primary','today'),link('See progress','/progress','button secondary','progress')));
+  return {node:page};
 }
+
