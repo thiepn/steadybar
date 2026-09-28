@@ -103,7 +103,7 @@ export function activePracticePage():Page{
     if(!await confirmAction(reason,'The current microphone capture has not been saved. Discard it and continue?','Discard recording',true))return false;
     practiceRecorder.cancel();resetRecordingUi();return true;
   };
-  const leave=button('Leave',async()=>{if(!await discardActiveRecording('Leave practice while recording?'))return;await practice.pause();await store.refresh();navigate('/');},'ghost','exit');
+  const leave=button('Leave',async()=>{if(!await discardActiveRecording('Leave practice while recording?'))return;await practice.pause();await store.refresh();navigate(active.returnTo?.path??'/');},'ghost','exit');
   leave.setAttribute('aria-label','Save & leave');leave.title='Pause, save, and leave practice';
   const finishSession=async()=>{if(!await discardActiveRecording('Finish session while recording?'))return;if(await confirmAction('Finish this session?','Your time, attempts, notes, and block results will be saved. Unfinished future blocks will be marked skipped.','Finish session')){await practice.finish();draw();}};
   const toggleFullscreen=async()=>{if(document.fullscreenElement)await document.exitFullscreen().catch(()=>{});else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen().catch(()=>{});};
