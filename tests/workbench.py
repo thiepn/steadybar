@@ -1708,7 +1708,7 @@ class Workbench(e2e.MusicPracticeTests):
 
         practice_dock.get_by_role('button',name='Start plan',exact=True).click()
         self.page.wait_for_url(re.compile(r'.*#/practice/active$'))
-        self.assertEqual(self.page.locator('.mobile-nav').count(),0)
+        expect(self.page.locator('.mobile-nav')).to_have_count(0)
         primary=self.page.get_by_role('group',name='Practice controls')
         expect(primary).to_be_visible()
         self.assertEqual(primary.evaluate('(e)=>getComputedStyle(e).position'),'fixed')
