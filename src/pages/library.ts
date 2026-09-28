@@ -41,12 +41,16 @@ export function libraryPage(): Page {
     if (!exercises.length) rows.push(empty('No matching exercises', 'Change a filter or add an exercise.', button('New exercise', () => editExercise(), 'secondary', 'plus')));
     for (const e of exercises.slice(0, view.visible)) {
       const best = clean.get(e.id),protocol=exerciseProtocol(e),tempo=exerciseBpm(e);
+      const play=button('Practice',()=>launchPractice([exerciseBlock(e)]),'secondary compact','play');
+      play.setAttribute('aria-label',`Practice ${e.name}`);
       rows.push(el('article', { class: 'exercise-card' },
         el('div', { class: 'exercise-card-top' }, badge(skillLabel(e.skillArea??e.category)), el('span', { class: 'muted tiny' }, e.archived ? 'Archived' : e.builtin ? 'Built-in' : 'Custom')),
         el('h2', {}, link(e.name, `/library/${e.id}`)),
         protocol.kind==='tempo'&&protocol.sticking ? el('p', { class: 'sticking small-sticking' }, protocol.sticking) : el('p', { class: 'muted exercise-description' }, protocolSummary(protocol)),
-        el('div', { class: 'exercise-card-bottom' }, el('div', {}, el('span', { class: 'muted tiny' }, tempo!==undefined?(best ? 'Best clean' : 'Starting tempo'):protocolDefinition(protocol.kind).label),
-          el('strong', {}, tempo!==undefined?`${best??tempo} BPM`:scope.value==='all'?(data.profiles?.find(p=>p.id===e.profileId)?.name??'Earlier practice'):'Self-paced')), (()=>{const play=button('Practice',()=>launchPractice([exerciseBlock(e)]),'secondary compact','play');play.setAttribute('aria-label',`Practice ${e.name}`);return play;})()))));
+        el('div', { class: 'exercise-card-bottom' },
+          el('div', {}, el('span', { class: 'muted tiny' }, tempo!==undefined?(best ? 'Best clean' : 'Starting tempo'):protocolDefinition(protocol.kind).label),
+            el('strong', {}, tempo!==undefined?`${best??tempo} BPM`:scope.value==='all'?(data.profiles?.find(p=>p.id===e.profileId)?.name??'Earlier practice'):'Self-paced')),
+          play)));
     }
     results.replaceChildren(...rows);
   };
