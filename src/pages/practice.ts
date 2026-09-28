@@ -38,7 +38,7 @@ export function practicePage():Page{
 
   if(profile.instrumentType==='drums')page.append(el('section',{class:'drum-tool-strip','aria-label':'Drum practice tools'},
     el('div',{class:'drum-tool-strip-head'},el('div',{},el('strong',{},'Drum tools'),el('span',{class:'muted small'},'Focused workstations for a specific practice problem')),link('All drum tools','/drums','button ghost compact','routine')),
-    el('div',{class:'drum-tool-grid'},
+    el('div',{class:'drum-tool-grid','data-horizontal-scroll':'true'},
       link('Rudiment Lab','/rudiments','drum-tool-card','routine'),
       link('Phrase Lab','/phrases','drum-tool-card','routine'),
       link('Grid Lab','/drum-grid','drum-tool-card','routine'),
